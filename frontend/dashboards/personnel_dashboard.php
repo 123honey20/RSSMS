@@ -188,6 +188,9 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
 
 
     </div>
+    <!-- Toast Container -->
+    <div id="toastContainer"
+        class="fixed top-6 right-6 space-y-3 z-[9999]"></div>
 
 
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -264,10 +267,12 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        alert(`Submission ${status}!`);
-                        location.reload();
+                        showToast(`Submission ${status}!`, "success");
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
                     } else {
-                        alert("Failed to update status.");
+                        showToast("Failed to update status.", "error");
                     }
                 })
                 .catch(err => console.error(err));
@@ -377,9 +382,10 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                                     'hover:bg-blue-700'
                                 );
                             }
+                            showToast("Comment added successfully!", "success");
                             closeCommentModal();
                         } else {
-                            alert("Failed to save comment.");
+                            showToast("Failed to save comment.", "error");
                         }
                     })
                     .catch(err => console.error(err));
@@ -426,6 +432,49 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
             const modal = document.getElementById('viewCommentModal');
             modal.classList.remove('flex');
             modal.classList.add('hidden');
+        }
+
+
+        function showToast(message, type = "success") {
+
+            const container = document.getElementById("toastContainer");
+
+            const toast = document.createElement("div");
+
+            const baseClasses =
+                "flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transform transition-all duration-300 translate-x-full opacity-0";
+
+            const typeClasses = type === "success" ?
+                "bg-green-600 text-white" :
+                "bg-red-600 text-white";
+
+            toast.className = `${baseClasses} ${typeClasses}`;
+            toast.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    ${
+                        type === "success"
+                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 13l4 4L19 7"/>`
+                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"/>`
+                    }
+                </svg>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.remove("translate-x-full", "opacity-0");
+            }, 50);
+
+            // Auto remove
+            setTimeout(() => {
+                toast.classList.add("translate-x-full", "opacity-0");
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 

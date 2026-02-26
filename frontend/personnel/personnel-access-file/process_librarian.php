@@ -108,6 +108,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 File not found.
             </div>
         <?php endif; ?>
+        
     </div>
 
     <div class="flex justify-between pt-6 border-t">
