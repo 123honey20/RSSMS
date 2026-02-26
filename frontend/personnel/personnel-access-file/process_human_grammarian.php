@@ -8,6 +8,8 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 }
 
 $submissionId = intval($_GET['id']);
+$viewOnly = isset($_GET['viewOnly']);
+
 
 $stmt = $conn->prepare("
     SELECT h.id, h.file_path, h.status, s.control_number
@@ -65,28 +67,30 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 <input type="hidden" id="initialCommentCount" value="<?= $totalComments ?>">
 
                 <span id="commentHeaderCount" class="text-blue-700 text-xs">
-                    You Currently Added <?= $totalComments ?> Comment<?= $totalComments != 1 ? 's' : '' ?>
+                    <?php if (!$viewOnly): ?>You Currently Added<?php endif; ?> <?= $totalComments ?> Comment<?= $totalComments != 1 ? 's' : '' ?>
                 </span>
             </div>
-            <div class="flex gap-3">
-                <button
-                    class="btn-approve px-5 py-2 text-xs font-medium transition
+            <?php if (!$viewOnly): ?>
+                <div class="flex gap-3">
+                    <button
+                        class="btn-approve px-5 py-2 text-xs font-medium transition
                     <?= $currentStatus === 'Approved'
                         ? 'text-gray-500 cursor-not-allowed'
                         : 'text-blue-700 hover:underline' ?>"
-                    data-id="<?= $submission['id'] ?>">
-                    Approve
-                </button>
-                <span>-</span>
-                <button
-                    class="btn-reject px-5 py-2 text-xs font-medium transition
+                        data-id="<?= $submission['id'] ?>">
+                        Approve
+                    </button>
+                    <span>-</span>
+                    <button
+                        class="btn-reject px-5 py-2 text-xs font-medium transition
                     <?= $currentStatus === 'Rejected'
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                         : 'text-red-700 hover:underline' ?>"
-                    data-id="<?= $submission['id'] ?>">
-                    Reject
-                </button>
-            </div>
+                        data-id="<?= $submission['id'] ?>">
+                        Reject
+                    </button>
+                </div>
+            <?php endif; ?>
         </div>
 
     </div>
@@ -118,20 +122,22 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 onclick="openViewCommentModal(<?= $submission['id'] ?>)"
                 <?= $totalComments == 0 ? 'disabled' : '' ?>
                 class="px-6 py-2.5 rounded-lg text-sm font-medium shadow transition
-        <?= $totalComments == 0
-            ? 'bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700' ?>">
-                View Comment
+                <?= $totalComments == 0
+                    ? 'bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700' ?>">
+                        View Comment
             </button>
         </div>
 
-        <div>
-            <button
-                onclick="openCommentModal(<?= $submission['id'] ?>)"
-                class="bg-gray-800 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-900 transition">
-                Add Comment
-            </button>
-        </div>
+        <?php if (!$viewOnly): ?>
+            <div>
+                <button
+                    onclick="openCommentModal(<?= $submission['id'] ?>)"
+                    class="bg-gray-800 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-900 transition">
+                    Add Comment
+                </button>
+            </div>
+        <?php endif; ?>
     </div>
 
 </div>

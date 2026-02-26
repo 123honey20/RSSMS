@@ -252,6 +252,23 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 .catch(err => console.error('Error loading submission:', err));
         }
 
+        function viewSubmissionWithComments(submissionId) {
+
+            const url = `../personnel/personnel-access-file/process_${serviceType}.php?id=${submissionId}&viewOnly=1`;
+
+            fetch(url)
+                .then(res => res.text())
+                .then(html => {
+                    document.getElementById('main-content').innerHTML = html;
+
+                    // After loading, automatically open the comment modal
+                    setTimeout(() => {
+                        openViewCommentModal(submissionId);
+                    }, 300);
+                })
+                .catch(err => console.error('Error loading submission:', err));
+        }
+
 
         function updateSubmissionStatus(submissionId, status) {
             fetch(`../../backend/ajax/access_file_${serviceType}.php`, {
@@ -410,7 +427,7 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                             container.innerHTML += `
                         <div class="border p-3 rounded-lg bg-gray-50">
                             <div class="font-semibold text-gray-700">
-                                Comment #${index + 1}  (Page ${comment.page_number})  (Paragraph ${comment.paragraph_number})
+                                Comment ${index + 1}:   Page ${comment.page_number}  -  Paragraph ${comment.paragraph_number}
                             </div>
                             <div class="text-gray-600 mt-1">
                                 ${comment.comment_text}

@@ -145,10 +145,10 @@
                     <td class="p-3 border-b text-center">
                         ${
                             row.status === 'Approved'
-                            ? `<button class="text-blue-700 hover:underline text-sm">
-                                    View Comment
+                            ? `<button onclick="viewSubmissionWithComments(${row.id})" class="text-blue-700 hover:underline text-sm">
+                                    Review Submission
                                </button>`
-                            : row.status === 'Rejected' ? `<button class="text-blue-700  hover:underline text-sm">View Comment</button>`
+                            : row.status === 'Rejected' ? `<button onclick="viewSubmissionWithComments(${row.id})" class="text-blue-700  hover:underline text-sm">Review Submission</button>`
                             : `<button onclick="loadProcess(${row.id})"
                                     class="text-blue-700 hover:underline text-sm">
                                     Process
