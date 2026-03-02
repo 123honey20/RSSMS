@@ -105,7 +105,7 @@ $currentStatus = $latest ? $latest['status'] : null;
             <table class="w-full text-sm text-left text-gray-600">
                 <thead class="text-xs uppercase text-gray-500 border-b">
                     <tr>
-                        <th class="py-2">Round</th>
+                        <th class="py-2">Submission</th>
                         <th class="py-2">File</th>
                         <th class="py-2">Status</th>
                         <th class="py-2">Date</th>
@@ -118,8 +118,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                         <?php $i = 1; ?>
                         <?php while ($row = $subs->fetch_assoc()): ?>
                             <tr class="border-b">
-                                <td class="py-3"><?php echo $i++; ?>.</td>
-
+                                <td class="py-3 text-xs">Round <?php echo (int)$row['round']; ?></td>
                                 <td class="py-3 max-w-xs">
                                     <?php
                                     $fullName = basename($row['file_path']);

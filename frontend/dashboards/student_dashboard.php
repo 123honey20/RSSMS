@@ -97,17 +97,14 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M7 16l-4-4m0 0l4-4m-4 4h18M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
-
-
                             <span>Transaction</span>
-
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': open }">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
                     <div x-show="open" class="mt-1 ml-7 flex flex-col gap-1" x-cloak>
-                        <a href="#" class="px-3 py-1 text-gray-700 rounded-lg hover:bg-blue-100 hover:text-blue-900 transition">Grammarly & AI Checking</a>
+                        <a href="student_dashboard.php?page=student_transaction_grammarly_ai" class="px-3 py-1 text-gray-700 rounded-lg hover:bg-blue-100 hover:text-blue-900 transition">Grammarly & AI Checking</a>
                     </div>
                 </div>
 
@@ -121,8 +118,6 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
                 </a>
             </nav>
         </aside>
-
-
 
         <!-- MAIN CONTENT -->
         <main class="flex-1 p-6">
@@ -172,6 +167,14 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
                     case 'student_upload_human_grammarian':
                         include '../dashboards/student-submission/human_grammarian_upload.php';
+                        break;
+
+                    case 'student_transaction_grammarly_ai':
+                        include '../students/transaction/transaction_grammarly_ai.php';
+                        break;
+
+                    case 'student_transaction_receipt_grammarly_ai':
+                        include '../students/transaction/transaction-receipt-upload/grammarly_ai_receipt.php';
                         break;
 
                     default:
