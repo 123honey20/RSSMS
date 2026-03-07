@@ -137,12 +137,20 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
                         include '../students/view-reports/view_grammarly_ai_report.php';
                         break;
 
+                    case 'student_grammarly_ai_approved_result':
+                        include '../students/view-approved-result/grammarly_ai_approved_result.php';
+                        break;
+
                     case 'students_rs_ethics':
                         include '../students/student-research-services/ethics.php';
                         break;
 
                     case 'student_view_ethics_report':
                         include '../students/view-reports/view_ethics_report.php';
+                        break;
+
+                    case 'student_ethics_approved_result':
+                        include '../students/view-approved-result/ethics_approved_result.php';
                         break;
 
                     case 'students_rs_human_grammarian':
@@ -153,6 +161,10 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
                         include '../students/view-reports/view_human_grammarian_report.php';
                         break;
 
+                    case 'student_human_grammarian_approved_result':
+                        include '../students/view-approved-result/human_grammarian_approved_result.php';
+                        break;
+
                     case 'students_rs_librarian':
                         include '../students/student-research-services/librarian.php';
                         break;
@@ -161,12 +173,20 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
                         include '../students/view-reports/view_librarian_report.php';
                         break;
 
+                    case 'student_librarian_approved_result':
+                        include '../students/view-approved-result/librarian_approved_result.php';
+                        break;
+
                     case 'students_rs_statistician':
                         include '../students/student-research-services/statistician.php';
                         break;
 
                     case 'student_view_statistician_report':
                         include '../students/view-reports/view_statistician_report.php';
+                        break;
+
+                    case 'student_statistician_approved_result':
+                        include '../students/view-approved-result/statistician_approved_result.php';
                         break;
 
                     case 'student_upload_grammarly_ai':
