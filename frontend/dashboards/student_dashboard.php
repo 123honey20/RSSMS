@@ -133,20 +133,40 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
                         include '../students/student-research-services/grammarly_ai_checking.php';
                         break;
 
+                    case 'student_view_grammarly_ai_report':
+                        include '../students/view-reports/view_grammarly_ai_report.php';
+                        break;
+
                     case 'students_rs_ethics':
                         include '../students/student-research-services/ethics.php';
+                        break;
+
+                    case 'student_view_ethics_report':
+                        include '../students/view-reports/view_ethics_report.php';
                         break;
 
                     case 'students_rs_human_grammarian':
                         include '../students/student-research-services/human_grammarian.php';
                         break;
 
+                    case 'student_view_human_grammarian_report':
+                        include '../students/view-reports/view_human_grammarian_report.php';
+                        break;
+
                     case 'students_rs_librarian':
                         include '../students/student-research-services/librarian.php';
                         break;
 
+                    case 'student_view_librarian_report':
+                        include '../students/view-reports/view_librarian_report.php';
+                        break;
+
                     case 'students_rs_statistician':
                         include '../students/student-research-services/statistician.php';
+                        break;
+
+                    case 'student_view_statistician_report':
+                        include '../students/view-reports/view_statistician_report.php';
                         break;
 
                     case 'student_upload_grammarly_ai':

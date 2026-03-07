@@ -11,13 +11,6 @@ $res = $stmt->get_result();
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 
-$stmt2 = $conn->prepare("SELECT school_id FROM users WHERE id = ?");
-$stmt2->bind_param("i", $user_id);
-$stmt2->execute();
-$res2 = $stmt2->get_result();
-$userRow = $res2->fetch_assoc();
-$school_id = $userRow['school_id'];
-
 // Get latest round
 $latestRes = $conn->query("
     SELECT round FROM grammarly_ai_transactions
@@ -25,7 +18,6 @@ $latestRes = $conn->query("
     ORDER BY round DESC
     LIMIT 1
 ");
-
 $latest = $latestRes->fetch_assoc();
 $newRound = $latest ? ((int)$latest['round'] + 1) : 1;
 
@@ -34,11 +26,11 @@ if ($newRound > 7) {
 }
 
 $stmt = $conn->prepare("
-    INSERT INTO grammarly_ai_transactions (student_id, school_id, round)
-    VALUES (?, ?, ?)
+    INSERT INTO grammarly_ai_transactions (student_id, round)
+    VALUES (?, ?)
 ");
 
-$stmt->bind_param("iii", $student_id, $school_id, $newRound);
+$stmt->bind_param("ii", $student_id, $newRound);
 $stmt->execute();
 
 header("Location: ../../../frontend/dashboards/student_dashboard.php?page=student_transaction_grammarly_ai");

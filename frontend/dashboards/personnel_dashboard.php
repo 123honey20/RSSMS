@@ -407,7 +407,7 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                                     'bg-gray-300',
                                     'text-gray-500',
                                     'opacity-50',
-                                    'cursor-not-allowed'
+                                    'hidden'
                                 );
                                 // Add active styles
                                 viewBtn.classList.add(
@@ -504,7 +504,7 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 toast.classList.remove("translate-x-full", "opacity-0");
             }, 50);
 
-            // Auto remove
+            // Auto remove Notif
             setTimeout(() => {
                 toast.classList.add("translate-x-full", "opacity-0");
                 setTimeout(() => toast.remove(), 300);

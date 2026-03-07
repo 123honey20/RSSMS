@@ -74,7 +74,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
                     <button
                         class="btn-approve px-5 py-2 text-xs font-medium transition
                     <?= $currentStatus === 'Approved'
-                        ? 'text-gray-500 cursor-not-allowed'
+                        ? 'text-gray-500'
                         : 'text-blue-700 hover:underline' ?>"
                         data-id="<?= $submission['id'] ?>">
                         Approve
@@ -83,7 +83,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
                     <button
                         class="btn-reject px-5 py-2 text-xs font-medium transition
                     <?= $currentStatus === 'Rejected'
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        ? 'bg-gray-200 text-gray-500'
                         : 'text-red-700 hover:underline' ?>"
                         data-id="<?= $submission['id'] ?>">
                         Reject
@@ -120,11 +120,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
             <button
                 id="viewCommentBtn"
                 onclick="openViewCommentModal(<?= $submission['id'] ?>)"
-                <?= $totalComments == 0 ? 'disabled' : '' ?>
-                class="px-6 py-2.5 rounded-lg text-sm font-medium shadow transition
-        <?= $totalComments == 0
-            ? 'bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700' ?>">
+                class="px-6 py-2.5 rounded-lg text-sm font-medium shadow transition bg-blue-600 text-white hover:bg-blue-700 <?= $totalComments == 0 ? 'hidden' : '' ?>">
                 View Comment
             </button>
         </div>

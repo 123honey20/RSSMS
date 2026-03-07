@@ -117,5 +117,5 @@ $updateStmt->execute();
 // Redirect Back
 $_SESSION['flash_success'] = "Receipt uploaded successfully for Round {$round}.";
 
-header("Location: ../../../frontend/dashboards/student_dashboard.php?page=transaction_grammarly_ai");
+header("Location: ../../../frontend/dashboards/student_dashboard.php?page=student_transaction_grammarly_ai");
 exit();

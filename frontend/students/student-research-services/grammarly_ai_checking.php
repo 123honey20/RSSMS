@@ -82,9 +82,19 @@ $currentStatus = $latest ? $latest['status'] : null;
         }
         ?>
 
-        <?php if ($hasPendingSubmission): ?>
+        <?php if ($currentStatus === 'Approved'): ?>
 
-            <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between cursor-not-allowed opacity-60">
+            <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-60">
+                <div>
+                    <p class="text-sm text-gray-500">Upload</p>
+                    <p class="font-semibold text-green-700">Upload Disabled</p>
+                </div>
+                <div class="text-2xl font-bold">+</div>
+            </div>
+
+        <?php elseif ($hasPendingSubmission): ?>
+
+            <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-60">
                 <div>
                     <p class="text-sm text-gray-500">Upload</p>
                     <p class="font-semibold text-gray-800">Pending Submission</p>
@@ -111,7 +121,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                     <p class="text-sm text-gray-500">Upload</p>
                     <p class="font-semibold text-gray-800">Upload Submission</p>
                 </div>
-                <div class="text-2xl font-bold">+</div>
+                <div class="text-2xl font-bold text-blue-600">+</div>
             </a>
 
         <?php endif; ?>
@@ -179,7 +189,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                                     if ($status === "Rejected") $color = "text-red-600";
                                     if ($status === "Pending")  $color = "text-yellow-600";
                                     ?>
-                                    <span class="px-3 py-1 text-xs rounded-full text-green-700 font-semibold <?php echo $color; ?>">
+                                    <span class="py-1 text-xs text-green-700 font-semibold <?php echo $color; ?>">
                                         <?php echo ucfirst($status); ?>
                                     </span>
                                 </td>
@@ -187,10 +197,16 @@ $currentStatus = $latest ? $latest['status'] : null;
                                     <?php echo $row['uploaded_at']; ?>
                                 </td>
                                 <td class="py-3">
-                                    <a href="#"
-                                        class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">
-                                        View
-                                    </a>
+                                    <?php if ($status === 'Approved' || $status === 'Rejected'): ?>
+                                        <a href="student_dashboard.php?page=student_view_grammarly_ai_report&id=<?php echo $row['id']; ?>"
+                                            class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition shadow">
+                                            View
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="bg-gray-300 text-gray-500 px-3 py-1 rounded text-xs">
+                                            View
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="py-3 text-center">
                                     <?php
@@ -208,7 +224,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                                         </a>
 
                                     <?php else: ?>
-                                        <span class="bg-gray-300 text-gray-600 px-3 py-1 rounded text-xs cursor-not-allowed">
+                                        <span class="bg-gray-300 text-gray-600 px-3 py-1 rounded text-xs">
                                             Re-upload
                                         </span>
                                     <?php endif; ?>

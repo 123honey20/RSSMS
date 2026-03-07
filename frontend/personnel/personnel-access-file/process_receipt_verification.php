@@ -82,24 +82,15 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
 
             <?php if ($currentStatus === 'Receipt Uploaded'): ?>
                 <div class="flex gap-3">
-
                     <button
                         onclick="updateReceiptStatus(<?php echo $data['id']; ?>,'Approved')"
-                        <?php echo $currentStatus !== 'Receipt Uploaded' ? 'disabled' : ''; ?>
-                        class="px-5 py-2 text-xs font-medium transition
-                    <?php echo $currentStatus !== 'Receipt Uploaded'
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-blue-700 hover:underline'; ?>">
+                        class="px-5 py-2 text-xs font-medium transition text-blue-700 hover:underline">
                         Approve
                     </button>
                     <span>-</span>
                     <button
                         onclick="updateReceiptStatus(<?php echo $data['id']; ?>,'Rejected')"
-                        <?php echo $currentStatus !== 'Receipt Uploaded' ? 'disabled' : ''; ?>
-                        class="px-5 py-2 text-xs font-medium transition
-                    <?php echo $currentStatus !== 'Receipt Uploaded'
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-red-700 hover:underline'; ?>">
+                        class="px-5 py-2 text-xs font-medium transition text-red-700 hover:underline">
                         Reject
                     </button>
                 </div>
@@ -107,8 +98,6 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
         </div>
 
     </div>
-
-
     <!-- RECEIPT FILE -->
     <div>
 
@@ -132,15 +121,12 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
             </div>
         <?php endif; ?>
     </div>
-
     <div class="flex justify-end pt-6 border-t">
-
         <button
             onclick="location.reload()"
             class="bg-gray-800 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-900 transition">
             Back
         </button>
-
     </div>
 
 </div>
