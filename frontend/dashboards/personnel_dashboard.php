@@ -11,11 +11,14 @@ require_once "../../backend/config/database.php";
 // Get personnel info
 $user_id = $_SESSION['user'];
 
-$res = $conn->query("
+$stmt = $conn->prepare("
     SELECT service_role, department_id
     FROM personnel 
-    WHERE user_id = $user_id
+    WHERE user_id = ?
 ");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$res = $stmt->get_result();
 
 $personnel = $res->fetch_assoc();
 
@@ -106,8 +109,19 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                     <span>Student Submission</span>
                 </a>
 
+                <?php if ($serviceRole === 'Grammarly & AI Checking'): ?>
+                    <a href="personnel_dashboard.php?page=receipt_verification"
+                        class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-900 transition">
 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6M9 16h6M7 3h10a2 2 0 012 2v16l-7-3-7 3V5a2 2 0 012-2z" />
+                        </svg>
 
+                        <span>Receipt Verification</span>
+                    </a>
+                <?php endif; ?>
 
                 <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-900 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -124,7 +138,6 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                     </svg>
                     <span>Rating and Feedback</span>
                 </a>
-
 
                 <hr class="my-4">
 
@@ -168,6 +181,10 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
 
                     case 'submissions_human_grammarian':
                         include "../personnel/personnel-research-services/submissions_human_grammarian.php";
+                        break;
+
+                    case 'receipt_verification':
+                        include "../personnel/personnel-research-services/receipt_verification.php";
                         break;
 
                     default:

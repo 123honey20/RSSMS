@@ -5,14 +5,11 @@
     </div>
 
     <div class="flex flex-col md:flex-row gap-3 mb-4">
-
-        <!-- Search -->
         <input
             type="text"
             id="searchInput"
             placeholder="Search by Control Number"
             class="w-full md:w-1/2 border rounded px-3 py-2 text-sm">
-
     </div>
 
     <div class="overflow-x-auto">

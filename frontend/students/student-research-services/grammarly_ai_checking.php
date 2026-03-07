@@ -39,26 +39,72 @@ $currentStatus = $latest ? $latest['status'] : null;
 
     <div class="flex flex-wrap gap-6">
 
-        <?php
-        $canUploadNewRound = false;
 
-        if (!$latest) {
-            $canUploadNewRound = true; // no submission yet
-        } elseif ($currentStatus === 'Rejected' && $currentRound < 7) {
-            $canUploadNewRound = true; // can go to next round
+        <?php
+        // Check if student has pending submission
+        $hasPendingSubmission = $conn->query("
+            SELECT id FROM grammarly_ai 
+            WHERE student_id = $student_id 
+            AND status = 'Pending'
+        ")->num_rows > 0;
+
+        // Get latest approved transaction
+        $approvedTransactionRes = $conn->query("
+            SELECT * FROM grammarly_ai_transactions
+            WHERE student_id = $student_id
+            AND status = 'Approved'
+            ORDER BY round DESC
+            LIMIT 1
+        ");
+
+        $approvedTransaction = $approvedTransactionRes->fetch_assoc();
+
+        // Check if that approved transaction already has a submission
+        $hasSubmissionForApprovedRound = false;
+
+        if ($approvedTransaction) {
+            $approvedRound = (int)$approvedTransaction['round'];
+
+            $checkSubmission = $conn->query("
+            SELECT id FROM grammarly_ai
+            WHERE student_id = $student_id
+            AND round = $approvedRound
+        ");
+
+            $hasSubmissionForApprovedRound = $checkSubmission->num_rows > 0;
+        }
+
+        // Determine if upload is allowed
+        $canUploadSubmission = false;
+
+        if ($approvedTransaction && !$hasSubmissionForApprovedRound) {
+            $canUploadSubmission = true;
         }
         ?>
 
-        <?php if ($currentStatus === 'Approved'): ?>
+        <?php if ($hasPendingSubmission): ?>
+
             <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between cursor-not-allowed opacity-60">
                 <div>
                     <p class="text-sm text-gray-500">Upload</p>
-                    <p class="font-semibold text-gray-800">Upload Disabled</p>
+                    <p class="font-semibold text-gray-800">Pending Submission</p>
                 </div>
-                <div class="text-2xl font-bold">+</div>
+                <div class="text-2xl font-bold">⏳</div>
             </div>
 
-        <?php elseif ($canUploadNewRound): ?>
+        <?php elseif (!$canUploadSubmission): ?>
+
+            <a href="student_dashboard.php?page=student_transaction_grammarly_ai"
+                class="bg-white shadow rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition">
+                <div>
+                    <p class="text-sm text-gray-500">Upload</p>
+                    <p class="font-semibold text-gray-800">Proceed to Payment</p>
+                </div>
+                <div class="text-2xl font-bold">💳</div>
+            </a>
+
+        <?php else: ?>
+
             <a href="student_dashboard.php?page=student_upload_grammarly_ai"
                 class="bg-white shadow rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition">
                 <div>
@@ -68,15 +114,9 @@ $currentStatus = $latest ? $latest['status'] : null;
                 <div class="text-2xl font-bold">+</div>
             </a>
 
-        <?php else: ?>
-            <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between cursor-not-allowed opacity-60">
-                <div>
-                    <p class="text-sm text-gray-500">Upload</p>
-                    <p class="font-semibold text-gray-800">Upload Disabled</p>
-                </div>
-                <div class="text-2xl font-bold">⏳</div>
-            </div>
         <?php endif; ?>
+
+
 
 
         <a href="#"

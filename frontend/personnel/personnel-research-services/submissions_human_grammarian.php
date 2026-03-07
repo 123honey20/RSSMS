@@ -5,14 +5,11 @@
     </div>
 
     <div class="flex flex-col md:flex-row gap-3 mb-4">
-
-        <!-- Search -->
         <input
             type="text"
             id="searchInput"
             placeholder="Search by Control Number"
             class="w-full md:w-1/2 border rounded px-3 py-2 text-sm">
-
     </div>
 
     <div class="overflow-x-auto">
@@ -36,13 +33,13 @@
 </div>
 
 <!-- Student Profile Modal -->
-<div id="profileModalStudent" 
-     class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+<div id="profileModalStudent"
+    class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
     <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-all duration-300 ease-out">
         <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-8 py-5 flex items-center justify-between">
             <h3 class="text-xl font-semibold tracking-wide">Student Profile</h3>
-            <button onclick="closeProfileStudent()" 
-                    class="text-white hover:text-gray-200 text-2xl font-bold leading-none">
+            <button onclick="closeProfileStudent()"
+                class="text-white hover:text-gray-200 text-2xl font-bold leading-none">
                 ✕
             </button>
         </div>
@@ -73,7 +70,7 @@
             </div>
             <div class="mt-6 flex justify-end">
                 <button onclick="closeProfileStudent()"
-                        class="bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-sm">
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-sm">
                     Close
                 </button>
             </div>

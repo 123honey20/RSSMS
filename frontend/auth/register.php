@@ -140,7 +140,7 @@ $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                             <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M9 21V10m6 11V10M5 6h14l-1-3H6L5 6z" />
                             </svg>
-                            <select name="student_department_id" id="departmentSelect" required>
+                            <select class="w-full bg-transparent focus:outline-none border rounded p-2" name="student_department_id" id="departmentSelect" required>
                                 <option value="">Select Department</option>
                                 <?php while ($d = $departments->fetch_assoc()): ?>
                                     <option value="<?= $d['id']; ?>"><?= htmlspecialchars($d['name']); ?></option>
@@ -156,7 +156,7 @@ $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422A12.083 12.083 0 0121 13.5c0 2.485-4.03 4.5-9 4.5S3 15.985 3 13.5a12.083 12.083 0 012.84-2.922L12 14z" />
                             </svg>
-                            <select name="course_id" id="courseSelect"
+                            <select class="w-full bg-transparent focus:outline-none border rounded p-2" name="course_id" id="courseSelect"
                                 required class="w-full border p-2 rounded">
 
                                 <option value="">Select Course</option>
@@ -182,7 +182,7 @@ $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                         </div>
                     </div>
 
-                    <div>
+                    <div id="personnelDepartmentContainer">
                         <label class="text-sm">Department</label>
                         <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
                             <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -212,7 +212,8 @@ $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                             <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6M9 16h6M7 4h10v16H7z" />
                             </svg>
-                            <select name="role" class="w-full bg-transparent focus:outline-none">
+                            <select id="serviceRole" name="role" class="w-full bg-transparent focus:outline-none">
+                                <option value="">Select Role</option>
                                 <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
                                 <option value="Human Grammarian">Human Grammarian</option>
                                 <option value="Statistician">Statistician</option>
@@ -320,10 +321,23 @@ $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                     courseSelect.innerHTML = '<option value="">Error loading courses</option>';
                 });
         });
+
+        function handlePersonnelRole() {
+            const role = document.getElementById("serviceRole").value;
+            const deptContainer = document.getElementById("personnelDepartmentContainer");
+            const deptSelect = document.querySelector("select[name='personnel_department_id']");
+            if (role === "Grammarly & AI Checking") {
+                deptContainer.style.display = "none";
+                deptSelect.required = false;
+                deptSelect.value = "";
+            } else {
+                deptContainer.style.display = "block";
+                deptSelect.required = true;
+            }
+        }
+        document.getElementById("serviceRole").addEventListener("change", handlePersonnelRole);
+        handlePersonnelRole();
     </script>
-
-
-
 
 </body>
 

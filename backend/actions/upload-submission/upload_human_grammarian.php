@@ -23,7 +23,7 @@ $school_id = $userRow['school_id'];
 // File handling
 $file = $_FILES['submission_file'];
 $filename = time() . "_" . basename($file['name']);
-$targetDir = "../../../uploads/";
+$targetDir = "../../../uploads/human_grammarian/";
 $targetFile = $targetDir . $filename;
 
 // Extension check

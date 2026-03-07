@@ -10,12 +10,18 @@ require_once "../../config/database.php";
 $user_id = $_SESSION['user'];
 
 // Get student id
-$res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
+$stmt = $conn->prepare("SELECT id FROM students WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$res = $stmt->get_result();
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 
 // Get school_id of student
-$res2 = $conn->query("SELECT school_id FROM users WHERE id = $user_id");
+$stmt2 = $conn->prepare("SELECT school_id FROM users WHERE id = ?");
+$stmt2->bind_param("i", $user_id);
+$stmt2->execute();
+$res2 = $stmt2->get_result();
 $userRow = $res2->fetch_assoc();
 $school_id = $userRow['school_id'];
 
@@ -23,7 +29,7 @@ $school_id = $userRow['school_id'];
 // File handling
 $file = $_FILES['submission_file'];
 $filename = time() . "_" . basename($file['name']);
-$targetDir = "../../../uploads/";
+$targetDir = "../../../uploads/grammarly_ai/submissions/";
 $targetFile = $targetDir . $filename;
 
 // Extension check
@@ -54,65 +60,75 @@ if (!in_array($mime, $allowedMime)) {
 
 
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-
-    // Check if already has submission
-    $check = $conn->query("
-    SELECT * FROM grammarly_ai 
-    WHERE student_id = $student_id 
-    ORDER BY round DESC 
-    LIMIT 1
+    // Get latest approved transaction
+    $stmt = $conn->prepare("
+        SELECT * FROM grammarly_ai_transactions
+        WHERE student_id = ?
+        AND status = 'Approved'
+        ORDER BY round DESC
+        LIMIT 1
     ");
 
-    $latest = $check->fetch_assoc();
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
 
+    $result = $stmt->get_result();
+    $approvedTransaction = $result->fetch_assoc();
 
-    if ($latest) {
-        $currentRound = (int)$latest['round'];
-        $status = $latest['status'];
-
-        if ($status === 'Pending') {
-            // Re-upload same round
-            $stmt = $conn->prepare("
-            UPDATE grammarly_ai 
-            SET file_path = ?, status = 'Pending' 
-            WHERE id = ?
-        ");
-            $stmt->bind_param("si", $filename, $latest['id']);
-            $stmt->execute();
-
-            $_SESSION['flash_success'] = "Submission re-uploaded (same round).";
-        } elseif ($status === 'Rejected') {
-
-            if ($currentRound >= 7) {
-                die("You have reached the maximum of 7 rounds.");
-            }
-
-            $newRound = $currentRound + 1;
-
-            $stmt = $conn->prepare("
-            INSERT INTO grammarly_ai (student_id, school_id, file_path, status, round) 
-            VALUES (?, ?, ?, 'Pending', ?)
-        ");
-            $stmt->bind_param("issi", $student_id, $school_id, $filename, $newRound);
-            $stmt->execute();
-
-            $_SESSION['flash_success'] = "New round ($newRound) submitted successfully.";
-        } else {
-            // Approved
-            die("Submission already approved. Upload disabled.");
-        }
-    } else {
-        // First submission = round 1
-        $stmt = $conn->prepare("
-        INSERT INTO grammarly_ai (student_id, school_id, file_path, status, round) 
-        VALUES (?, ?, ?, 'Pending', 1)
-    ");
-        $stmt->bind_param("iss", $student_id, $school_id, $filename);
-        $stmt->execute();
-
-        $_SESSION['flash_success'] = "Submission uploaded successfully (Round 1).";
+    if (!$approvedTransaction) {
+        die("No approved transaction found. Please complete payment first.");
     }
 
+    $round = (int)$approvedTransaction['round'];
+
+    // Check if submission already exists for this round
+    $checkSubmission = $conn->query("
+    SELECT * FROM grammarly_ai
+    WHERE student_id = $student_id
+    AND round = $round
+    LIMIT 1
+");
+
+    $existingSubmission = $checkSubmission->fetch_assoc();
+
+    if ($existingSubmission) {
+
+        if ($existingSubmission['status'] === 'Pending') {
+            // Re-upload same round
+            $stmt = $conn->prepare("
+            UPDATE grammarly_ai
+            SET file_path = ?, status = 'Pending'
+            WHERE id = ?
+        ");
+            $stmt->bind_param("si", $filename, $existingSubmission['id']);
+            $stmt->execute();
+
+            $_SESSION['flash_success'] = "Submission re-uploaded for Round $round.";
+        } elseif ($existingSubmission['status'] === 'Approved') {
+            die("This round is already approved.");
+        } else {
+            // Rejected submission → allow update
+            $stmt = $conn->prepare("
+            UPDATE grammarly_ai
+            SET file_path = ?, status = 'Pending'
+            WHERE id = ?
+        ");
+            $stmt->bind_param("si", $filename, $existingSubmission['id']);
+            $stmt->execute();
+
+            $_SESSION['flash_success'] = "Submission updated for Round $round.";
+        }
+    } else {
+        // Insert new submission for approved round
+        $stmt = $conn->prepare("
+        INSERT INTO grammarly_ai (student_id, school_id, file_path, status, round)
+        VALUES (?, ?, ?, 'Pending', ?)
+    ");
+        $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
+        $stmt->execute();
+
+        $_SESSION['flash_success'] = "Submission uploaded successfully for Round $round.";
+    }
 
     header("Location: ../../../frontend/dashboards/student_dashboard.php?page=student_upload_grammarly_ai");
     exit();

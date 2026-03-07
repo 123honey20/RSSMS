@@ -5,7 +5,9 @@ $school_id  = $_POST['school_id'];
 $full_name  = $_POST['full_name'];
 $email      = $_POST['email'];
 $password   = $_POST['password'];
-$department_id = intval($_POST['personnel_department_id']);
+$department_id = isset($_POST['personnel_department_id']) && $_POST['personnel_department_id'] !== ''
+    ? intval($_POST['personnel_department_id'])
+    : NULL;
 $role       = $_POST['role'];
 
 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -27,4 +29,3 @@ if ($stmt->execute()) {
 } else {
     echo "Error: " . $conn->error;
 }
-?>

@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm_pass    = $_POST['confirm_password'];
 
     $full_name       = trim($_POST['full_name']);
-    $department_id      = trim($_POST['department_id']);
+    $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : NULL;
     $service_role    = trim($_POST['service_role']);
 
     $role   = "personnel";
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endwhile; ?>
         </select>
 
-        <select name="service_role" required class="w-full border p-2 rounded">
+        <select name="service_role" id="serviceRole" required class="w-full border p-2 rounded">
             <option value="">Select Service Role</option>
             <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
             <option value="Human Grammarian">Human Grammarian</option>
@@ -117,3 +117,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </form>
 </div>
+
+<script>
+    const roleSelect = document.getElementById("serviceRole");
+    const departmentSelect = document.getElementById("departmentSelect");
+
+    function toggleDepartment() {
+
+        const role = roleSelect.value;
+
+        if (role === "Grammarly & AI Checking" || role === "Human Grammarian") {
+
+            departmentSelect.value = "";
+            departmentSelect.disabled = true;
+            departmentSelect.removeAttribute("required");
+
+        } else {
+
+            departmentSelect.disabled = false;
+            departmentSelect.setAttribute("required", "required");
+
+        }
+    }
+
+    roleSelect.addEventListener("change", toggleDepartment);
+
+    // run on page load
+    toggleDepartment();
+</script>

@@ -25,7 +25,7 @@ if (!$submission) {
     exit();
 }
 
-$relativePath = "/RSSMS/uploads/" . $submission['file_path'];
+$relativePath = "/RSSMS/uploads/grammarly_ai/submissions/" . $submission['file_path'];
 $absolutePath = $_SERVER['DOCUMENT_ROOT'] . $relativePath;
 
 $currentStatus = $submission['status'] ?? 'Pending';

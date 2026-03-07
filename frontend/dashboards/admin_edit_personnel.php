@@ -4,15 +4,26 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die("Invalid Personnel ID");
 }
 // Fetch all departments
-$departmentsQuery = $conn->query("SELECT id, name FROM departments ORDER BY name ASC");
+$deptStmt = $conn->prepare("SELECT id, name FROM departments ORDER BY name ASC");
+$deptStmt->execute();
+$departmentsQuery = $deptStmt->get_result();
 
 $user_id = (int) $_GET['id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $school_id = $_POST['school_id'];
     $email = $_POST['email'];
     $full_name = $_POST['full_name'];
-    $department_id = $_POST['department_id'];
+    $department_id = $_POST['department_id'] ?? null;
+
+    // Get service role first
+    $roleStmt = $conn->prepare("SELECT service_role FROM personnel WHERE user_id = ?");
+    $roleStmt->bind_param("i", $user_id);
+    $roleStmt->execute();
+    $roleResult = $roleStmt->get_result()->fetch_assoc();
+
+    $service_role = $roleResult['service_role'] ?? null;
 
     // Update users table
     $stmt1 = $conn->prepare("UPDATE users SET school_id = ?, email = ? WHERE id = ?");
@@ -26,30 +37,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = $check->get_result();
 
     if ($res->num_rows > 0) {
-        // Update personnel table
-        $stmt2 = $conn->prepare("
-        UPDATE personnel SET full_name = ?, department_id = ? 
-        WHERE user_id = ?
-        ");
-        $stmt2->bind_param("sii", $full_name, $department_id, $user_id);
+
+        if ($service_role !== 'Grammarly & AI Checking') {
+
+            $stmt2 = $conn->prepare("
+                UPDATE personnel 
+                SET full_name = ?, department_id = ?
+                WHERE user_id = ?
+            ");
+            $stmt2->bind_param("sii", $full_name, $department_id, $user_id);
+        } else {
+
+            $stmt2 = $conn->prepare("
+                UPDATE personnel 
+                SET full_name = ?
+                WHERE user_id = ?
+            ");
+            $stmt2->bind_param("si", $full_name, $user_id);
+        }
+
         $stmt2->execute();
     } else {
-        // Insert if not exists
+
         $stmt2 = $conn->prepare("
             INSERT INTO personnel (user_id, full_name, department_id)
             VALUES (?, ?, ?)
         ");
-        $stmt2->bind_param(
-            "isi",
-            $user_id,
-            $full_name,
-            $department_id
-        );
+        $stmt2->bind_param("isi", $user_id, $full_name, $department_id);
         $stmt2->execute();
     }
 
     echo "<script>
-    window.location.href = '../dashboards/admin_dashboard.php?page=personnel&updated=1';
+        window.location.href = '../dashboards/admin_dashboard.php?page=personnel&updated=1';
     </script>";
     exit();
 }
@@ -57,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch Personnel data
 $stmt = $conn->prepare("
     SELECT u.school_id, u.email,
-           s.full_name, s.department_id
+           s.full_name, s.department_id, s.service_role
     FROM users u
     LEFT JOIN personnel s ON u.id = s.user_id
     WHERE u.id = ?
@@ -91,23 +110,31 @@ if (!$data) {
         <div>
             <label class="block text-sm font-medium">Full Name</label>
             <input type="text" name="full_name"
-                value="<?php echo htmlspecialchars($data['full_name']); ?>"
+                value="<?php echo htmlspecialchars($data['full_name'] ?? ''); ?>"
                 class="w-full border rounded px-3 py-2">
         </div>
 
-        <label class="block text-sm font-medium">Department</label>
-        <select name="department_id" required
-            class="w-full border rounded px-3 py-2">
-            <option value="">Select Department</option>
-            <?php
-            $departmentsQuery->data_seek(0); // reset pointer
-            while ($row = $departmentsQuery->fetch_assoc()): ?>
-                <option value="<?= $row['id']; ?>"
-                    <?= ($data['department_id'] == $row['id']) ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($row['name']); ?>
-                </option>
-            <?php endwhile; ?>
-        </select>
+        <?php if ($data['service_role'] !== 'Grammarly & AI Checking'): ?>
+            <label class="block text-sm font-medium">Department</label>
+            <select name="department_id" required
+                class="w-full border rounded px-3 py-2">
+                <option value="">Select Department</option>
+                <?php
+                $departmentsQuery->data_seek(0); // reset pointer
+                while ($row = $departmentsQuery->fetch_assoc()): ?>
+                    <option value="<?= $row['id']; ?>"
+                        <?= ($data['department_id'] == $row['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($row['name']); ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+        <?php endif; ?>
+
+        <?php if ($data['service_role'] === 'Grammarly & AI Checking'): ?>
+            <p class="text-sm text-gray-500">
+                Service Scope: All Departments
+            </p>
+        <?php endif; ?>
 
 
         <div class="flex justify-end gap-2 pt-4">
