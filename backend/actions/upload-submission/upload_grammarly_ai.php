@@ -107,16 +107,8 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         } elseif ($existingSubmission['status'] === 'Approved') {
             die("This round is already approved.");
         } else {
-            // Rejected submission → allow update
-            $stmt = $conn->prepare("
-            UPDATE grammarly_ai
-            SET file_path = ?, status = 'Pending'
-            WHERE id = ?
-        ");
-            $stmt->bind_param("si", $filename, $existingSubmission['id']);
-            $stmt->execute();
-
-            $_SESSION['flash_success'] = "Submission updated for Round $round.";
+            // Rejected submission -> DO NOT ALLOW UPDATE. They must request a new transaction round.
+            die("This submission was rejected. You must request a new transaction round from the dashboard.");
         }
     } else {
         // Insert new submission for approved round

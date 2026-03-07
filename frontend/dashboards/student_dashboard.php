@@ -218,9 +218,6 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
         });
     </script>
 
-
-
-
 </body>
 
 </html>

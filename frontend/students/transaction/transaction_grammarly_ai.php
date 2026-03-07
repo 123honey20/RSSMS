@@ -122,16 +122,28 @@ if (!$latestTransaction) {
             $canCreateNewRound = false;
 
             if (!$latestTransaction) {
-
-                // No transaction yet
+                // First time student
                 $canCreateNewRound = true;
             } else {
-
                 $latestRound = (int)$latestTransaction['round'];
                 $latestStatus = $latestTransaction['status'];
 
-                if ($latestStatus === 'Approved' && $latestRound < $maxRound) {
-                    $canCreateNewRound = true;
+                // Only check if we haven't exceeded max rounds
+                if ($latestRound < $maxRound) {
+
+                    // Check if there is already a SUBMISSION for this latest round
+                    $subCheck = $conn->query("
+                        SELECT status FROM grammarly_ai 
+                        WHERE student_id = $student_id AND round = $latestRound 
+                        LIMIT 1
+                    ");
+                    $latestSubmission = $subCheck->fetch_assoc();
+
+                    // If a submission exists for this round AND it was Rejected,
+                    // ONLY THEN can they request a new receipt transaction for Round 2.
+                    if ($latestSubmission && $latestSubmission['status'] === 'Rejected') {
+                        $canCreateNewRound = true;
+                    }
                 }
             }
             ?>

@@ -125,21 +125,14 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
                     class="w-full h-[650px] bg-gray-50"
                     frameborder="0">
                 </iframe>
-
             </div>
-
         <?php else: ?>
-
             <div class="bg-red-50 text-red-600 p-4 rounded-lg">
                 File not found.
             </div>
-
         <?php endif; ?>
-
     </div>
 
-
-    <!-- FOOTER ACTION -->
     <div class="flex justify-end pt-6 border-t">
 
         <button
@@ -151,29 +144,3 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
     </div>
 
 </div>
-<script>
-    function updateReceiptStatus(id, status) {
-
-        fetch("../../backend/ajax/update_receipt_verification.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    id,
-                    status
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.success) {
-                    alert("Receipt " + status);
-                    location.reload();
-                } else {
-                    alert("Update failed");
-                }
-            })
-            .catch(err => console.error(err));
-
-    }
-</script>

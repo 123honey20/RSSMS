@@ -79,7 +79,7 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
                             <td class="px-4 py-3 text-center">
                                 <button onclick="loadReceiptProcess(${row.id})"
                                 class="text-blue-700 hover:underline text-sm">
-                                    Process
+                                    ${(row.status === 'Approved' || row.status === 'Rejected') ? 'Receipt Review' : 'Process'}
                                 </button>
                             </td>
 

@@ -66,7 +66,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 <input type="hidden" id="initialCommentCount" value="<?= $totalComments ?>">
 
                 <span id="commentHeaderCount" class="text-blue-700 text-xs">
-                    <?php if(!$viewOnly): ?>You Currently Added<?php endif; ?> <?= $totalComments ?> Comment<?= $totalComments != 1 ? 's' : '' ?>
+                    <?php if (!$viewOnly): ?>You Currently Added<?php endif; ?> <?= $totalComments ?> Comment<?= $totalComments != 1 ? 's' : '' ?>
                 </span>
             </div>
             <?php if (!$viewOnly): ?>
@@ -127,15 +127,23 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 View Comment
             </button>
         </div>
-        <?php if (!$viewOnly): ?>
-            <div>
+
+        <div class="flex items-center gap-3">
+            <button
+                onclick="location.reload()"
+                class="bg-gray-200 text-gray-800 px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-300 transition">
+                Back
+            </button>
+
+            <?php if (!$viewOnly): ?>
                 <button
                     onclick="openCommentModal(<?= $submission['id'] ?>)"
                     class="bg-gray-800 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-900 transition">
                     Add Comment
                 </button>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
     </div>
 
 </div>

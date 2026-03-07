@@ -122,22 +122,29 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 onclick="openViewCommentModal(<?= $submission['id'] ?>)"
                 <?= $totalComments == 0 ? 'disabled' : '' ?>
                 class="px-6 py-2.5 rounded-lg text-sm font-medium shadow transition
-                <?= $totalComments == 0
-                    ? 'bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700' ?>">
+        <?= $totalComments == 0
+            ? 'bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed'
+            : 'bg-blue-600 text-white hover:bg-blue-700' ?>">
                 View Comment
             </button>
         </div>
 
-        <?php if (!$viewOnly): ?>
-            <div>
+        <div class="flex items-center gap-3">
+            <button
+                onclick="location.reload()"
+                class="bg-gray-200 text-gray-800 px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-300 transition">
+                Back
+            </button>
+
+            <?php if (!$viewOnly): ?>
                 <button
                     onclick="openCommentModal(<?= $submission['id'] ?>)"
                     class="bg-gray-800 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-900 transition">
                     Add Comment
                 </button>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
     </div>
 
 </div>

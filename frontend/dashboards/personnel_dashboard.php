@@ -510,6 +510,33 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+        // For Updating the Status of Receipt
+        function updateReceiptStatus(id, status) {
+            fetch(`../../backend/ajax/update_receipt_verification.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: id,
+                        status: status
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Using your existing custom toast notifications!
+                        showToast(`Receipt ${status}!`, "success");
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showToast("Failed to update receipt status.", "error");
+                    }
+                })
+                .catch(err => console.error(err));
+        }
     </script>
 
 </body>
