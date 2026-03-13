@@ -50,32 +50,48 @@ $currentStatus = $latest ? $latest['status'] : null;
         ?>
 
         <?php if ($currentStatus === 'Approved'): ?>
-            <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-60">
+
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-75">
                 <div>
                     <p class="text-sm text-gray-500">Upload</p>
                     <p class="font-semibold text-green-700">Upload Disabled</p>
                 </div>
-                <div class="text-2xl font-bold">+</div>
+                <div class="text-green-600 bg-green-100 p-2 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
             </div>
 
         <?php elseif ($canUploadNewRound): ?>
+
             <a href="student_dashboard.php?page=student_upload_human_grammarian"
-                class="bg-white shadow rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition">
+                class="bg-white shadow rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition group">
                 <div>
                     <p class="text-sm text-gray-500">Upload</p>
-                    <p class="font-semibold text-gray-800">Upload Submission</p>
+                    <p class="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Upload Submission</p>
                 </div>
-                <div class="text-2xl font-bold">+</div>
+                <div class="text-blue-600 bg-blue-50 p-2 rounded-xl group-hover:scale-105 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                </div>
             </a>
 
         <?php else: ?>
-            <div class="bg-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-60">
+
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-75">
                 <div>
                     <p class="text-sm text-gray-500">Upload</p>
-                    <p class="font-semibold text-gray-800">Upload Disabled</p>
+                    <p class="font-semibold text-gray-600">Pending Submission</p>
                 </div>
-                <div class="text-2xl font-bold">⏳</div>
+                <div class="text-yellow-600 bg-yellow-100 p-2 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
             </div>
+
         <?php endif; ?>
 
 
@@ -93,7 +109,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                 </div>
             </a>
         <?php else: ?>
-            <div class="bg-gray-100 border border-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-70 cursor-not-allowed">
+            <div class="bg-gray-100 border border-gray-200 rounded-lg p-5 w-64 flex items-center justify-between opacity-70">
                 <div>
                     <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Locked</p>
                     <p class="font-semibold text-gray-500">Result Not Available</p>

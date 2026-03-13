@@ -136,7 +136,7 @@ if (!$latestTransaction) {
                                         </a>
                                     
                                     <?php elseif ($status === 'Approved'): ?>
-                                        <span class="inline-flex items-center justify-center bg-gray-50 text-gray-400 border border-gray-200 px-4 py-2 rounded-lg text-xs font-semibold cursor-not-allowed gap-2">
+                                        <span class="inline-flex items-center justify-center bg-gray-50 text-gray-400 border border-gray-200 px-4 py-2 rounded-lg text-xs font-semibold gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                             </svg>
@@ -144,7 +144,7 @@ if (!$latestTransaction) {
                                         </span>
                                     
                                     <?php else: ?>
-                                        <span class="inline-flex items-center justify-center bg-gray-50 text-gray-500 border border-gray-200 px-4 py-2 rounded-lg text-xs font-semibold cursor-not-allowed gap-2">
+                                        <span class="inline-flex items-center justify-center bg-gray-50 text-gray-500 border border-gray-200 px-4 py-2 rounded-lg text-xs font-semibold gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
