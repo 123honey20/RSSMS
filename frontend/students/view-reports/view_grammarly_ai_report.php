@@ -72,12 +72,22 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600";
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">Submitted Document</h3>
+        <div class="lg:col-span-2 bg-white rounded-lg shadow p-6 flex flex-col h-[775px]">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b shrink-0">
+                <h3 class="text-lg font-semibold text-gray-800">Submitted Document</h3>
+                <?php if (file_exists($absolutePath)): ?>
+                    <button onclick="openFileModal()" class="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-2 transition font-semibold border border-blue-100 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        </svg>
+                        Expand File
+                    </button>
+                <?php endif; ?>
+            </div>
 
             <?php if (file_exists($absolutePath)): ?>
-                <div class="rounded-xl overflow-hidden border shadow-sm">
-                    <iframe src="<?php echo $relativePath; ?>" class="w-full h-[700px] bg-gray-50" frameborder="0"></iframe>
+                <div class="rounded-xl overflow-hidden border shadow-sm flex-1">
+                    <iframe src="<?php echo $relativePath; ?>" class="w-full h-full bg-gray-50" frameborder="0"></iframe>
                 </div>
             <?php else: ?>
                 <div class="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
@@ -194,6 +204,32 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600";
     </div>
 </div>
 
+<div id="fileDetailModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 backdrop-blur-md p-4 sm:p-6 transition-opacity">
+    <div class="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[95vh]">
+
+        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-100 text-blue-600 p-1.5 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800">Document Viewer</h3>
+            </div>
+            <button onclick="closeFileModal()" class="text-gray-500 hover:text-white bg-gray-200 hover:bg-red-500 p-1.5 rounded-full transition shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex-1 w-full bg-gray-200 p-2 sm:p-4">
+            <iframe src="<?php echo $relativePath; ?>" class="w-full h-full rounded-xl border bg-white border-gray-300 shadow-sm" frameborder="0"></iframe>
+        </div>
+
+    </div>
+</div>
+
 <script>
     function openCommentModalDetails(btn) {
         // Read data directly from the button that was clicked
@@ -219,6 +255,25 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600";
     document.getElementById('commentDetailModal').addEventListener('click', function(e) {
         if (e.target === this) {
             closeCommentModalDetails();
+        }
+    });
+
+    // === FILE MODAL SCRIPTS ===
+    function openFileModal() {
+        const modal = document.getElementById('fileDetailModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeFileModal() {
+        const modal = document.getElementById('fileDetailModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    document.getElementById('fileDetailModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeFileModal();
         }
     });
 </script>

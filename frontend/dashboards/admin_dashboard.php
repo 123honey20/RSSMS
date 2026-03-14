@@ -102,7 +102,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                     </div>
                 </div>
 
-                <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-900 transition">
+                <a href="admin_dashboard.php?page=feedback_admin" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-900 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8-1.125 0-2.197-.183-3.21-.516L3 21l1.516-5.79C3.183 14.197 3 13.125 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
@@ -209,6 +209,22 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         include '../department-courses/edit_course.php';
                         break;
 
+                    case 'feedback_admin':
+                        include '../feedback/feedback-admin/admin_feedback.php';
+                        break;
+
+                    case 'feedback_admin_add':
+                        include '../feedback/feedback-admin/admin_add_feedback.php';
+                        break;
+
+                    case 'feedback_admin_view':
+                        include '../feedback/feedback-admin/admin_view_feedback.php';
+                        break;
+
+                    case 'feedback_admin_edit':
+                        include '../feedback/feedback-admin/admin_edit_feedback.php';
+                        break;
+
                     default:
                 ?>
                         <div class="bg-white rounded-lg shadow p-6">
@@ -290,9 +306,6 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             modalp.classList.remove("flex");
         }
     </script>
-
-
-
 
 </body>
 

@@ -40,26 +40,25 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
         </div>
     </div>
 
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-100 text-gray-700">
-                    <th class="p-3 border-b text-xs text-center">#</th>
-                    <th class="p-3 border-b text-xs">School ID</th>
-                    <th class="p-3 border-b text-xs text-center">Status</th>
-                    <th class="p-3 border-b text-xs text-center">Profile</th>
-                    <th class="p-3 border-b text-xs text-center">Action</th>
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="w-full text-sm text-left text-gray-600">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+                <tr>
+                    <th class="px-6 py-4 font-semibold text-center">#</th>
+                    <th class="px-6 py-4 font-semibold">School ID</th>
+                    <th class="px-6 py-4 font-semibold text-center">Status</th>
+                    <th class="px-6 py-4 font-semibold text-center">Profile</th>
+                    <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
             </thead>
-            <tbody id="personnelTableBody"></tbody>
+            <tbody id="personnelTableBody" class="divide-y divide-gray-100"></tbody>
         </table>
 
-        <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm"></div>
-        <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-600 text-center"></div>
+        <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm pb-4"></div>
+        <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-500 text-center pb-4 pr-6"></div>
     </div>
 </div>
 
-<!-- Personnel Profile -->
 
 <div id="profileModalPersonnel" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
     <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden">
@@ -70,45 +69,48 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 ✕
             </button>
         </div>
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-
-                <div>
-                    <p class="text-gray-500 text-xs uppercase">School ID</p>
-                    <p class="font-medium" id="p_school_id"></p>
+        <div class="p-6 overflow-y-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800">
+                
+                <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 mb-2 flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center shrink-0 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Full Name</p>
+                        <p class="font-bold text-lg text-gray-900 leading-none" id="p_full_name"></p>
+                    </div>
                 </div>
 
                 <div>
-                    <p class="text-gray-500 text-xs uppercase">Email</p>
-                    <p class="font-medium" id="p_email"></p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                    <p class="font-bold text-gray-900" id="p_school_id"></p>
+                </div>
+                <div>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
+                    <p class="font-medium text-gray-800" id="p_email"></p>
                 </div>
 
-                <div>
-                    <p class="text-gray-500 text-xs uppercase">Full Name</p>
-                    <p class="font-medium" id="p_full_name"></p>
-                </div>
+                <div class="md:col-span-2 border-t border-gray-100 my-1"></div>
 
                 <div>
-                    <p class="text-gray-500 text-xs uppercase">Department</p>
-                    <p class="font-medium" id="p_department_id"></p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Department</p>
+                    <p class="font-medium text-gray-800" id="p_department_id"></p>
+                </div>
+                <div>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Role</p>
+                    <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block" id="p_service_role"></span>
                 </div>
 
-                <div>
-                    <p class="text-gray-500 text-xs uppercase">Service Role</p>
-                    <p class="font-medium" id="p_service_role"></p>
-                </div>
-
-                <div>
-                    <p class="text-gray-500 text-xs uppercase">Status</p>
-                    <span id="p_status"
-                        class="inline-block px-3 py-1 mt-2 text-xs rounded-full font-semibold bg-green-100 text-green-700">
-                    </span>
+                <div class="md:col-span-2">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Account Status</p>
+                    <span id="p_status" class="inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-gray-100 text-gray-700"></span>
                 </div>
 
             </div>
-            <div class="mt-6 flex justify-end">
-                <button onclick="closeProfilePersonnel()"
-                    class="bg-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 text-sm font-medium">
+
+            <div class="mt-8 flex justify-end">
+                <button onclick="closeProfilePersonnel()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">
                     Close
                 </button>
             </div>
@@ -117,7 +119,6 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
     </div>
 </div>
 
-
 <script>
     let currentPage = 1;
     let currentStatusFilter = 'All';
@@ -125,21 +126,22 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 
     function fetchPersonnel(page = 1) {
         currentPage = page;
-
         const search = document.getElementById('personnelSearch').value;
 
         fetch(`../../backend/ajax/fetch_personnel.php?p=${page}&search=${encodeURIComponent(search)}&status=${currentStatusFilter}`)
             .then(response => response.json())
             .then(data => {
-
                 const tbody = document.getElementById('personnelTableBody');
                 tbody.innerHTML = '';
 
                 if (data.personnel.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="5" class="text-center p-4 text-gray-500">
-                                No Personnel Accounts Found.
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                <p class="font-medium text-gray-500">No Personnel Accounts Found.</p>
                             </td>
                         </tr>`;
                     document.getElementById('recordInfo').textContent = '';
@@ -149,23 +151,22 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 let counter = (data.currentPage - 1) * 10 + 1;
 
                 data.personnel.forEach(person => {
-
                     const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-50 transition";
+                    row.className = "hover:bg-gray-50/50 transition";
 
                     row.innerHTML = `
-                        <td class="p-3 text-xs border-b text-center">${counter++}.</td>
-                        <td class="p-3 border-b"></td>
-                        <td class="p-3 border-b text-center"></td>
-                        <td class="p-3 border-b text-center">
-                            <button class="text-blue-700 hover:underline text-sm"
-                                onclick='openProfilePersonnel(${JSON.stringify(person)})'>
-                                View
+                        <td class="px-6 py-4 text-center text-gray-500">${counter++}.</td>
+                        <td class="px-6 py-4 font-semibold text-gray-800"></td>
+                        <td class="px-6 py-4 text-center"></td>
+                        <td class="px-6 py-4 text-center">
+                            <button class="text-blue-700 px-4 py-1.5 hover:underline text-xs"
+                                onclick='openProfilePersonnel(${JSON.stringify(person).replace(/'/g, "&#39;")})'>
+                                View Profile
                             </button>
                         </td>
-                        <td class="p-3 border-b text-center">
+                        <td class="px-6 py-4 flex justify-center gap-2">
                             <a href="../dashboards/admin_dashboard.php?page=edit_personnel&id=${person.id}"
-                                class="text-blue-700 hover:underline text-sm">
+                                class="text-blue-700 px-4 py-1.5 hover:underline text-xs">
                                 Update
                             </a>
                         </td>
@@ -175,17 +176,17 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 
                     if (person.status === 'Pending') {
                         row.children[2].innerHTML = `
-                            <form action="../../backend/actions/approve_user.php" method="POST">
+                            <form action="../../backend/actions/approve_user.php" method="POST" class="inline">
                                 <input type="hidden" name="user_id" value="${person.id}">
                                 <button type="submit"
-                                    class="bg-blue-900 text-white px-3 py-1 rounded hover:bg-blue-800 text-sm">
+                                    class="bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 transition shadow-sm border border-blue-100">
                                     Approve
                                 </button>
                             </form>
                         `;
                     } else {
                         row.children[2].innerHTML = `
-                            <span class="px-3 py-1 text-xs rounded-full text-green-700 font-semibold">
+                            <span class="bg-green-50 text-green-700 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100">
                                 Approved
                             </span>
                         `;
@@ -201,45 +202,26 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 const endRecord = Math.min(currentPage * 10, totalRows);
 
                 document.getElementById('recordInfo').textContent =
-                    totalRows > 0 ?
-                    `Showing ${startRecord} - ${endRecord} of ${totalRows} Personnel` :
-                    '';
-
+                    totalRows > 0 ? `Showing ${startRecord} - ${endRecord} of ${totalRows} Personnel` : '';
             })
-            .catch(error => {
-                console.error(error);
-            });
+            .catch(error => console.error(error));
     }
 
     function renderPagination(totalPages, currentPage) {
         const container = document.getElementById('paginationContainer');
         container.innerHTML = '';
-
         if (totalPages <= 1) return;
 
         if (currentPage > 1) {
-            container.innerHTML += `
-                <button onclick="fetchPersonnel(${currentPage - 1})"
-                    class="px-2 py-1 border rounded text-xs hover:bg-gray-100">
-                    Prev
-                </button>`;
+            container.innerHTML += `<button onclick="fetchPersonnel(${currentPage - 1})" class="px-3 py-1 border border-gray-200 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition shadow-sm">Prev</button>`;
         }
 
         for (let i = 1; i <= totalPages; i++) {
-            container.innerHTML += `
-                <button onclick="fetchPersonnel(${i})"
-                    class="px-2 py-1 text-xs border rounded
-                    ${i === currentPage ? 'bg-blue-900 text-white' : 'hover:bg-gray-100'}">
-                    ${i}
-                </button>`;
+            container.innerHTML += `<button onclick="fetchPersonnel(${i})" class="px-3 py-1 text-xs border border-gray-200 rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 text-white border-blue-900' : 'text-gray-600 hover:bg-gray-50'}">${i}</button>`;
         }
 
         if (currentPage < totalPages) {
-            container.innerHTML += `
-                <button onclick="fetchPersonnel(${currentPage + 1})"
-                    class="px-2 py-1 border text-xs rounded hover:bg-gray-100">
-                    Next
-                </button>`;
+            container.innerHTML += `<button onclick="fetchPersonnel(${currentPage + 1})" class="px-3 py-1 border border-gray-200 text-gray-600 text-xs rounded-md hover:bg-gray-50 transition shadow-sm">Next</button>`;
         }
     }
 
@@ -250,12 +232,8 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 
     document.getElementById('personnelSearch').addEventListener('keyup', () => {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            fetchPersonnel(1);
-        }, 400);
+        searchTimeout = setTimeout(() => fetchPersonnel(1), 400);
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        fetchPersonnel(1);
-    });
+    document.addEventListener('DOMContentLoaded', () => fetchPersonnel(1));
 </script>

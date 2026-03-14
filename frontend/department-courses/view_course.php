@@ -17,35 +17,27 @@
     </div>
 
 
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-100 text-gray-700">
-                    <th class="p-3 border-b text-xs text-center">#</th>
-                    <th class="p-3 border-b text-xs">Course</th>
-                    <th class="p-3 border-b text-xs text-center">Department</th>
-                    <th class="p-3 border-b text-xs text-center">Action</th>
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="w-full text-sm text-left text-gray-600">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+                <tr>
+                    <th class="px-6 py-4 font-semibold text-center">#</th>
+                    <th class="px-6 py-4 font-semibold">Course Name</th>
+                    <th class="px-6 py-4 font-semibold text-center">Department</th>
+                    <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
             </thead>
-
-            <tbody id="courseTableBody">
-            </tbody>
-
+            <tbody id="courseTableBody" class="divide-y divide-gray-100"></tbody>
         </table>
 
-        <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm"></div>
-        <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-600 text-center"></div>
-
-
-        <div class="flex justify-end mt-3 text-xs text-gray-600 text-center">
-        </div>
-
+        <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm pb-4"></div>
+        <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-500 text-center pb-4 pr-6"></div>
     </div>
-
 </div>
 
 <script>
     let currentPage = 1;
+    let searchTimeout;
 
     function fetchCourses(page = 1) {
         const search = document.getElementById('courseSearch').value;
@@ -53,33 +45,34 @@
         fetch(`../../backend/ajax/fetch_courses.php?p=${page}&search=${encodeURIComponent(search)}`)
             .then(response => response.json())
             .then(data => {
-
                 const tbody = document.getElementById('courseTableBody');
                 tbody.innerHTML = '';
 
                 if (data.courses.length === 0) {
                     tbody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center p-4 text-gray-500">
-                            No Courses Found.
-                        </td>
-                    </tr>`;
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                <p class="font-medium text-gray-500">No Courses Found.</p>
+                            </td>
+                        </tr>`;
                     document.getElementById('recordInfo').textContent = '';
                 } else {
-
                     let counter = (data.currentPage - 1) * 10 + 1;
 
                     data.courses.forEach(course => {
                         const row = document.createElement('tr');
-                        row.className = "hover:bg-gray-50 transition";
+                        row.className = "hover:bg-gray-50/50 transition";
 
                         row.innerHTML = `
-                            <td class="p-3 text-xs border-b text-center">${counter++}.</td>
-                            <td class="p-3 border-b"></td>
-                            <td class="p-3 border-b text-center"></td>
-                            <td class="p-3 border-b text-center">
+                            <td class="px-6 py-4 text-center text-gray-500">${counter++}.</td>
+                            <td class="px-6 py-4 font-semibold text-gray-800"></td>
+                            <td class="px-6 py-4 text-center text-gray-600"></td>
+                            <td class="px-6 py-4 flex justify-center gap-2">
                                 <a href="../dashboards/admin_dashboard.php?page=edit_course&id=${course.id}"
-                                   class="text-blue-700 hover:underline text-sm">
+                                   class="text-blue-700 px-4 py-1.5 hover:underline text-xs">
                                    Update
                                 </a>
                             </td>
@@ -90,72 +83,39 @@
 
                         tbody.appendChild(row);
                     });
-
                 }
 
                 renderPagination(data.totalPages, data.currentPage);
 
                 const startRecord = (data.totalRows > 0) ? ((page - 1) * 10 + 1) : 0;
                 const endRecord = Math.min(page * 10, data.totalRows);
-                document.getElementById('recordInfo').textContent =
-                    `Showing ${startRecord} - ${endRecord} of ${data.totalRows} Courses`;
+                document.getElementById('recordInfo').textContent = `Showing ${startRecord} - ${endRecord} of ${data.totalRows} Courses`;
             })
-            .catch(error => {
-                console.error(error);
-                document.getElementById('courseTableBody').innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center p-4 text-red-500">
-                            Failed to load courses.
-                        </td>
-                    </tr>`;
-                    document.getElementById('recordInfo').textContent = '';
-            });
+            .catch(error => console.error(error));
     }
 
     function renderPagination(totalPages, currentPage) {
         const container = document.getElementById('paginationContainer');
         container.innerHTML = '';
-
         if (totalPages <= 1) return;
 
         if (currentPage > 1) {
-            container.innerHTML += `
-            <button onclick="fetchCourses(${currentPage - 1})"
-                class="px-2 py-1 border rounded text-xs hover:bg-gray-100">
-                Prev
-            </button>`;
+            container.innerHTML += `<button onclick="fetchCourses(${currentPage - 1})" class="px-3 py-1 border border-gray-200 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition shadow-sm">Prev</button>`;
         }
 
         for (let i = 1; i <= totalPages; i++) {
-            container.innerHTML += `
-            <button onclick="fetchCourses(${i})"
-                class="px-2 py-1 text-xs border rounded
-                ${i === currentPage ? 'bg-blue-900 text-white' : 'hover:bg-gray-100'}">
-                ${i}
-            </button>`;
+            container.innerHTML += `<button onclick="fetchCourses(${i})" class="px-3 py-1 text-xs border border-gray-200 rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 text-white border-blue-900' : 'text-gray-600 hover:bg-gray-50'}">${i}</button>`;
         }
 
         if (currentPage < totalPages) {
-            container.innerHTML += `
-            <button onclick="fetchCourses(${currentPage + 1})"
-                class="px-2 py-1 border text-xs rounded hover:bg-gray-100">
-                Next
-            </button>`;
+            container.innerHTML += `<button onclick="fetchCourses(${currentPage + 1})" class="px-3 py-1 border border-gray-200 text-gray-600 text-xs rounded-md hover:bg-gray-50 transition shadow-sm">Next</button>`;
         }
     }
 
-    let searchTimeout;
-
     document.getElementById('courseSearch').addEventListener('keyup', () => {
         clearTimeout(searchTimeout);
-
-        searchTimeout = setTimeout(() => {
-            fetchCourses(1);
-        }, 400);
+        searchTimeout = setTimeout(() => fetchCourses(1), 400);
     });
 
-
-    document.addEventListener('DOMContentLoaded', () => {
-        fetchCourses(1);
-    });
+    document.addEventListener('DOMContentLoaded', () => fetchCourses(1));
 </script>

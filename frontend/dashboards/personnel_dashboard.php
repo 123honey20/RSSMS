@@ -131,7 +131,7 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                     <span>Communicate</span>
                 </a>
 
-                <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-900 transition">
+                <a href="personnel_dashboard.php?page=personnel_feedback" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-900 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.036 6.26a1 1 0 00.95.69h6.58c.969 0 1.371 1.24.588 1.81l-5.326 3.87a1 1 0 00-.364 1.118l2.036 6.26c.3.921-.755 1.688-1.54 1.118l-5.326-3.87a1 1 0 00-1.176 0l-5.326 3.87c-.784.57-1.838-.197-1.539-1.118l2.036-6.26a1 1 0 00-.364-1.118L2.845 11.687c-.783-.57-.38-1.81.588-1.81h6.58a1 1 0 00.95-.69l2.036-6.26z" />
@@ -185,6 +185,10 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
 
                     case 'receipt_verification':
                         include "../personnel/personnel-research-services/receipt_verification.php";
+                        break;
+
+                    case 'personnel_feedback':
+                        include "../feedback/feedback-personnel/view_feedback.php";
                         break;
 
                     default:
