@@ -38,8 +38,14 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Invisible Custom Scrollbar for a cleaner look */
-        .custom-scrollbar::-webkit-scrollbar { width: 0px; background: transparent; }
-        [x-cloak] { display: none !important; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -70,7 +76,7 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
     <div class="flex pt-[72px] min-h-screen">
 
         <aside class="fixed left-0 top-[72px] w-64 h-[calc(100vh-72px)] bg-white border-r border-gray-200 flex flex-col z-40 overflow-y-auto custom-scrollbar">
-            
+
             <nav class="flex-1 py-5 flex flex-col gap-4">
 
                 <div class="px-5 mb-2">
@@ -83,12 +89,24 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 <?php
                 $submissionPage = '';
                 switch ($serviceRole) {
-                    case 'Grammarly & AI Checking': $submissionPage = 'submissions_g_ai'; break;
-                    case 'Ethics': $submissionPage = 'submissions_ethics'; break;
-                    case 'Librarian': $submissionPage = 'submissions_librarian'; break;
-                    case 'Statistician': $submissionPage = 'submissions_statistician'; break;
-                    case 'Human Grammarian': $submissionPage = 'submissions_human_grammarian'; break;
-                    default: $submissionPage = 'dashboard'; break;
+                    case 'Grammarly & AI Checking':
+                        $submissionPage = 'submissions_g_ai';
+                        break;
+                    case 'Ethics':
+                        $submissionPage = 'submissions_ethics';
+                        break;
+                    case 'Librarian':
+                        $submissionPage = 'submissions_librarian';
+                        break;
+                    case 'Statistician':
+                        $submissionPage = 'submissions_statistician';
+                        break;
+                    case 'Human Grammarian':
+                        $submissionPage = 'submissions_human_grammarian';
+                        break;
+                    default:
+                        $submissionPage = 'dashboard';
+                        break;
                 }
                 ?>
 
@@ -99,18 +117,22 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
-                    
+
                     <div x-show="open" class="flex flex-col gap-0.5 px-3" x-cloak>
                         <a href="personnel_dashboard.php?page=<?php echo $submissionPage; ?>" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                             Student Submissions
                         </a>
 
                         <?php if ($serviceRole === 'Grammarly & AI Checking'): ?>
-                        <a href="personnel_dashboard.php?page=receipt_verification" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M7 3h10a2 2 0 012 2v16l-7-3-7 3V5a2 2 0 012-2z" /></svg>
-                            Receipt Verification
-                        </a>
+                            <a href="personnel_dashboard.php?page=receipt_verification" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M7 3h10a2 2 0 012 2v16l-7-3-7 3V5a2 2 0 012-2z" />
+                                </svg>
+                                Receipt Verification
+                            </a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -122,14 +144,18 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
-                    
+
                     <div x-show="open" class="flex flex-col gap-0.5 px-3" x-cloak>
-                        <a href="#" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5m9-2a9 9 0 11-4.5-7.8L21 3l-1.2 6.5A8.96 8.96 0 0117 12z" /></svg>
-                            Communicate
+                        <a href="personnel_dashboard.php?page=personnel_chat" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] text-gray-600 font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5m9-2a9 9 0 11-4.5-7.8L21 3l-1.2 6.5A8.96 8.96 0 0117 12z" />
+                                </svg>
+                            <span>Communicate</span>
                         </a>
                         <a href="personnel_dashboard.php?page=personnel_feedback" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.036 6.26a1 1 0 00.95.69h6.58c.969 0 1.371 1.24.588 1.81l-5.326 3.87a1 1 0 00-.364 1.118l2.036 6.26c.3.921-.755 1.688-1.54 1.118l-5.326-3.87a1 1 0 00-1.176 0l-5.326 3.87c-.784.57-1.838-.197-1.539-1.118l2.036-6.26a1 1 0 00-.364-1.118L2.845 11.687c-.783-.57-.38-1.81.588-1.81h6.58a1 1 0 00.95-.69l2.036-6.26z" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.036 6.26a1 1 0 00.95.69h6.58c.969 0 1.371 1.24.588 1.81l-5.326 3.87a1 1 0 00-.364 1.118l2.036 6.26c.3.921-.755 1.688-1.54 1.118l-5.326-3.87a1 1 0 00-1.176 0l-5.326 3.87c-.784.57-1.838-.197-1.539-1.118l2.036-6.26a1 1 0 00-.364-1.118L2.845 11.687c-.783-.57-.38-1.81.588-1.81h6.58a1 1 0 00.95-.69l2.036-6.26z" />
+                            </svg>
                             Rating and Feedback
                         </a>
                     </div>
@@ -139,10 +165,13 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
 
             <div class="p-4 border-t border-gray-100 mt-auto flex flex-col gap-1">
                 <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                     Settings
                 </a>
-                
+
                 <a href="../auth/logout.php" class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors mt-1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2-2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
@@ -188,6 +217,10 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                         include "../feedback/feedback-personnel/view_feedback.php";
                         break;
 
+                    case 'personnel_chat':
+                        include "../communicate/personnel-communicate/personnel_chat.php";
+                        break;
+
                     default:
                 ?>
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 flex flex-col items-center justify-center text-center h-[50vh]">
@@ -209,7 +242,7 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
         </main>
 
     </div>
-    
+
     <div id="toastContainer"
         class="fixed top-6 right-6 space-y-3 z-[9999]"></div>
 
