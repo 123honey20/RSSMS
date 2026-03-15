@@ -110,11 +110,6 @@ $stmtComments->close();
             <p class="text-sm text-gray-500 mt-1">View your aggregated evaluation scores and anonymous student feedback.</p>
         </div>
         <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 flex items-center gap-3">
-            <div class="bg-blue-100 p-2 rounded-md text-blue-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
             <div>
                 <p class="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Service Type</p>
                 <p class="text-sm font-semibold text-blue-900"><?php echo htmlspecialchars($service_role_name); ?></p>
@@ -137,31 +132,98 @@ $stmtComments->close();
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <?php foreach ($rubricAverages as $rubric): ?>
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                    
-                    <div class="bg-gray-50 border-b border-gray-100 px-6 py-5 flex justify-between items-center">
-                        <h2 class="text-lg font-bold text-gray-800 truncate pr-4"><?php echo htmlspecialchars($rubric['name']); ?></h2>
+
+                    <div class="bg-gray-50 border-b border-gray-100 px-6 py-5 flex justify-between items-center relative z-20">
+
+                        <div class="group flex items-center flex-1 min-w-0 pr-6 relative cursor-help">
+                            <h2 class="text-lg font-bold text-gray-800 truncate">
+                                <?php echo htmlspecialchars($rubric['name']); ?>
+                            </h2>
+
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+
+                            <div class="absolute left-0 top-full mt-3 w-max max-w-xs sm:max-w-sm md:max-w-md bg-gray-900 text-gray-100 text-xs font-medium px-4 py-3 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 whitespace-normal leading-relaxed">
+                                <?php echo htmlspecialchars($rubric['name']); ?>
+                                <div class="absolute -top-1.5 left-5 w-3 h-3 bg-gray-900 transform rotate-45 rounded-sm"></div>
+                            </div>
+                        </div>
+
                         <div class="text-right shrink-0">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Evals</p>
-                            <p class="text-xl font-black text-blue-600 leading-none"><?php echo $rubric['total_evaluations']; ?></p>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Total Evals</p>
+                            <p class="text-2xl font-black text-blue-600 leading-none"><?php echo $rubric['total_evaluations']; ?></p>
                         </div>
                     </div>
 
-                    <div class="p-6 flex-1">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b pb-2">Average Score Per Criterion</h4>
-                        
-                        <div class="space-y-4">
-                            <?php foreach ($rubric['criteria'] as $criterion): ?>
-                                <div>
-                                    <div class="flex justify-between items-end mb-1">
-                                        <span class="text-sm font-semibold text-gray-700"><?php echo htmlspecialchars($criterion['name']); ?></span>
-                                        <span class="text-sm font-black text-gray-900"><?php echo $criterion['average_score']; ?></span>
+
+                    <div class="p-6 md:p-8 flex-1 flex flex-col bg-white">
+                        <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                            <h4 class="text-sm font-bold text-gray-800 uppercase tracking-wider">Average Score Per Criterion</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 shadow-sm"></span>
+                                <span class="text-xs font-medium text-gray-500">Max Score: 4.0</span>
+                            </div>
+                        </div>
+
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-[40%] right-10 flex justify-between pointer-events-none z-0">
+                                <div class="w-px h-full border-l border-dashed border-gray-200"></div>
+                                <div class="w-px h-full border-l border-dashed border-gray-200"></div>
+                                <div class="w-px h-full border-l border-dashed border-gray-200"></div>
+                                <div class="w-px h-full border-l border-dashed border-gray-200"></div>
+                                <div class="w-px h-full border-l border-dashed border-gray-200"></div>
+                            </div>
+
+                            <div class="space-y-6 relative z-10 pb-2">
+                                <?php foreach ($rubric['criteria'] as $criterion): ?>
+                                    <?php
+                                    $score = floatval($criterion['average_score']);
+                                    $percentage = min(100, ($score / 4) * 100);
+
+                                    // Dynamic Gradient based on performance score
+                                    if ($percentage >= 85) {
+                                        $barColor = "from-emerald-400 to-green-500";
+                                    } elseif ($percentage >= 60) {
+                                        $barColor = "from-blue-400 to-indigo-500";
+                                    } else {
+                                        $barColor = "from-amber-400 to-orange-500";
+                                    }
+                                    ?>
+                                    <div class="flex items-center group">
+                                        <div class="w-2/5 pr-5">
+                                            <span class="text-sm font-medium text-gray-600 line-clamp-2 leading-snug group-hover:text-blue-700 transition-colors" title="<?php echo htmlspecialchars($criterion['name']); ?>">
+                                                <?php echo htmlspecialchars($criterion['name']); ?>
+                                            </span>
+                                        </div>
+
+                                        <div class="w-3/5 relative flex items-center">
+                                            <div class="flex-1 bg-gray-100 rounded-full h-3.5 shadow-inner overflow-hidden mr-10 relative">
+                                                <div class="h-full rounded-full bg-gradient-to-r <?php echo $barColor; ?> shadow-[0_0_10px_rgba(0,0,0,0.1)] transition-all duration-700 ease-out"
+                                                    style="width: <?php echo $percentage; ?>%">
+                                                </div>
+                                            </div>
+                                            <div class="absolute right-0 w-10 text-right">
+                                                <span class="text-sm font-black text-gray-800"><?php echo number_format($score, 1); ?></span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <?php $percentage = min(100, ($criterion['average_score'] / 4) * 100); ?>
-                                    <div class="w-full bg-gray-100 rounded-full h-2.5">
-                                        <div class="bg-blue-500 h-2.5 rounded-full" style="width: <?php echo $percentage; ?>%"></div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="flex mt-2 pt-3 border-t border-gray-200 relative z-10 bg-white">
+                                <div class="w-2/5"></div>
+                                <div class="w-3/5 relative pr-10">
+                                    <div class="flex justify-between text-[11px] font-bold text-gray-400">
+                                        <span class="w-4 text-center -ml-2">0</span>
+                                        <span class="w-4 text-center">1</span>
+                                        <span class="w-4 text-center">2</span>
+                                        <span class="w-4 text-center">3</span>
+                                        <span class="w-4 text-center -mr-2">4</span>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
+                            </div>
+
                         </div>
                     </div>
 
@@ -179,7 +241,7 @@ $stmtComments->close();
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
-                Anonymous Student Feedback
+                Student Feedback
             </h2>
 
             <?php if (empty($comments)): ?>

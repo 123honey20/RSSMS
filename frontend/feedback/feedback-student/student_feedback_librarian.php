@@ -26,7 +26,7 @@ if (!$submission) {
 $completedRubrics = [];
 $serviceType = 'librarian';
 $stmtCompleted = $conn->prepare("SELECT rubric_id FROM student_evaluations WHERE submission_id = ? AND service_type = ?");
-$stmtCompleted->bind_param("is", $submissionId, $serviceType); 
+$stmtCompleted->bind_param("is", $submissionId, $serviceType);
 $stmtCompleted->execute();
 $resCompleted = $stmtCompleted->get_result();
 while ($row = $resCompleted->fetch_assoc()) {
@@ -72,17 +72,17 @@ $jsonRubrics = json_encode($rubrics);
 
 <div class="max-w-5xl mx-auto pb-12 pt-6" x-data="studentEvaluationForm(<?php echo htmlspecialchars($jsonRubrics, ENT_QUOTES, 'UTF-8'); ?>)">
 
-    <div x-show="notification.show" 
-         x-transition:enter="transition-all duration-500 transform"
-         x-transition:enter-start="opacity-0 translate-x-full"
-         x-transition:enter-end="opacity-100 translate-x-0"
-         x-transition:leave="transition-all duration-500 transform"
-         x-transition:leave-start="opacity-100 translate-x-0"
-         x-transition:leave-end="opacity-0 translate-x-full"
-         style="display: none;"
-         class="fixed top-6 right-6 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50"
-         :class="notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'">
-        
+    <div x-show="notification.show"
+        x-transition:enter="transition-all duration-500 transform"
+        x-transition:enter-start="opacity-0 translate-x-full"
+        x-transition:enter-end="opacity-100 translate-x-0"
+        x-transition:leave="transition-all duration-500 transform"
+        x-transition:leave-start="opacity-100 translate-x-0"
+        x-transition:leave-end="opacity-0 translate-x-full"
+        style="display: none;"
+        class="fixed top-6 right-6 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50"
+        :class="notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'">
+
         <div class="rounded-full p-1" :class="notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'">
             <svg x-show="notification.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
@@ -119,13 +119,55 @@ $jsonRubrics = json_encode($rubrics);
             </div>
         </div>
 
-        <div class="w-full md:w-auto">
+        <div class="w-full md:w-64 relative" x-data="{ dropdownOpen: false }">
             <label class="block text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Select Evaluation Instrument</label>
-            <select x-model="selectedRubricId" class="w-full md:w-64 bg-white text-gray-800 text-sm rounded-lg px-3 py-2 border-0 focus:ring-2 focus:ring-blue-300 shadow-sm cursor-pointer font-medium">
-                <template x-for="rubric in rubrics" :key="rubric.id">
-                    <option :value="rubric.id" :disabled="rubric.isCompleted" x-text="rubric.isCompleted ? rubric.name + ' (Completed)' : rubric.name"></option>
-                </template>
-            </select>
+
+            <button @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" type="button"
+                class="w-full bg-white text-gray-800 text-sm rounded-lg px-3 py-2 border border-transparent focus:ring-2 focus:ring-blue-300 shadow-sm flex justify-between items-center transition-all font-medium">
+
+                <span class="truncate pr-3" x-text="activeRubric ? activeRubric.name : 'Select a Rubric...'"></span>
+
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+
+            <div x-show="dropdownOpen"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 translate-y-1"
+                class="absolute mt-1 w-full md:w-72 right-0 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden"
+                style="display: none;">
+
+                <ul class="max-h-56 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+                    <template x-for="rubric in rubrics" :key="rubric.id">
+                        <li>
+                            <button type="button"
+                                @click="if(!rubric.isCompleted) { selectedRubricId = rubric.id; dropdownOpen = false; }"
+                                :class="{
+                                        'bg-blue-50 text-blue-700 font-semibold': selectedRubricId === rubric.id, 
+                                        'opacity-50 cursor-not-allowed bg-gray-50 text-gray-500': rubric.isCompleted, 
+                                        'hover:bg-gray-50 text-gray-700': !rubric.isCompleted && selectedRubricId !== rubric.id
+                                    }"
+                                class="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between">
+
+                                <span class="truncate pr-2" x-text="rubric.name" :title="rubric.name"></span>
+
+                                <div class="shrink-0 flex items-center">
+                                    <span x-show="rubric.isCompleted" class="text-[9px] font-bold uppercase tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded shadow-inner">Done</span>
+
+                                    <svg x-show="selectedRubricId === rubric.id && !rubric.isCompleted" class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                        </li>
+                    </template>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -239,9 +281,9 @@ $jsonRubrics = json_encode($rubrics);
                 this.notification.message = message;
                 this.notification.type = type;
                 this.notification.show = true;
-                
+
                 // Hide automatically after 3 seconds if it's an error
-                if(type === 'error'){
+                if (type === 'error') {
                     setTimeout(() => {
                         this.notification.show = false;
                     }, 3000);
@@ -276,7 +318,7 @@ $jsonRubrics = json_encode($rubrics);
                     .then(data => {
                         if (data.success) {
                             this.showNotification("Evaluation submitted successfully!", 'success');
-                            
+
                             setTimeout(() => {
                                 window.location.href = 'student_dashboard.php?page=student_librarian_approved_result&id=<?php echo $submissionId; ?>';
                             }, 3000);

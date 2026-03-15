@@ -70,7 +70,7 @@ if (!$submission) {
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
 
-                <button onclick="alert('Certificate Viewer coming soon!')" class="group flex items-center p-4 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm transition-all cursor-pointer text-left">
+                <a href="student_dashboard.php?page=student_certificate_statistician&id=<?php echo $submissionId; ?>" class="group flex items-center p-4 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm transition-all cursor-pointer text-left">
                     <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 mr-4 group-hover:scale-105 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -80,7 +80,7 @@ if (!$submission) {
                         <span class="block text-blue-700 font-bold text-sm">View Certificate</span>
                         <span class="block text-gray-500 text-xs mt-0.5 leading-snug">Download or print your approval certificate.</span>
                     </div>
-                </button>
+                </a>
 
                 <a href="student_dashboard.php?page=student_feedback_statistician&id=<?php echo $submissionId; ?>" class="group flex items-center p-4 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm transition-all cursor-pointer text-left">
                     <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 mr-4 group-hover:scale-105 transition-transform">
