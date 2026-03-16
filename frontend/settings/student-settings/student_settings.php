@@ -155,7 +155,10 @@ function studentSettingsApp() {
                 this.isProfileLoading = false;
                 this.isProfileError = !data.success;
                 this.profileMsg = data.message;
-                if(data.success) setTimeout(() => { this.profileMsg = ''; }, 4000);
+                if(data.success) {
+                    // NEW: Refresh the page after 1.5s
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                }
             })
             .catch((error) => {
                 console.error("Fetch Error:", error);
@@ -189,7 +192,8 @@ function studentSettingsApp() {
                 this.passMsg = data.message;
                 if (data.success) {
                     this.passwords.current = ''; this.passwords.new = ''; this.passwords.confirm = '';
-                    setTimeout(() => { this.passMsg = ''; }, 4000);
+                    // NEW: Refresh the page after 1.5s
+                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             })
             .catch(() => {

@@ -45,6 +45,27 @@ $existing = $sub->fetch_assoc();
         <?php unset($_SESSION['flash_success']); ?>
     <?php endif; ?>
 
+    <?php if (isset($_SESSION['flash_error'])): ?>
+        <div id="toast-error" class="fixed top-6 right-6 bg-red-600 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0">
+            <div class="bg-red-500 rounded-full p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+            <span class="font-medium text-sm"><?php echo $_SESSION['flash_error']; ?></span>
+        </div>
+
+        <script>
+            setTimeout(() => {
+                const toast = document.getElementById('toast-error');
+                if (toast) {
+                    toast.classList.add('opacity-0', 'translate-x-full');
+                    setTimeout(() => toast.remove(), 500);
+                }
+            }, 4000); 
+        </script>
+        <?php unset($_SESSION['flash_error']); ?>
+    <?php endif; ?>
 
     <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

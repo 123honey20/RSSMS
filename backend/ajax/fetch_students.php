@@ -21,6 +21,8 @@ $offset = ($page - 1) * $limit;
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status = isset($_GET['status']) ? $_GET['status'] : 'All';
+// NEW: Capture the school year parameter
+$sy = isset($_GET['sy']) ? $_GET['sy'] : 'All';
 
 $where = "WHERE u.role = 'student'";
 $params = [];
@@ -40,6 +42,14 @@ if ($status !== 'All' && in_array($status, ['Pending', 'Approved'])) {
     $types .= "s";
 }
 
+// NEW: School Year filter
+if ($sy !== 'All' && !empty($sy)) {
+    // We target the 's' (students) table alias since that's where the year belongs
+    $where .= " AND s.school_year = ?";
+    $params[] = $sy;
+    $types .= "s";
+}
+
 // Count total
 $countSql = "
     SELECT COUNT(*) as total
@@ -50,6 +60,7 @@ $countSql = "
 
 $countStmt = $conn->prepare($countSql);
 
+// Only bind params if we actually added any to the array
 if (!empty($params)) {
     $countStmt->bind_param($types, ...$params);
 }
@@ -58,6 +69,7 @@ $countStmt->execute();
 $countResult = $countStmt->get_result();
 $totalRows = $countResult->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
+$countStmt->close();
 
 // Fetch students
 $sql = "
@@ -69,6 +81,7 @@ $sql = "
         s.thesis_title,
         s.control_number,
         s.research_leader,
+        s.school_year, 
         d.name AS department_name,
         c.name AS course_name
     FROM users u
@@ -98,6 +111,7 @@ $students = [];
 while ($row = $result->fetch_assoc()) {
     $students[] = $row;
 }
+$stmt->close();
 
 echo json_encode([
     "students" => $students,
@@ -105,3 +119,4 @@ echo json_encode([
     "currentPage" => $page,
     "totalRows" => $totalRows
 ]);
+?>

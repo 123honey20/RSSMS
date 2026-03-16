@@ -1,218 +1,167 @@
 <?php
 require_once "../../backend/config/database.php";
 
+// Fetch Departments
 $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
-?>
 
+$sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
+$active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
+?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title>Registration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration | RSSMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .bg-pattern { background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%232563eb" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); }
+    </style>
 </head>
 
-<body class="bg-gray-200 flex items-center justify-center min-h-screen">
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800 antialiased selection:bg-blue-200 selection:text-blue-900 bg-pattern flex items-center justify-center p-4">
 
-    <div class="bg-white shadow-lg rounded-xl overflow-hidden w-full max-w-4xl p-10 mb-20 mt-10">
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row" x-data="registrationApp()">
+        
+        <div class="w-full md:w-5/12 bg-blue-900 p-10 flex flex-col justify-between text-white relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full bg-blue-800 opacity-20 transform -skew-y-12 scale-150 origin-top-left"></div>
+            
+            <div class="relative z-10">
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="bg-white p-2 rounded-xl shadow-md">
+                        <img src="../images/smcc logo.png" class="w-10 h-10 object-contain">
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-lg tracking-tight leading-tight">SMCC</h2>
+                        <p class="text-[10px] text-blue-200 font-medium tracking-widest uppercase">Research Support</p>
+                    </div>
+                </div>
 
-        <div class="flex items-center gap-3 mb-8">
-            <img src="../images/smcc logo.png" class="w-11 h-11">
-            <span class="font-semibold text-gray-700">Saint Michael College of Caraga</span>
+                <h1 class="text-2xl font-bold mb-4 leading-tight">Research Support Services<br>Monitoring System</h1>
+                <p class="text-blue-100 text-sm leading-relaxed mb-8">Register your account to manage your thesis documents, connect with research personnel, and track your academic progress.</p>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3 text-blue-200 text-sm font-medium">
+                        <svg class="w-5 h-5 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Department-Specific Academic Support
+                    </div>
+                    <div class="flex items-center gap-3 text-blue-200 text-sm font-medium">
+                        <svg class="w-5 h-5 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Centralized Thesis Monitoring
+                    </div>
+                    <div class="flex items-center gap-3 text-blue-200 text-sm font-medium">
+                        <svg class="w-5 h-5 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Direct Chat with Research Personnel
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative z-10 mt-12 text-xs text-blue-300">
+                Already have an account? <br>
+                <a href="login.php" class="text-white font-bold hover:underline mt-1 inline-block">Sign in here &rarr;</a>
+            </div>
         </div>
 
-        <h1 class="text-lg font-bold mb-2">REGISTRATION</h1>
-        <p class="text-xs text-gray-500 mb-8">Please fill out the form below to complete your registration for RSSMS</p>
-
-        <div class="mb-6">
-            <p id="passwordError" class="text-red-600 text-xs mt-1 hidden">
-                Password and Confirm Password do not match.
-            </p>
-        </div>
-
-        <div class="mb-6">
-            <label class="block text-sm font-medium mb-2">I am a</label>
-            <select id="roleSelect" class="bg-gray-100 rounded-lg px-3 py-2 w-60 focus:outline-none" onchange="switchRole()">
-                <option value="student" selected>Student</option>
-                <option value="personnel">Personnel</option>
-            </select>
-        </div>
-
-        <!-- FORM -->
-        <form id="registerForm" method="POST" action="../../backend/actions/register_student_action.php">
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+        <div class="w-full md:w-7/12 p-10 bg-white">
+            
+            <div class="flex justify-between items-end mb-8">
                 <div>
-                    <label class="text-sm">School ID</label>
-                    <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                        <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M5.121 17.804A4 4 0 019 15h6a4 4 0 013.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <input type="text" name="school_id" required
-                            class="w-full bg-transparent focus:outline-none" placeholder="Enter School ID">
-                    </div>
-
+                    <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Create Account</h2>
+                    <p class="text-xs text-gray-500 mt-1">Select your role and fill in your details.</p>
                 </div>
-
-                <div>
-                    <label class="text-sm">Email</label>
-                    <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                        <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M3 8l9 6 9-6M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
-                        </svg>
-                        <input type="email" name="email" required
-                            class="w-full bg-transparent focus:outline-none" placeholder="Enter Email">
-                    </div>
-
+                
+                <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                    <button @click="role = 'student'" :class="role === 'student' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all">
+                        Student
+                    </button>
+                    <button @click="role = 'personnel'" :class="role === 'personnel' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all">
+                        Personnel
+                    </button>
                 </div>
+            </div>
 
-                <div>
-                    <label class="text-sm">Password</label>
-                    <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                        <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M12 11c1.657 0 3 1.343 3 3v3H9v-3c0-1.657 1.343-3 3-3z" />
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M17 11V7a5 5 0 00-10 0v4" />
-                        </svg>
-                        <input type="password" id="password" name="password" required
-                            class="w-full bg-transparent focus:outline-none" placeholder="Enter Password">
-                    </div>
+            <div x-show="errorMsg" class="mb-6 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3" x-cloak>
+                <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <p class="text-sm font-medium text-red-700" x-text="errorMsg"></p>
+            </div>
 
-                </div>
+            <form :action="role === 'student' ? '../../backend/actions/register_student_action.php' : '../../backend/actions/register_personnel_action.php'" method="POST" @submit="validateForm">
+                
+                <input type="hidden" name="school_year" value="<?php echo htmlspecialchars($active_sy); ?>">
 
-                <div>
-                    <label class="text-sm">Confirm Password</label>
-                    <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                        <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M12 11c1.657 0 3 1.343 3 3v3H9v-3c0-1.657 1.343-3 3-3z" />
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M17 11V7a5 5 0 00-10 0v4" />
-                        </svg>
-                        <input type="password" id="confirm_password" placeholder="Confirm Password" name="confirm_password" required
-                            class="w-full bg-transparent focus:outline-none">
-                    </div>
-                </div>
-
-
-                <!-- STUDENT FIELDS -->
-                <div id="studentFields" class="contents">
-
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                     <div>
-                        <label class="text-sm">Thesis Title</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6h8M12 10h8M12 14h8M4 6h4v12H4z" />
-                            </svg>
-                            <input type="text" name="thesis_title" class="w-full bg-transparent focus:outline-none" placeholder="Enter Thesis Title">
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1" x-text="role === 'student' ? 'School ID' : 'School ID'"></label>
+                        <input type="text" name="school_id" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter your School ID">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
+                        <input type="email" name="email" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter your Email">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
+                        <input type="password" name="password" x-model="password" required minlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Confirm Password</label>
+                        <input type="password" name="confirm_password" x-model="confirm_password" required minlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="w-full h-px bg-gray-100 my-6"></div>
+
+                <div x-show="role === 'student'" x-transition x-cloak class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Control Number</label>
+                            <input type="text" name="control_number" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter you Control No.">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Research Leader</label>
+                            <input type="text" name="research_leader" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Full Name">
                         </div>
                     </div>
-
+                    
                     <div>
-                        <label class="text-sm">Control Number</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 20h10M9 4h6v16H9z" />
-                            </svg>
-                            <input type="text" name="control_number" class="w-full bg-transparent focus:outline-none" placeholder="Enter Control Number">
-                        </div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Thesis Title</label>
+                        <input type="text" name="thesis_title" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter complete thesis title">
                     </div>
 
-                    <div>
-                        <label class="text-sm">Research Leader</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A4 4 0 019 15h6a4 4 0 013.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <input type="text" name="research_leader" class="w-full bg-transparent focus:outline-none" placeholder="Enter Research Leader">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-sm">Department</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M9 21V10m6 11V10M5 6h14l-1-3H6L5 6z" />
-                            </svg>
-                            <select class="w-full bg-transparent focus:outline-none border rounded p-2" name="student_department_id" id="departmentSelect" required>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Department</label>
+                            <select name="student_department_id" id="student_department_id" :required="role === 'student'" @change="fetchCourses" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
                                 <option value="">Select Department</option>
-                                <?php while ($d = $departments->fetch_assoc()): ?>
+                                <?php
+                                $departments->data_seek(0);
+                                while ($d = $departments->fetch_assoc()):
+                                ?>
                                     <option value="<?= $d['id']; ?>"><?= htmlspecialchars($d['name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="text-sm">Course</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422A12.083 12.083 0 0121 13.5c0 2.485-4.03 4.5-9 4.5S3 15.985 3 13.5a12.083 12.083 0 012.84-2.922L12 14z" />
-                            </svg>
-                            <select class="w-full bg-transparent focus:outline-none border rounded p-2" name="course_id" id="courseSelect"
-                                required class="w-full border p-2 rounded">
-
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Course</label>
+                            <select name="course_id" id="courseSelect" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
                                 <option value="">Select Course</option>
                             </select>
-
-
-
                         </div>
                     </div>
-
                 </div>
 
-                <!-- PERSONNEL FIELDS -->
-                <div id="personnelFields" class="contents hidden">
-
+                <div x-show="role === 'personnel'" x-transition x-cloak class="space-y-5">
                     <div>
-                        <label class="text-sm">Full Name</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A4 4 0 019 15h6a4 4 0 013.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <input type="text" name="full_name" class="w-full bg-transparent focus:outline-none" placeholder="Enter Full Name">
-                        </div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
+                        <input type="text" name="full_name" :required="role === 'personnel'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter your Full Name">
                     </div>
 
-                    <div id="personnelDepartmentContainer">
-                        <label class="text-sm">Department</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M9 21V10m6 11V10M5 6h14l-1-3H6L5 6z" />
-                            </svg>
-                            <select name="personnel_department_id"
-                                required
-                                class="w-full bg-transparent focus:outline-none border rounded p-2">
-                                <option value="">Select Department</option>
-
-                                <?php
-                                $departments->data_seek(0);
-                                while ($row = $departments->fetch_assoc()):
-                                ?>
-                                    <option value="<?= $row['id']; ?>">
-                                        <?= htmlspecialchars($row['name']); ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            </select>
-
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-sm">Role</label>
-                        <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6M9 16h6M7 4h10v16H7z" />
-                            </svg>
-                            <select id="serviceRole" name="role" class="w-full bg-transparent focus:outline-none">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Service Role</label>
+                            <select name="role" x-model="personnelServiceRole" :required="role === 'personnel'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
                                 <option value="">Select Role</option>
                                 <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
                                 <option value="Human Grammarian">Human Grammarian</option>
@@ -221,124 +170,76 @@ $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                                 <option value="Ethics">Ethics</option>
                             </select>
                         </div>
-                    </div>
 
+                        <div x-show="personnelServiceRole !== 'Grammarly & AI Checking' && personnelServiceRole !== ''">
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Assigned Department</label>
+                            <select name="personnel_department_id" :required="role === 'personnel' && personnelServiceRole !== 'Grammarly & AI Checking'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
+                                <option value="">Select Department</option>
+                                <?php
+                                $departments->data_seek(0);
+                                while ($row = $departments->fetch_assoc()):
+                                ?>
+                                    <option value="<?= $row['id']; ?>"><?= htmlspecialchars($row['name']); ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
+                <div class="mt-10">
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20">
+                        Create Account
+                    </button>
+                </div>
 
-            </div>
-
-            <div class="flex justify-end gap-4 mt-10">
-                <a href="login.php" class="text-sm bg-gray-300 px-7 py-3 rounded-lg">Back</a>
-                <button type="submit" class="bg-blue-900 text-sm text-white px-10 py-3 rounded-lg">Register</button>
-            </div>
-
-        </form>
-
+            </form>
+        </div>
     </div>
 
     <script>
-        function switchRole() {
-            const role = document.getElementById("roleSelect").value;
-            const studentFields = document.getElementById("studentFields");
-            const personnelFields = document.getElementById("personnelFields");
-            const form = document.getElementById("registerForm");
+        function registrationApp() {
+            return {
+                role: 'student', // 'student' or 'personnel'
+                password: '',
+                confirm_password: '',
+                errorMsg: '',
+                personnelServiceRole: '',
 
-            const studentInputs = studentFields.querySelectorAll("input, select");
-            const personnelInputs = personnelFields.querySelectorAll("input, select");
+                validateForm(e) {
+                    this.errorMsg = '';
+                    if (this.password !== this.confirm_password) {
+                        e.preventDefault();
+                        this.errorMsg = "Passwords do not match. Please try again.";
+                        return;
+                    }
+                },
 
-            if (role === "student") {
-                studentFields.classList.remove("hidden");
-                personnelFields.classList.add("hidden");
-                form.action = "../../backend/actions/register_student_action.php";
+                fetchCourses(event) {
+                    const departmentId = event.target.value;
+                    const courseSelect = document.getElementById("courseSelect");
+                    
+                    courseSelect.innerHTML = '<option value="">Loading...</option>';
 
-                studentInputs.forEach(el => el.required = true);
-                personnelInputs.forEach(el => el.required = false);
-            } else {
-                studentFields.classList.add("hidden");
-                personnelFields.classList.remove("hidden");
-                form.action = "../../backend/actions/register_personnel_action.php";
+                    if (!departmentId) {
+                        courseSelect.innerHTML = '<option value="">Select Course</option>';
+                        return;
+                    }
 
-                studentInputs.forEach(el => el.required = false);
-                personnelInputs.forEach(el => el.required = true);
-            }
-        }
-
-        document.getElementById("registerForm").addEventListener("submit", function(e) {
-            const password = document.getElementById("password").value.trim();
-            const confirmPassword = document.getElementById("confirm_password").value.trim();
-            const passwordError = document.getElementById("passwordError");
-            passwordError.classList.add("hidden");
-
-            // 1. Check password match
-            if (password !== confirmPassword) {
-                e.preventDefault();
-                passwordError.classList.remove("hidden");
-                return;
-            }
-
-            const role = document.getElementById("roleSelect").value;
-            const container = role === "student" ?
-                document.getElementById("studentFields") :
-                document.getElementById("personnelFields");
-
-            const requiredFields = container.querySelectorAll("input[required], select[required]");
-
-            for (let field of requiredFields) {
-                if (!field.value.trim()) {
-                    e.preventDefault();
-                    alert("Please fill in all required fields before registering.");
-                    field.focus();
-                    return;
+                    fetch("../../backend/ajax/get_courses.php?department_id=" + departmentId)
+                        .then(response => response.json())
+                        .then(data => {
+                            let options = '<option value="">Select Course</option>';
+                            data.forEach(course => {
+                                options += `<option value="${course.id}">${course.name}</option>`;
+                            });
+                            courseSelect.innerHTML = options;
+                        })
+                        .catch(error => {
+                            courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+                        });
                 }
             }
-        });
-
-        switchRole();
-
-        // Use this instead
-        document.getElementById("departmentSelect").addEventListener("change", function() {
-            const departmentId = this.value;
-            const courseSelect = document.getElementById("courseSelect");
-
-            courseSelect.innerHTML = '<option value="">Loading...</option>';
-
-            if (!departmentId) {
-                courseSelect.innerHTML = '<option value="">Select Course</option>';
-                return;
-            }
-
-            fetch("../../backend/ajax/get_courses.php?department_id=" + departmentId)
-                .then(response => response.json())
-                .then(data => {
-                    let options = '<option value="">Select Course</option>';
-                    data.forEach(course => {
-                        options += `<option value="${course.id}">${course.name}</option>`;
-                    });
-                    courseSelect.innerHTML = options;
-                })
-                .catch(error => {
-                    courseSelect.innerHTML = '<option value="">Error loading courses</option>';
-                });
-        });
-
-        function handlePersonnelRole() {
-            const role = document.getElementById("serviceRole").value;
-            const deptContainer = document.getElementById("personnelDepartmentContainer");
-            const deptSelect = document.querySelector("select[name='personnel_department_id']");
-            if (role === "Grammarly & AI Checking") {
-                deptContainer.style.display = "none";
-                deptSelect.required = false;
-                deptSelect.value = "";
-            } else {
-                deptContainer.style.display = "block";
-                deptSelect.required = true;
-            }
         }
-        document.getElementById("serviceRole").addEventListener("change", handlePersonnelRole);
-        handlePersonnelRole();
     </script>
-
 </body>
-
 </html>

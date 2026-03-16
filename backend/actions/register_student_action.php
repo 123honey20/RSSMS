@@ -13,6 +13,9 @@ $research_leader = trim($_POST['research_leader']);
 $department_id = intval($_POST['student_department_id']);
 $course_id     = intval($_POST['course_id']);  
 
+// NEW: Capture the hidden school year (Fallback to default if missing)
+$school_year   = trim($_POST['school_year'] ?? '2025-2026'); 
+
 if ($department_id <= 0) {
     die("Error: Please select a valid Department.");
 }
@@ -20,7 +23,6 @@ if ($department_id <= 0) {
 if ($course_id <= 0) {
     die("Error: Please select a valid Course.");
 }
-
 
 // Hash password securely
 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -32,13 +34,12 @@ $stmt->bind_param("sss", $school_id, $email, $hashedPassword);
 if ($stmt->execute()) {
     $user_id = $conn->insert_id;
 
-    // Insert into students table
+    // NEW: Added school_year to the INSERT query and added 's' to bind_param
     $stmt2 = $conn->prepare("
-    INSERT INTO students (user_id, thesis_title, control_number, research_leader, department_id, course_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-");
-    $stmt2->bind_param("isssii", $user_id, $thesis_title, $control_number, $research_leader, $department_id, $course_id);
-
+        INSERT INTO students (user_id, thesis_title, control_number, research_leader, department_id, course_id, school_year)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ");
+    $stmt2->bind_param("isssiis", $user_id, $thesis_title, $control_number, $research_leader, $department_id, $course_id, $school_year);
 
     if ($stmt2->execute()) {
         header("Location: ../../frontend/auth/login.php?success=registered");

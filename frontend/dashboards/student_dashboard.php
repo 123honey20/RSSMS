@@ -9,14 +9,24 @@ require_once "../../backend/config/database.php";
 
 $user_id = $_SESSION['user'];
 
-// 1. Get the student's ID and Control Number
-$stmt = $conn->prepare("SELECT id, control_number FROM students WHERE user_id = ?");
+// 1. Get ALL Student Profile Details (Upgraded Query)
+$stmt = $conn->prepare("
+    SELECT u.school_id, u.email, 
+           s.id AS student_id, s.control_number, s.thesis_title, s.research_leader,
+           d.name AS department_name, c.name AS course_name
+    FROM users u
+    LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN departments d ON s.department_id = d.id
+    LEFT JOIN courses c ON s.course_id = c.id
+    WHERE u.id = ?
+");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$student_res = $stmt->get_result()->fetch_assoc();
-$student_id = $student_res ? $student_res['id'] : 0;
-$_SESSION['control_number'] = $student_res ? $student_res['control_number'] : '';
+$profile = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+
+$student_id = $profile['student_id'] ?? 0;
+$_SESSION['control_number'] = $profile['control_number'] ?? '';
 
 // 2. Check if the student is Approved in ALL 5 research services
 $services = ['grammarly_ai', 'ethics', 'human_grammarian', 'librarian', 'statistician'];
@@ -51,7 +61,6 @@ if ($student_id > 0) {
             width: 0px;
             background: transparent;
         }
-
         [x-cloak] {
             display: none !important;
         }
@@ -72,13 +81,14 @@ if ($student_id > 0) {
         <div class="flex items-center gap-4">
             <div class="text-right hidden sm:block">
                 <p class="text-[11px] text-blue-200 font-medium uppercase tracking-wider mb-0.5">Welcome, Student</p>
-                <p class="text-sm font-bold"><?php echo htmlspecialchars($_SESSION['school_id']); ?></p>
+                <p class="text-sm font-bold"><?php echo htmlspecialchars($profile['school_id'] ?? 'Unknown'); ?></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-blue-800 border border-blue-400/50 flex items-center justify-center shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200" viewBox="0 0 20 20" fill="currentColor">
+            
+            <button onclick="openMyProfile()" class="w-10 h-10 rounded-full bg-blue-800 border border-blue-400/50 flex items-center justify-center shadow-inner hover:bg-blue-700 hover:ring-2 hover:ring-blue-300 transition-all focus:outline-none group">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200 group-hover:text-white transition-colors" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                 </svg>
-            </div>
+            </button>
         </div>
     </header>
 
@@ -222,159 +232,120 @@ if ($student_id > 0) {
                     case 'student_proposal_certificate':
                         include '../certificate/proposal-certificate-student/student_certificate_proposal.php';
                         break;
-
                     case 'students_rs_grammarly_ai':
                         include '../students/student-research-services/grammarly_ai_checking.php';
                         break;
-
                     case 'student_view_grammarly_ai_report':
                         include '../students/view-reports/view_grammarly_ai_report.php';
                         break;
-
                     case 'student_grammarly_ai_approved_result':
                         include '../students/view-approved-result/grammarly_ai_approved_result.php';
                         break;
-
                     case 'student_feedback_grammarly_ai':
                         include '../feedback/feedback-student/student_feedback_grammarly_ai.php';
                         break;
-
                     case 'student_certificate_grammarly_ai':
                         include '../certificate/certificate-student/student_certificate_grammarly_ai.php';
                         break;
-
                     case 'students_rs_ethics':
                         include '../students/student-research-services/ethics.php';
                         break;
-
                     case 'student_view_ethics_report':
                         include '../students/view-reports/view_ethics_report.php';
                         break;
-
                     case 'student_ethics_approved_result':
                         include '../students/view-approved-result/ethics_approved_result.php';
                         break;
-
                     case 'student_feedback_ethics':
                         include '../feedback/feedback-student/student_feedback_ethics.php';
                         break;
-
                     case 'student_certificate_ethics':
                         include '../certificate/certificate-student/student_certificate_ethics.php';
                         break;
-
                     case 'students_rs_human_grammarian':
                         include '../students/student-research-services/human_grammarian.php';
                         break;
-
                     case 'student_view_human_grammarian_report':
                         include '../students/view-reports/view_human_grammarian_report.php';
                         break;
-
                     case 'student_human_grammarian_approved_result':
                         include '../students/view-approved-result/human_grammarian_approved_result.php';
                         break;
-
                     case 'student_feedback_human_grammarian':
                         include '../feedback/feedback-student/student_feedback_human_grammarian.php';
                         break;
-
                     case 'student_certificate_human_grammarian':
                         include '../certificate/certificate-student/student_certificate_human_grammarian.php';
                         break;
-
                     case 'students_rs_librarian':
                         include '../students/student-research-services/librarian.php';
                         break;
-
                     case 'student_view_librarian_report':
                         include '../students/view-reports/view_librarian_report.php';
                         break;
-
                     case 'student_librarian_approved_result':
                         include '../students/view-approved-result/librarian_approved_result.php';
                         break;
-
                     case 'student_feedback_librarian':
                         include '../feedback/feedback-student/student_feedback_librarian.php';
                         break;
-
                     case 'student_certificate_librarian':
                         include '../certificate/certificate-student/student_certificate_librarian.php';
                         break;
-
                     case 'students_rs_statistician':
                         include '../students/student-research-services/statistician.php';
                         break;
-
                     case 'student_view_statistician_report':
                         include '../students/view-reports/view_statistician_report.php';
                         break;
-
                     case 'student_statistician_approved_result':
                         include '../students/view-approved-result/statistician_approved_result.php';
                         break;
-
                     case 'student_feedback_statistician':
                         include '../feedback/feedback-student/student_feedback_statistician.php';
                         break;
-
                     case 'student_certificate_statistician':
                         include '../certificate/certificate-student/student_certificate_statistician.php';
                         break;
-
                     case 'student_upload_grammarly_ai':
                         include '../dashboards/student-submission/grammarly_ai_upload.php';
                         break;
-
                     case 'student_upload_ethics':
                         include '../dashboards/student-submission/ethics_upload.php';
                         break;
-
                     case 'student_upload_statistician':
                         include '../dashboards/student-submission/statistician_upload.php';
                         break;
-
                     case 'student_upload_librarian':
                         include '../dashboards/student-submission/librarian_upload.php';
                         break;
-
                     case 'student_upload_human_grammarian':
                         include '../dashboards/student-submission/human_grammarian_upload.php';
                         break;
-
                     case 'student_transaction_grammarly_ai':
                         include '../students/transaction/transaction_grammarly_ai.php';
                         break;
-
                     case 'student_transaction_receipt_grammarly_ai':
                         include '../students/transaction/transaction-receipt-upload/grammarly_ai_receipt.php';
                         break;
-
                     case 'chat_grammarly_ai':
                         include '../communicate/student-communicate/grammarly-ai-communication/grammarly_ai_chat.php';
                         break;
-
                     case 'chat_ethics':
                         include '../communicate/student-communicate/ethics-communication/ethics_chat.php';
                         break;
-
                     case 'chat_human_grammarian':
                         include '../communicate/student-communicate/human-grammarian-communication/human_grammarian_chat.php';
                         break;
-
                     case 'chat_librarian':
                         include '../communicate/student-communicate/librarian-communication/librarian_chat.php';
                         break;
-
                     case 'chat_statistician':
                         include '../communicate/student-communicate/statistician-communication/statistician_chat.php';
                         break;
-
                     case 'student_settings':
                         include '../settings/student-settings/student_settings.php';
                         break;
-
                     default:
                 ?>
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-10 flex flex-col items-center justify-center text-center h-[50vh]">
@@ -393,6 +364,70 @@ if ($student_id > 0) {
 
             </div>
         </main>
+    </div>
+
+    <div id="myProfileModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold tracking-wide flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                    My Profile
+                </h3>
+                <button onclick="closeMyProfile()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto max-h-[80vh]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800">
+                    
+                    <div class="md:col-span-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
+                        <div class="w-14 h-14 bg-blue-200 text-blue-800 rounded-full flex items-center justify-center shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">School ID</p>
+                            <p class="font-bold text-xl text-gray-900 leading-none"><?php echo htmlspecialchars($profile['school_id'] ?? 'N/A'); ?></p>
+                            <p class="text-blue-600 text-xs font-medium mt-1"><?php echo htmlspecialchars($profile['email'] ?? 'N/A'); ?></p>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 border-t border-gray-100 my-1"></div>
+
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Control Number</p>
+                        <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block break-words">
+                            <?php echo htmlspecialchars($profile['control_number'] ?? 'Not Assigned'); ?>
+                        </span>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Research Leader</p>
+                        <p class="font-medium text-gray-800 break-words"><?php echo htmlspecialchars($profile['research_leader'] ?? 'N/A'); ?></p>
+                    </div>
+
+                    <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 mt-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thesis Title</p>
+                        <p class="font-semibold text-gray-900 leading-snug"><?php echo htmlspecialchars($profile['thesis_title'] ?? 'N/A'); ?></p>
+                    </div>
+
+                    <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Department</p>
+                        <p class="font-semibold text-gray-900 break-words leading-snug"><?php echo htmlspecialchars($profile['department_name'] ?? 'N/A'); ?></p>
+                    </div>
+
+                    <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Course</p>
+                        <p class="font-semibold text-gray-900 break-words leading-snug"><?php echo htmlspecialchars($profile['course_name'] ?? 'N/A'); ?></p>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-end">
+                    <button onclick="closeMyProfile()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -415,6 +450,19 @@ if ($student_id > 0) {
                 loadContent(this.getAttribute('data-load'));
             });
         });
+
+        // NEW: Modal Javascript functions
+        function openMyProfile() {
+            const modal = document.getElementById('myProfileModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeMyProfile() {
+            const modal = document.getElementById('myProfileModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
     </script>
 </body>
 

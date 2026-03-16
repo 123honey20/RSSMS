@@ -29,7 +29,6 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
 
 <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg p-8 space-y-8">
 
-    <!-- HEADER -->
     <div class="flex justify-between items-start border-b pb-6">
 
         <div>
@@ -44,7 +43,7 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
                         Control Number
                     </p>
                     <p class="font-semibold text-gray-800 break-words">
-                        <?php echo $data['control_number']; ?>
+                        <?php echo htmlspecialchars($data['control_number']); ?>
                     </p>
                 </div>
 
@@ -53,7 +52,7 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
                         Department
                     </p>
                     <p class="font-semibold text-gray-800 break-words">
-                        <?php echo $data['department_name']; ?>
+                        <?php echo htmlspecialchars($data['department_name']); ?>
                     </p>
                 </div>
 
@@ -69,14 +68,13 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
             </div>
         </div>
 
-        <!-- STATUS ACTIONS -->
         <div class="flex flex-col items-end gap-3">
 
-            <div class="text-xs font-semibold px-3 py-1 rounded-full
+            <div class="text-xs font-bold px-4 py-1.5 rounded-full border
                     <?php
-                    if ($currentStatus == 'Approved') echo 'text-green-700';
-                    elseif ($currentStatus == 'Rejected') echo 'text-red-700';
-                    else echo 'text-yellow-700'; ?>">
+                    if ($currentStatus == 'Approved') echo 'text-green-700 bg-green-50 border-green-200';
+                    elseif ($currentStatus == 'Rejected') echo 'text-red-700 bg-red-50 border-red-200';
+                    else echo 'text-yellow-700 bg-yellow-50 border-yellow-200'; ?>">
                 <?php echo $currentStatus; ?>
             </div>
 
@@ -84,13 +82,12 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
                 <div class="flex gap-3">
                     <button
                         onclick="updateReceiptStatus(<?php echo $data['id']; ?>,'Approved')"
-                        class="px-5 py-2 text-xs font-medium transition text-blue-700 hover:underline">
+                        class="px-5 py-2 text-xs font-bold bg-gray-100 rounded-lg transition text-blue-700 hover:bg-blue-50 border border-gray-200">
                         Approve
                     </button>
-                    <span>-</span>
                     <button
                         onclick="updateReceiptStatus(<?php echo $data['id']; ?>,'Rejected')"
-                        class="px-5 py-2 text-xs font-medium transition text-red-700 hover:underline">
+                        class="px-5 py-2 text-xs font-bold bg-gray-100 rounded-lg transition text-red-700 hover:bg-red-50 border border-gray-200">
                         Reject
                     </button>
                 </div>
@@ -98,17 +95,23 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
         </div>
 
     </div>
-    <!-- RECEIPT FILE -->
-    <div>
 
-        <p class="text-gray-400 text-xs uppercase tracking-wide mb-3">
-            Receipt File
-        </p>
+    <div>
+        <div class="flex justify-between items-center mb-3">
+            <p class="text-gray-400 text-xs uppercase tracking-wide">
+                Receipt File
+            </p>
+            
+            <?php if (file_exists($absolutePath)): ?>
+                <a href="<?= htmlspecialchars($relativePath) ?>" download="<?= htmlspecialchars(basename($data['receipt_path'])) ?>" class="flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-sm border border-blue-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Download Receipt
+                </a>
+            <?php endif; ?>
+        </div>
 
         <?php if (file_exists($absolutePath)): ?>
-
             <div class="rounded-xl overflow-hidden border shadow-sm">
-
                 <iframe
                     src="<?php echo $relativePath; ?>"
                     class="w-full h-[650px] bg-gray-50"
@@ -116,11 +119,12 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
                 </iframe>
             </div>
         <?php else: ?>
-            <div class="bg-red-50 text-red-600 p-4 rounded-lg">
-                File not found.
+            <div class="bg-red-50 text-red-600 p-4 rounded-lg font-medium">
+                File not found on server.
             </div>
         <?php endif; ?>
     </div>
+    
     <div class="flex justify-end pt-6 border-t">
         <button
             onclick="location.reload()"

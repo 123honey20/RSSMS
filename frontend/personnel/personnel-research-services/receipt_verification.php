@@ -2,6 +2,8 @@
 if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
     die("Access Denied");
 }
+// Fetch departments for the dropdown
+$dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC");
 ?>
 
 <div class="bg-white p-6 rounded-xl shadow min-h-[80vh]">
@@ -10,9 +12,23 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
         <h2 class="text-xl font-semibold text-gray-800">Receipt Verification for Grammarly & AI Checking Service</h2>
     </div>
 
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <input type="text" id="searchInput" placeholder="Search by Control Number..."
-            class="w-full md:w-1/3 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm">
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm">
+        
+        <select id="deptFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All Departments</option>
+            <?php while($d = $dept_query->fetch_assoc()): ?>
+                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
+            <?php endwhile; ?>
+        </select>
+
+        <select id="statusFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All Statuses</option>
+            <option value="Receipt Uploaded">Receipt Uploaded (Pending)</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+        </select>
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-200 w-full">
@@ -29,13 +45,22 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
         </table>
     </div>
 
+    <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm pb-4"></div>
+    <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-500 text-center pb-4 pr-6"></div>
+
 </div>
 
 <script>
-    function fetchData() {
-        const search = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
+    let currentPage = 1;
+    let searchTimeout;
 
-        fetch(`../../backend/ajax/fetch_receipt_verification.php`)
+    function fetchData(page = 1) {
+        currentPage = page;
+        const search = document.getElementById('searchInput').value;
+        const dept = document.getElementById('deptFilter').value;
+        const status = document.getElementById('statusFilter').value;
+
+        fetch(`../../backend/ajax/fetch_receipt_verification.php?p=${page}&search=${encodeURIComponent(search)}&dept=${encodeURIComponent(dept)}&status=${encodeURIComponent(status)}`)
             .then(res => res.json())
             .then(res => {
                 const tbody = document.getElementById("tableBody");
@@ -51,6 +76,8 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
                                 <p class="font-medium text-gray-500">No uploaded receipts found.</p>
                             </td>
                         </tr>`;
+                    document.getElementById('recordInfo').textContent = '';
+                    document.getElementById('paginationContainer').innerHTML = '';
                     return;
                 }
 
@@ -62,10 +89,9 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
                         actionButton = `<button onclick="loadReceiptProcess(${row.id})" class="text-gray-600 bg-gray-100 border border-gray-200 px-4 py-1.5 rounded-lg hover:bg-gray-200 transition font-bold text-xs shadow-sm whitespace-nowrap">Process</button>`;
                     }
 
-                    // Department column removed from here
                     tbody.innerHTML += `
                         <tr class="hover:bg-gray-50/50 transition">
-                            <td class="px-6 py-4 text-center text-xs text-gray-600 align-middle whitespace-nowrap">
+                            <td class="px-6 py-4 text-center text-xs text-gray-600 font-bold align-middle whitespace-nowrap">
                                 Round ${row.round}
                             </td>
                             <td class="px-6 py-4 font-semibold text-gray-800 align-middle whitespace-nowrap">
@@ -80,47 +106,50 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
                         </tr>
                     `;
                 });
+
+                renderPagination(res.totalPages, res.currentPage);
+
+                const totalRows = res.totalRows || 0;
+                const startRecord = totalRows > 0 ? ((currentPage - 1) * 10 + 1) : 0;
+                const endRecord = Math.min(currentPage * 10, totalRows);
+
+                document.getElementById('recordInfo').textContent =
+                    totalRows > 0 ? `Showing ${startRecord} - ${endRecord} of ${totalRows} Receipts` : '';
             })
             .catch(error => console.error("Error fetching data:", error));
     }
 
-    function updateStatus(id, status) {
-        fetch("../../backend/ajax/update_receipt_verification.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    id,
-                    status
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.success) {
-                    alert("Status Updated Successfully");
-                    fetchData();
-                } else {
-                    alert("Update Failed");
-                }
-            });
+    function renderPagination(totalPages, currentPage) {
+        const container = document.getElementById('paginationContainer');
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        if (currentPage > 1) {
+            container.innerHTML += `<button onclick="fetchData(${currentPage - 1})" class="px-3 py-1 border border-gray-200 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition shadow-sm">Prev</button>`;
+        }
+
+        for (let i = 1; i <= totalPages; i++) {
+            container.innerHTML += `<button onclick="fetchData(${i})" class="px-3 py-1 text-xs border border-gray-200 rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 text-white border-blue-900' : 'text-gray-600 hover:bg-gray-50'}">${i}</button>`;
+        }
+
+        if (currentPage < totalPages) {
+            container.innerHTML += `<button onclick="fetchData(${currentPage + 1})" class="px-3 py-1 border border-gray-200 text-gray-600 text-xs rounded-md hover:bg-gray-50 transition shadow-sm">Next</button>`;
+        }
     }
 
-    // Status Badge Styling (Untouched)
     function getStatusBadge(status) {
         if (status === 'Approved') {
-            return `<span class="text-green-700 font-bold px-3 py-1.5 text-xs">Approved</span>`;
+            return `<span class="text-green-700 bg-green-50 border border-green-100 font-bold px-3 py-1.5 rounded-md text-xs">Approved</span>`;
         }
         if (status === 'Rejected') {
-            return `<span class="text-red-700 font-bold px-3 py-1.5 text-xs">Rejected</span>`;
+            return `<span class="text-red-700 bg-red-50 border border-red-100 font-bold px-3 py-1.5 rounded-md text-xs">Rejected</span>`;
         }
         if (status === 'Receipt Uploaded') {
-            return `<span class="text-yellow-700 font-bold px-3 py-1.5 text-xs">Receipt Uploaded</span>`;
+            return `<span class="text-yellow-700 bg-yellow-50 border border-yellow-100 font-bold px-3 py-1.5 rounded-md text-xs">Pending Review</span>`;
         }
         return `<span class="bg-gray-50 text-gray-700 font-bold px-3 py-1.5 rounded-md text-xs border border-gray-200">${status}</span>`;
     }
 
-    // Process Receipt of the Student
     function loadReceiptProcess(id) {
         const url = `../personnel/personnel-access-file/process_receipt_verification.php?id=${id}`;
         fetch(url)
@@ -131,16 +160,15 @@ if ($_SESSION['service_role'] !== 'Grammarly & AI Checking') {
             .catch(err => console.error(err));
     }
 
-    // Basic debounced search 
-    let searchTimeout;
-    if (document.getElementById('searchInput')) {
-        document.getElementById('searchInput').addEventListener('keyup', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                fetchData();
-            }, 400);
-        });
-    }
+    // Event Listeners for Filters
+    ['deptFilter', 'statusFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => fetchData(1));
+    });
 
-    document.addEventListener("DOMContentLoaded", fetchData);
+    document.getElementById('searchInput').addEventListener('keyup', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => fetchData(1), 400);
+    });
+
+    document.addEventListener("DOMContentLoaded", () => fetchData(1));
 </script>

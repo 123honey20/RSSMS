@@ -1,42 +1,62 @@
 <?php
 require_once "../../backend/config/database.php";
+
 $departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
+
+$error_msg = "";
+if (isset($_GET['error'])) {
+    if ($_GET['error'] === 'duplicate_course') {
+        $error_msg = "This course already exists within the selected department.";
+    } elseif ($_GET['error'] === 'failed') {
+        $error_msg = "Failed to add course. Please try again.";
+    }
+}
 ?>
 
-<div class="bg-white p-6 rounded-xl shadow max-w-xl mx-auto">
-    <h1 class="text-xl font-bold mb-4">Add Course</h1>
+<div class="bg-white p-8 rounded-2xl shadow-sm max-w-2xl mx-auto border border-gray-100">
+    <div class="mb-8 border-b pb-4">
+        <h1 class="text-2xl font-bold text-gray-800">Add New Course</h1>
+        <p class="text-sm text-gray-500 mt-1">Register a new academic course and assign it to a department.</p>
+    </div>
 
-    <form method="POST" action="../../backend/controllers/department-course-controller/add_department_course_controller.php" class="space-y-3">
+    <?php if ($error_msg): ?>
+        <div class="bg-red-50 text-red-700 p-4 mb-6 rounded-lg border border-red-100 flex items-center gap-3">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span class="font-medium text-sm"><?= htmlspecialchars($error_msg) ?></span>
+        </div>
+    <?php endif; ?>
 
-        <input type="text"
-            name="course_name"
-            placeholder="Course Name"
-            required
-            class="w-full border p-2 rounded">
-
-        <select name="department_id"
-            required
-            class="w-full border p-2 rounded">
-            <option value="">Select Department</option>
-
-            <?php while ($row = $departments->fetch_assoc()): ?>
-                <option value="<?= $row['id']; ?>">
-                    <?= htmlspecialchars($row['name']); ?>
-                </option>
-            <?php endwhile; ?>
-        </select>
-
+    <form method="POST" action="../../backend/controllers/department-course-controller/add_department_course_controller.php" class="space-y-6">
         <input type="hidden" name="action" value="add_course">
 
-        <div class="flex justify-between pt-4">
-            <a href="../dashboards/admin_dashboard.php?page=view_courses"
-                class="text-gray-600 hover:underline">Cancel</a>
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Course Name</label>
+            <input type="text" name="course_name" placeholder="Enter Course Name" required 
+                class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all">
+        </div>
 
-            <button type="submit"
-                class="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-800">
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Assign to Department</label>
+            <select name="department_id" required 
+                class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all">
+                <option value="">Select Department...</option>
+                <?php while ($row = $departments->fetch_assoc()): ?>
+                    <option value="<?= $row['id']; ?>">
+                        <?= htmlspecialchars($row['name']); ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
+            <a href="../dashboards/admin_dashboard.php?page=view_courses" 
+                class="px-6 py-2.5 rounded-lg text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all">
+                Cancel
+            </a>
+            <button type="submit" 
+                class="bg-blue-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-blue-800 hover:shadow-lg transition-all">
                 Save Course
             </button>
         </div>
     </form>
-
 </div>

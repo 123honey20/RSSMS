@@ -64,27 +64,28 @@ $totalComments = $countResult['total_comments'] ?? 0;
         <div class="flex flex-col items-end gap-3">
             <div class="text-right">
                 <input type="hidden" id="initialCommentCount" value="<?= $totalComments ?>">
-
-                <span id="commentHeaderCount" class="text-blue-700 text-xs">
+                <span id="commentHeaderCount" class="text-blue-700 text-xs font-bold">
                     <?php if (!$viewOnly): ?>You Currently Added<?php endif; ?> <?= $totalComments ?> Comment<?= $totalComments != 1 ? 's' : '' ?>
                 </span>
             </div>
-            <?php if (!$viewOnly): ?>
+
+            <div class="text-xs font-bold px-4 py-1.5 rounded-full border
+                    <?php
+                    if ($currentStatus == 'Approved') echo 'text-green-700 bg-green-50 border-green-200';
+                    elseif ($currentStatus == 'Rejected') echo 'text-red-700 bg-red-50 border-red-200';
+                    else echo 'text-yellow-700 bg-yellow-50 border-yellow-200'; ?>">
+                <?php echo $currentStatus; ?>
+            </div>
+
+            <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
                 <div class="flex gap-3">
                     <button
-                        class="btn-approve px-5 py-2 text-xs font-medium transition
-                    <?= $currentStatus === 'Approved'
-                        ? 'text-gray-500'
-                        : 'text-blue-700 hover:underline' ?>"
+                        class="btn-approve px-5 py-2 text-xs font-bold bg-gray-100 rounded-lg transition text-blue-700 hover:bg-blue-50 border border-gray-200"
                         data-id="<?= $submission['id'] ?>">
                         Approve
                     </button>
-                    <span>-</span>
                     <button
-                        class="btn-reject px-5 py-2 text-xs font-medium transition
-                    <?= $currentStatus === 'Rejected'
-                        ? 'bg-gray-200 text-gray-500'
-                        : 'text-red-700 hover:underline' ?>"
+                        class="btn-reject px-5 py-2 text-xs font-bold bg-gray-100 rounded-lg transition text-red-700 hover:bg-red-50 border border-gray-200"
                         data-id="<?= $submission['id'] ?>">
                         Reject
                     </button>
@@ -95,14 +96,22 @@ $totalComments = $countResult['total_comments'] ?? 0;
     </div>
 
     <div>
-        <p class="text-gray-400 text-xs uppercase tracking-wide mb-3">
-            Submission File
-        </p>
+        <div class="flex justify-between items-center mb-3">
+            <p class="text-gray-400 text-xs uppercase tracking-wide">
+                Submission File
+            </p>
+            <?php if (file_exists($absolutePath)): ?>
+                <a href="<?= htmlspecialchars($relativePath) ?>" download="<?= htmlspecialchars(basename($submission['file_path'])) ?>" class="flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-sm border border-blue-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Download Document
+                </a>
+            <?php endif; ?>
+        </div>
 
         <?php if (file_exists($absolutePath)): ?>
-            <div class="rounded-xl overflow-hidden border shadow-sm">
-                <iframe src="<?= $relativePath ?>"
-                    class="w-full h-[650px] bg-gray-50"
+            <div class="rounded-xl overflow-hidden border shadow-sm relative">
+                <iframe src="<?= htmlspecialchars($relativePath) ?>"
+                    class="w-full h-[650px] bg-gray-50 relative z-10"
                     frameborder="0">
                 </iframe>
             </div>
@@ -144,9 +153,8 @@ $totalComments = $countResult['total_comments'] ?? 0;
 
 </div>
 
-<!-- ADD COMMENT MODAL -->
 <div id="commentModal"
-    class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+    class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 backdrop-blur-sm">
 
     <div class="bg-white w-[500px] max-w-[95%] rounded-xl shadow-xl p-6 space-y-4">
 
@@ -165,19 +173,19 @@ $totalComments = $countResult['total_comments'] ?? 0;
         <div>
             <label class="text-sm text-gray-600">Page Number</label>
             <input type="number" id="commentPage"
-                class="w-full mt-1 border rounded-lg px-3 py-2 text-sm">
+                class="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
         </div>
 
         <div>
             <label class="text-sm text-gray-600">Paragraph Number</label>
             <input type="number" id="commentParagraph"
-                class="w-full mt-1 border rounded-lg px-3 py-2 text-sm">
+                class="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
         </div>
 
         <div>
             <label class="text-sm text-gray-600">Comment</label>
             <textarea id="commentText"
-                class="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
+                class="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 rows="4"></textarea>
         </div>
 
@@ -189,7 +197,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
             </button>
 
             <button id="saveCommentBtn"
-                class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm">
+                class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-blue-700">
                 Done
             </button>
         </div>
@@ -197,9 +205,8 @@ $totalComments = $countResult['total_comments'] ?? 0;
     </div>
 </div>
 
-<!-- VIEW COMMENT MODAL -->
 <div id="viewCommentModal"
-    class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+    class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 backdrop-blur-sm">
 
     <div class="bg-white w-[600px] max-w-[95%] rounded-xl shadow-xl p-6 space-y-4">
 
@@ -207,13 +214,12 @@ $totalComments = $countResult['total_comments'] ?? 0;
             Submitted Comments
         </h3>
 
-        <div id="viewCommentList" class="max-h-[400px] overflow-y-auto space-y-3 text-sm">
-            <!-- Comments will load here -->
-        </div>
+        <div id="viewCommentList" class="max-h-[400px] overflow-y-auto space-y-3 text-sm custom-scrollbar pr-2">
+            </div>
 
         <div class="flex justify-end pt-3">
             <button onclick="closeViewCommentModal()"
-                class="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm">
+                class="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm hover:bg-gray-900">
                 Close
             </button>
         </div>

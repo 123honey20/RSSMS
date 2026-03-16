@@ -3,74 +3,65 @@
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die("Invalid Personnel ID");
 }
+
 // Fetch all departments
 $deptStmt = $conn->prepare("SELECT id, name FROM departments ORDER BY name ASC");
 $deptStmt->execute();
 $departmentsQuery = $deptStmt->get_result();
 
 $user_id = (int) $_GET['id'];
+$error = ""; // NEW: Variable to hold error messages
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $school_id = trim($_POST['school_id']);
+    $email = trim($_POST['email']);
+    $full_name = trim($_POST['full_name']);
+    $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
 
-    $school_id = $_POST['school_id'];
-    $email = $_POST['email'];
-    $full_name = $_POST['full_name'];
-    $department_id = $_POST['department_id'] ?? null;
+    // NEW: Check if the new School ID or Email is already used by ANOTHER user
+    $checkDup = $conn->prepare("SELECT id FROM users WHERE (school_id = ? OR email = ?) AND id != ?");
+    $checkDup->bind_param("ssi", $school_id, $email, $user_id);
+    $checkDup->execute();
+    
+    if ($checkDup->get_result()->num_rows > 0) {
+        $error = "This School ID or Email is already in use by another account.";
+    } else {
+        // Get service role first
+        $roleStmt = $conn->prepare("SELECT service_role FROM personnel WHERE user_id = ?");
+        $roleStmt->bind_param("i", $user_id);
+        $roleStmt->execute();
+        $roleResult = $roleStmt->get_result()->fetch_assoc();
+        $service_role = $roleResult['service_role'] ?? null;
 
-    // Get service role first
-    $roleStmt = $conn->prepare("SELECT service_role FROM personnel WHERE user_id = ?");
-    $roleStmt->bind_param("i", $user_id);
-    $roleStmt->execute();
-    $roleResult = $roleStmt->get_result()->fetch_assoc();
+        // Update users table
+        $stmt1 = $conn->prepare("UPDATE users SET school_id = ?, email = ? WHERE id = ?");
+        $stmt1->bind_param("ssi", $school_id, $email, $user_id);
+        $stmt1->execute();
 
-    $service_role = $roleResult['service_role'] ?? null;
+        // Check if personnel row exists
+        $check = $conn->prepare("SELECT id FROM personnel WHERE user_id = ?");
+        $check->bind_param("i", $user_id);
+        $check->execute();
+        $res = $check->get_result();
 
-    // Update users table
-    $stmt1 = $conn->prepare("UPDATE users SET school_id = ?, email = ? WHERE id = ?");
-    $stmt1->bind_param("ssi", $school_id, $email, $user_id);
-    $stmt1->execute();
-
-    // Check if personnel row exists
-    $check = $conn->prepare("SELECT id FROM personnel WHERE user_id = ?");
-    $check->bind_param("i", $user_id);
-    $check->execute();
-    $res = $check->get_result();
-
-    if ($res->num_rows > 0) {
-
-        if ($service_role !== 'Grammarly & AI Checking') {
-
-            $stmt2 = $conn->prepare("
-                UPDATE personnel 
-                SET full_name = ?, department_id = ?
-                WHERE user_id = ?
-            ");
-            $stmt2->bind_param("sii", $full_name, $department_id, $user_id);
+        if ($res->num_rows > 0) {
+            if ($service_role !== 'Grammarly & AI Checking') {
+                $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ?, department_id = ? WHERE user_id = ?");
+                $stmt2->bind_param("sii", $full_name, $department_id, $user_id);
+            } else {
+                $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ? WHERE user_id = ?");
+                $stmt2->bind_param("si", $full_name, $user_id);
+            }
+            $stmt2->execute();
         } else {
-
-            $stmt2 = $conn->prepare("
-                UPDATE personnel 
-                SET full_name = ?
-                WHERE user_id = ?
-            ");
-            $stmt2->bind_param("si", $full_name, $user_id);
+            $stmt2 = $conn->prepare("INSERT INTO personnel (user_id, full_name, department_id) VALUES (?, ?, ?)");
+            $stmt2->bind_param("isi", $user_id, $full_name, $department_id);
+            $stmt2->execute();
         }
 
-        $stmt2->execute();
-    } else {
-
-        $stmt2 = $conn->prepare("
-            INSERT INTO personnel (user_id, full_name, department_id)
-            VALUES (?, ?, ?)
-        ");
-        $stmt2->bind_param("isi", $user_id, $full_name, $department_id);
-        $stmt2->execute();
+        echo "<script>window.location.href = '../dashboards/admin_dashboard.php?page=personnel&updated=1';</script>";
+        exit();
     }
-
-    echo "<script>
-        window.location.href = '../dashboards/admin_dashboard.php?page=personnel&updated=1';
-    </script>";
-    exit();
 }
 
 // Fetch Personnel data
@@ -89,61 +80,88 @@ if (!$data) {
     die("Personnel not found");
 }
 ?>
-<div class="bg-white p-6 rounded-xl shadow max-w-2xl mx-auto">
-    <h2 class="text-xl font-bold mb-6">Edit Personnel Profile</h2>
 
-    <form method="POST" class="space-y-4">
-        <div>
-            <label class="block text-sm font-medium">School ID</label>
-            <input type="text" name="school_id" required
-                value="<?php echo htmlspecialchars($data['school_id']); ?>"
-                class="w-full border rounded px-3 py-2">
+<div class="bg-white p-8 rounded-2xl shadow-sm max-w-3xl mx-auto border border-gray-100">
+    <div class="mb-8 border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Edit Personnel Profile</h2>
+        <p class="text-sm text-gray-500 mt-1">Update account details for <?= htmlspecialchars($data['full_name']) ?></p>
+    </div>
+
+    <?php if ($error): ?>
+        <div class="bg-red-50 text-red-700 p-4 mb-6 rounded-lg border border-red-100 flex items-center gap-3">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span class="font-medium text-sm"><?php echo htmlspecialchars($error); ?></span>
+        </div>
+    <?php endif; ?>
+
+    <form method="POST" class="space-y-6">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>
+                <input type="text" name="full_name" required
+                    value="<?php echo htmlspecialchars($_POST['full_name'] ?? $data['full_name'] ?? ''); ?>"
+                    class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">School ID</label>
+                <input type="text" name="school_id" required
+                    value="<?php echo htmlspecialchars($_POST['school_id'] ?? $data['school_id']); ?>"
+                    class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all">
+            </div>
         </div>
 
         <div>
-            <label class="block text-sm font-medium">Email</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
             <input type="email" name="email" required
-                value="<?php echo htmlspecialchars($data['email']); ?>"
-                class="w-full border rounded px-3 py-2">
+                value="<?php echo htmlspecialchars($_POST['email'] ?? $data['email']); ?>"
+                class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all">
         </div>
 
-        <div>
-            <label class="block text-sm font-medium">Full Name</label>
-            <input type="text" name="full_name"
-                value="<?php echo htmlspecialchars($data['full_name'] ?? ''); ?>"
-                class="w-full border rounded px-3 py-2">
+        <div class="border-t border-gray-100 pt-6 mt-2 grid grid-cols-1 md:grid-cols-2 gap-5">
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Service Role</label>
+                <input type="text" value="<?php echo htmlspecialchars($data['service_role']); ?>" 
+                    class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm font-bold bg-blue-50 text-blue-800 focus:outline-none cursor-not-allowed" readonly>
+            </div>
+
+            <?php if ($data['service_role'] !== 'Grammarly & AI Checking'): ?>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Department</label>
+                    <select name="department_id" required
+                        class="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all">
+                        <option value="">Select Department...</option>
+                        <?php
+                        $departmentsQuery->data_seek(0); 
+                        while ($row = $departmentsQuery->fetch_assoc()): 
+                            // Check if there was a post value (error state) or use database value
+                            $selected_dept = $_POST['department_id'] ?? $data['department_id'];
+                        ?>
+                            <option value="<?= $row['id']; ?>"
+                                <?= ($selected_dept == $row['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($row['name']); ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+            <?php else: ?>
+                <div class="flex items-center justify-start pt-6">
+                    <span class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold border border-gray-200">
+                        Service Scope: Global (All Departments)
+                    </span>
+                </div>
+            <?php endif; ?>
         </div>
 
-        <?php if ($data['service_role'] !== 'Grammarly & AI Checking'): ?>
-            <label class="block text-sm font-medium">Department</label>
-            <select name="department_id" required
-                class="w-full border rounded px-3 py-2">
-                <option value="">Select Department</option>
-                <?php
-                $departmentsQuery->data_seek(0); // reset pointer
-                while ($row = $departmentsQuery->fetch_assoc()): ?>
-                    <option value="<?= $row['id']; ?>"
-                        <?= ($data['department_id'] == $row['id']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($row['name']); ?>
-                    </option>
-                <?php endwhile; ?>
-            </select>
-        <?php endif; ?>
-
-        <?php if ($data['service_role'] === 'Grammarly & AI Checking'): ?>
-            <p class="text-sm text-gray-500">
-                Service Scope: All Departments
-            </p>
-        <?php endif; ?>
-
-
-        <div class="flex justify-end gap-2 pt-4">
-            <a href="admin_dashboard.php?page=personnel"
-                class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">
+        <div class="flex items-center justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
+            <a href="admin_dashboard.php?page=personnel" 
+                class="px-6 py-2.5 rounded-lg text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all">
                 Cancel
             </a>
-            <button type="submit"
-                class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">
+            <button type="submit" 
+                class="bg-blue-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-blue-800 hover:shadow-lg transition-all">
                 Update Personnel
             </button>
         </div>

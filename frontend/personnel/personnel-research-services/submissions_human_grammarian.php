@@ -1,3 +1,21 @@
+<?php
+// Fetch Active School Year
+$sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
+$active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
+
+// UNIVERSITY STANDARD SCHOOL YEAR GENERATION
+$start_year = 2024;
+$current_calendar_year = (int)date("Y"); 
+
+// Generate up to 2 years into the future
+$max_year = $current_calendar_year + 2; 
+
+$generated_years = [];
+for ($y = $max_year; $y >= $start_year; $y--) {
+    $generated_years[] = $y . "-" . ($y + 1);
+}
+?>
+
 <div class="bg-white p-6 rounded-xl shadow min-h-[80vh]">
 
     <div class="flex items-center justify-between mb-6 pb-4 border-b">
@@ -6,7 +24,23 @@
 
     <div class="flex flex-col md:flex-row gap-3 mb-4">
         <input type="text" id="searchInput" placeholder="Search by Control Number..."
-            class="w-full md:w-1/3 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm">
+            class="w-full md:w-1/3 border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+        
+        <select id="syFilter" class="w-full md:w-1/4 border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All School Years</option>
+            <?php foreach($generated_years as $year): ?>
+                <option value="<?php echo $year; ?>" <?= ($year === $active_sy) ? 'selected' : '' ?>>
+                    SY <?php echo $year; ?> <?= ($year === $active_sy) ? '(Active)' : '' ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <select id="statusFilter" class="w-full md:w-1/4 border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+        </select>
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-200">
@@ -29,21 +63,14 @@
     </div>
 </div>
 
-<!-- Student Profile Modal -->
-<div id="profileModalStudent"
-    class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+<div id="profileModalStudent" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
     <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-all duration-300 ease-out">
         <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-8 py-5 flex items-center justify-between">
             <h3 class="text-xl font-semibold tracking-wide">Student Profile</h3>
-            <button onclick="closeProfileStudent()"
-                class="text-white hover:text-gray-200 text-2xl font-bold leading-none">
-                ✕
-            </button>
+            <button onclick="closeProfileStudent()" class="text-white hover:text-gray-200 text-2xl font-bold leading-none">✕</button>
         </div>
-
         <div class="p-6 overflow-y-auto">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800">
-
                 <div>
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Control Number</p>
                     <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block break-words" id="sp_control_number">-</span>
@@ -52,33 +79,24 @@
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Research Leader</p>
                     <p class="font-medium text-gray-800 break-words" id="sp_research_leader">-</p>
                 </div>
-
                 <div class="md:col-span-2">
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
                     <p class="font-medium text-gray-800 break-all" id="sp_email">-</p>
                 </div>
-
                 <div class="md:col-span-2 border-t border-gray-100 my-1"></div>
-
                 <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Department</p>
                     <p class="font-semibold text-gray-900 break-words leading-snug" id="sp_department">-</p>
                 </div>
-
                 <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Course</p>
                     <p class="font-semibold text-gray-900 break-words leading-snug" id="sp_course">-</p>
                 </div>
-
             </div>
-
             <div class="mt-8 flex justify-end">
-                <button onclick="closeProfileStudent()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">
-                    Close
-                </button>
+                <button onclick="closeProfileStudent()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">Close</button>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -89,8 +107,10 @@
     function fetchSubmissions(page = 1) {
         currentPage = page;
         const search = document.getElementById('searchInput').value;
+        const status = document.getElementById('statusFilter').value; 
+        const sy = document.getElementById('syFilter').value; 
 
-        fetch(`../../backend/ajax/fetch_human_grammarian_submissions.php?p=${page}&search=${encodeURIComponent(search)}`)
+        fetch(`../../backend/ajax/fetch_human_grammarian_submissions.php?p=${page}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&sy=${encodeURIComponent(sy)}`)
             .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('tableBody');
@@ -107,6 +127,7 @@
                             </td>
                         </tr>`;
                     document.getElementById('recordInfo').textContent = '';
+                    document.getElementById('paginationContainer').innerHTML = '';
                     return;
                 }
 
@@ -118,11 +139,11 @@
 
                     let statusBadge = '';
                     if (row.status === 'Approved') {
-                        statusBadge = `<span class="text-green-700 font-bold px-3 py-1.5 text-xs">Approved</span>`;
+                        statusBadge = `<span class="text-green-700 bg-green-50 border border-green-100 font-bold px-3 py-1.5 rounded-md text-xs">Approved</span>`;
                     } else if (row.status === 'Rejected') {
-                        statusBadge = `<span class="text-red-700 font-bold px-3 py-1.5 text-xs">Rejected</span>`;
+                        statusBadge = `<span class="text-red-700 bg-red-50 border border-red-100 font-bold px-3 py-1.5 rounded-md text-xs">Rejected</span>`;
                     } else {
-                        statusBadge = `<span class="text-yellow-700 font-bold px-3 py-1.5 text-xs">Pending</span>`;
+                        statusBadge = `<span class="text-yellow-700 bg-yellow-50 border border-yellow-100 font-bold px-3 py-1.5 rounded-md text-xs">Pending</span>`;
                     }
 
                     let actionButton = '';
@@ -147,18 +168,14 @@
                             ${actionButton}
                         </td>
                     `;
-
                     tbody.appendChild(tr);
                 });
 
                 renderPagination(data.totalPages, data.currentPage);
-
                 const totalRows = data.totalRows || 0;
                 const startRecord = totalRows > 0 ? ((currentPage - 1) * 10 + 1) : 0;
                 const endRecord = Math.min(currentPage * 10, totalRows);
-
-                document.getElementById('recordInfo').textContent =
-                    totalRows > 0 ? `Showing ${startRecord} - ${endRecord} of ${totalRows} Submissions` : '';
+                document.getElementById('recordInfo').textContent = totalRows > 0 ? `Showing ${startRecord} - ${endRecord} of ${totalRows} Submissions` : '';
             })
             .catch(error => console.error(error));
     }
@@ -171,15 +188,17 @@
         if (currentPage > 1) {
             container.innerHTML += `<button onclick="fetchSubmissions(${currentPage - 1})" class="px-3 py-1 border border-gray-200 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition shadow-sm">Prev</button>`;
         }
-
         for (let i = 1; i <= totalPages; i++) {
             container.innerHTML += `<button onclick="fetchSubmissions(${i})" class="px-3 py-1 text-xs border border-gray-200 rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 text-white border-blue-900' : 'text-gray-600 hover:bg-gray-50'}">${i}</button>`;
         }
-
         if (currentPage < totalPages) {
             container.innerHTML += `<button onclick="fetchSubmissions(${currentPage + 1})" class="px-3 py-1 border border-gray-200 text-gray-600 text-xs rounded-md hover:bg-gray-50 transition shadow-sm">Next</button>`;
         }
     }
+
+    ['statusFilter', 'syFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => fetchSubmissions(1));
+    });
 
     document.getElementById('searchInput').addEventListener('keyup', () => {
         clearTimeout(searchTimeout);

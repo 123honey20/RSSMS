@@ -45,14 +45,35 @@ $existing = $sub->fetch_assoc();
         <?php unset($_SESSION['flash_success']); ?>
     <?php endif; ?>
 
+    <?php if (isset($_SESSION['flash_error'])): ?>
+        <div id="toast-error" class="fixed top-6 right-6 bg-red-600 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0">
+            <div class="bg-red-500 rounded-full p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+            <span class="font-medium text-sm"><?php echo $_SESSION['flash_error']; ?></span>
+        </div>
+
+        <script>
+            setTimeout(() => {
+                const toast = document.getElementById('toast-error');
+                if (toast) {
+                    toast.classList.add('opacity-0', 'translate-x-full');
+                    setTimeout(() => toast.remove(), 500);
+                }
+            }, 4000);
+        </script>
+        <?php unset($_SESSION['flash_error']); ?>
+    <?php endif; ?>
 
     <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Grammarly & AI Checking Upload</h1>
             <p class="text-sm text-gray-500 mt-1">Submit your document to review by the Grammarly & AI Checking Personnel.</p>
         </div>
-        <a href="student_dashboard.php?page=students_rs_grammarly_ai" 
-           class="bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
+        <a href="student_dashboard.php?page=students_rs_grammarly_ai"
+            class="bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -61,7 +82,7 @@ $existing = $sub->fetch_assoc();
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        
+
         <?php if ($existing): ?>
             <div class="mb-8 p-5 bg-blue-50/50 border border-blue-100 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
@@ -75,13 +96,13 @@ $existing = $sub->fetch_assoc();
                         <p class="text-xs text-gray-500 mt-0.5">Uploading a new file will replace your current submission round.</p>
                     </div>
                 </div>
-                
+
                 <?php
-                    $status = ucfirst($existing['status']);
-                    $badgeColor = "bg-gray-100 text-gray-700";
-                    if ($status === 'Pending') $badgeColor = "bg-yellow-100 text-yellow-700";
-                    if ($status === 'Approved') $badgeColor = "bg-green-100 text-green-700";
-                    if ($status === 'Rejected') $badgeColor = "bg-red-100 text-red-700";
+                $status = ucfirst($existing['status']);
+                $badgeColor = "bg-gray-100 text-gray-700";
+                if ($status === 'Pending') $badgeColor = "bg-yellow-100 text-yellow-700";
+                if ($status === 'Approved') $badgeColor = "bg-green-100 text-green-700";
+                if ($status === 'Rejected') $badgeColor = "bg-red-100 text-red-700";
                 ?>
                 <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm <?php echo $badgeColor; ?>">
                     Status: <?php echo $status; ?>
@@ -90,10 +111,10 @@ $existing = $sub->fetch_assoc();
         <?php endif; ?>
 
         <form action="../../backend/actions/upload-submission/upload_grammarly_ai.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm(event)">
-            
+
             <div class="mb-8">
                 <label class="block text-sm font-medium text-gray-700 mb-3">Select your document</label>
-                
+
                 <div class="flex items-center justify-center w-full">
                     <label for="dropzone-file" id="dropzone-label" class="flex flex-col items-center justify-center w-full h-56 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-blue-50 hover:border-blue-400 transition-all group">
                         <div class="flex flex-col items-center justify-center pt-5 pb-6">
@@ -110,7 +131,7 @@ $existing = $sub->fetch_assoc();
                 <p id="file-error" class="hidden text-red-500 text-sm font-medium mt-3 text-center">
                     Please select a document before submitting.
                 </p>
-                
+
                 <div id="file-display-container" class="hidden mt-4 flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-lg">
                     <div class="flex items-center gap-3 overflow-hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,11 +166,11 @@ $existing = $sub->fetch_assoc();
         const textDisplay = document.getElementById('file-name-text');
         const errorMsg = document.getElementById('file-error');
         const dropzoneLabel = document.getElementById('dropzone-label');
-        
+
         if (input.files && input.files.length > 0) {
             textDisplay.textContent = input.files[0].name;
             container.classList.remove('hidden');
-            
+
             // Hide error state if they select a file
             errorMsg.classList.add('hidden');
             dropzoneLabel.classList.remove('border-red-400', 'bg-red-50');
@@ -162,7 +183,7 @@ $existing = $sub->fetch_assoc();
     function clearFileSelection() {
         const input = document.getElementById('dropzone-file');
         const container = document.getElementById('file-display-container');
-        
+
         input.value = ""; // Clear the file input
         container.classList.add('hidden'); // Hide the display container
     }
@@ -172,18 +193,18 @@ $existing = $sub->fetch_assoc();
         const input = document.getElementById('dropzone-file');
         const errorMsg = document.getElementById('file-error');
         const dropzoneLabel = document.getElementById('dropzone-label');
-        
+
         // If no file is selected
         if (!input.files || input.files.length === 0) {
             event.preventDefault(); // Stop form from submitting
-            
+
             // Show custom error text and turn the dropzone red
             errorMsg.classList.remove('hidden');
             dropzoneLabel.classList.add('border-red-400', 'bg-red-50');
-            
+
             return false;
         }
-        
+
         return true;
     }
 </script>
