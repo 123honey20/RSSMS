@@ -1,0 +1,214 @@
+<?php
+// Fetch Departments
+$dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC");
+
+// Fetch Active School Year
+$sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
+$active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
+
+// UNIVERSITY STANDARD SCHOOL YEAR GENERATION
+$start_year = 2024;
+$current_calendar_year = (int)date("Y");
+$max_year = $current_calendar_year + 2;
+
+$generated_years = [];
+for ($y = $max_year; $y >= $start_year; $y--) {
+    $generated_years[] = $y . "-" . ($y + 1);
+}
+?>
+
+<div class="bg-white p-6 rounded-xl shadow min-h-[80vh]">
+
+    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Student Transactions & Receipts</h2>
+            <p class="text-xs text-gray-500 mt-1">Monitor all uploaded payment receipts and their verification statuses.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <input type="text" id="searchInput" placeholder="Search Control No..."
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+
+        <select id="syFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All School Years</option>
+            <?php foreach ($generated_years as $year): ?>
+                <option value="<?php echo $year; ?>" <?= ($year === $active_sy) ? 'selected' : '' ?>>
+                    SY <?php echo $year; ?> <?= ($year === $active_sy) ? '(Active)' : '' ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <select id="deptFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All Departments</option>
+            <?php while ($d = $dept_query->fetch_assoc()): ?>
+                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
+            <?php endwhile; ?>
+        </select>
+
+        <select id="statusFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All Statuses</option>
+            <option value="No Receipt">No Receipt</option>
+            <option value="Receipt Uploaded">Receipt Uploaded</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+        </select>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="w-full text-sm text-left border-collapse text-gray-600">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+                <tr>
+                    <th class="px-6 py-4 font-semibold text-center">No.</th>
+                    <th class="px-6 py-4 font-semibold">Control No.</th>
+                    <th class="px-6 py-4 font-semibold text-center">Round</th>
+                    <th class="px-6 py-4 font-semibold text-center">Status</th>
+                    <th class="px-6 py-4 font-semibold text-center">Document</th>
+                    <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
+        </table>
+
+        <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm pb-4"></div>
+        <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-500 text-center pb-4 pr-6"></div>
+    </div>
+</div>
+
+<div id="fileViewerModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999] backdrop-blur-sm p-4 sm:p-8">
+    <div class="bg-white w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all">
+        <div class="bg-gray-900 text-white px-5 py-3 flex items-center justify-between shrink-0 shadow-md z-10">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <h3 class="text-base font-semibold tracking-wide truncate">Receipt Viewer</h3>
+                <span id="viewer-filename" class="text-xs text-gray-400 font-medium truncate hidden sm:block"></span>
+            </div>
+            <button onclick="closeFileViewer()" class="text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg p-2 transition-colors focus:outline-none">✕</button>
+        </div>
+        <div class="flex-1 bg-gray-100 relative">
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            </div>
+            <iframe id="fileViewerIframe" src="" class="w-full h-full border-0 relative z-10 bg-white"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let searchTimeout;
+
+    function fetchTransactions(page = 1) {
+        currentPage = page;
+        const search = document.getElementById('searchInput').value;
+        const dept = document.getElementById('deptFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const sy = document.getElementById('syFilter').value;
+
+        fetch(`../../backend/ajax/fetch_admin_transactions.php?p=${page}&search=${encodeURIComponent(search)}&dept=${encodeURIComponent(dept)}&status=${encodeURIComponent(status)}&sy=${encodeURIComponent(sy)}`)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+
+                if (data.transactions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">No transactions found.</td></tr>`;
+                    document.getElementById('recordInfo').textContent = '';
+                    document.getElementById('paginationContainer').innerHTML = '';
+                    return;
+                }
+
+                let counter = (data.currentPage - 1) * 10 + 1;
+
+                data.transactions.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50/50 transition";
+
+                    // PERFECTLY REPLICATED ARCHIVE STATUS BADGE STYLE
+                    let badgeColor = "bg-gray-100 text-gray-700"; // Default for 'No Receipt'
+                    if (row.status === 'Receipt Uploaded') badgeColor = "bg-yellow-100 text-yellow-700";
+                    if (row.status === 'Approved') badgeColor = "bg-green-100 text-green-700";
+                    if (row.status === 'Rejected') badgeColor = "bg-red-100 text-red-700";
+
+                    let statusBadge = `<span class="px-3 py-1 rounded-md text-[10px] font-bold uppercase ${badgeColor}">${row.status}</span>`;
+
+                    // Smart View Button: Hide if no receipt exists
+                    let viewButton = '';
+                    if (row.status === 'No Receipt' || !row.receipt_path) {
+                        viewButton = `<span class="text-gray-400 text-[11px] font-medium italic">Not Submitted</span>`;
+                    } else {
+                        viewButton = `<button onclick="openFileViewer('../../uploads/receipts/${row.receipt_path}', '${row.receipt_path}')" 
+                                class="text-blue-700 hover:underline text-xs inline-flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                View Receipt
+                            </button>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 text-center text-xs text-gray-500">${counter++}.</td>
+                        <td class="px-6 py-4 font-semibold text-gray-800">${row.control_number}</td>
+                        <td class="px-6 py-4 text-center font-bold text-gray-600">R${row.round}</td>
+                        <td class="px-6 py-4 text-center">${statusBadge}</td>
+                        <td class="px-6 py-4 text-center">
+                            ${viewButton}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button class="text-blue-700 hover:underline text-xs" 
+                                onclick='openProfileStudent(${JSON.stringify(row).replace(/'/g, "&#39;")})'>
+                                Details
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                renderPagination(data.totalPages, data.currentPage);
+                const totalRows = data.totalRows || 0;
+                const startRecord = totalRows > 0 ? ((currentPage - 1) * 10 + 1) : 0;
+                const endRecord = Math.min(currentPage * 10, totalRows);
+                document.getElementById('recordInfo').textContent = totalRows > 0 ? `Showing ${startRecord} - ${endRecord} of ${totalRows} Transactions` : '';
+            })
+            .catch(error => console.error(error));
+    }
+
+    function renderPagination(totalPages, currentPage) {
+        const container = document.getElementById('paginationContainer');
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        if (currentPage > 1) {
+            container.innerHTML += `<button onclick="fetchTransactions(${currentPage - 1})" class="px-3 py-1 border border-gray-200 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition shadow-sm">Prev</button>`;
+        }
+        for (let i = 1; i <= totalPages; i++) {
+            container.innerHTML += `<button onclick="fetchTransactions(${i})" class="px-3 py-1 text-xs border border-gray-200 rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 text-white border-blue-900' : 'text-gray-600 hover:bg-gray-50'}">${i}</button>`;
+        }
+        if (currentPage < totalPages) {
+            container.innerHTML += `<button onclick="fetchTransactions(${currentPage + 1})" class="px-3 py-1 border border-gray-200 text-gray-600 text-xs rounded-md hover:bg-gray-50 transition shadow-sm">Next</button>`;
+        }
+    }
+
+    function openFileViewer(url, filename) {
+        document.getElementById('viewer-filename').textContent = "— " + filename;
+        document.getElementById('fileViewerIframe').src = url;
+        const modal = document.getElementById('fileViewerModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeFileViewer() {
+        const modal = document.getElementById('fileViewerModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        setTimeout(() => { document.getElementById('fileViewerIframe').src = ''; }, 300);
+    }
+
+    ['deptFilter', 'statusFilter', 'syFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => fetchTransactions(1));
+    });
+
+    document.getElementById('searchInput').addEventListener('keyup', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => fetchTransactions(1), 400);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => fetchTransactions(1));
+</script>

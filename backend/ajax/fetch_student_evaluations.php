@@ -13,33 +13,69 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 $page = isset($_GET['p']) ? intval($_GET['p']) : 1;
-$search = isset($_GET['search']) ? '%' . $_GET['search'] . '%' : '%';
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
+// Grab the new filters from the frontend
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$sy = isset($_GET['sy']) ? $_GET['sy'] : 'All';
+$service = isset($_GET['service']) ? $_GET['service'] : 'All';
+
+// Build the dynamic WHERE clause
+$where = "WHERE 1=1";
+$params = [];
+$types = "";
+
+if (!empty($search)) {
+    // Smart Search: Looks at both Control Number OR Personnel Name
+    $where .= " AND (s.control_number LIKE ? OR p.full_name LIKE ?)";
+    $searchTerm = "%" . $search . "%";
+    $params[] = $searchTerm;
+    $params[] = $searchTerm;
+    $types .= "ss";
+}
+
+if ($sy !== 'All' && !empty($sy)) {
+    $where .= " AND s.school_year = ?";
+    $params[] = $sy;
+    $types .= "s";
+}
+
+if ($service !== 'All' && !empty($service)) {
+    $where .= " AND se.service_type LIKE ?";
+    $serviceTerm = "%" . $service . "%";
+    $params[] = $serviceTerm;
+    $types .= "s";
+}
+
 try {
-    // Count Query
+    // Count Query (Joined with personnel so the smart search works)
     $countQuery = "
         SELECT COUNT(*) as total 
         FROM student_evaluations se
         JOIN students s ON se.student_id = s.id
-        WHERE s.control_number LIKE ?
+        JOIN personnel p ON se.personnel_id = p.id
+        $where
     ";
     
     $stmtCount = $conn->prepare($countQuery);
     if (!$stmtCount) throw new Exception("Count Query Prep Failed: " . $conn->error);
     
-    $stmtCount->bind_param("s", $search);
+    // Bind parameters dynamically if there are any
+    if (!empty($params)) {
+        $stmtCount->bind_param($types, ...$params);
+    }
+    
     $stmtCount->execute();
     $totalRows = $stmtCount->get_result()->fetch_assoc()['total'];
     $stmtCount->close();
 
     $totalPages = ceil($totalRows / $limit);
 
-    // Main Query: We added the `users u` join here to get school_id and email!
+    // Main Query (Added se.service_type so the frontend badge works properly)
     $query = "
         SELECT 
-            se.id, se.total_score, se.comments, se.created_at,
+            se.id, se.total_score, se.comments, se.created_at, se.service_type,
             s.control_number, s.thesis_title, s.research_leader,
             u.school_id, u.email,
             d.name as department_name, c.name as course_name,
@@ -52,7 +88,7 @@ try {
         LEFT JOIN courses c ON s.course_id = c.id
         JOIN personnel p ON se.personnel_id = p.id
         JOIN rubrics r ON se.rubric_id = r.id
-        WHERE s.control_number LIKE ?
+        $where
         ORDER BY se.created_at DESC
         LIMIT ?, ?
     ";
@@ -60,7 +96,16 @@ try {
     $stmt = $conn->prepare($query);
     if (!$stmt) throw new Exception("Main Query Prep Failed: " . $conn->error);
 
-    $stmt->bind_param("sii", $search, $offset, $limit);
+    // Create a new parameter array to include LIMIT and OFFSET at the end
+    $mainParams = $params;
+    $mainTypes = $types . "ii";
+    $mainParams[] = $offset;
+    $mainParams[] = $limit;
+
+    if (!empty($mainParams)) {
+        $stmt->bind_param($mainTypes, ...$mainParams);
+    }
+    
     $stmt->execute();
     $result = $stmt->get_result();
 

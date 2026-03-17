@@ -8,24 +8,27 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 
 require_once "../../backend/config/database.php";
 
-// Get personnel info
 $user_id = $_SESSION['user'];
 
+// 1. Get ALL Personnel Profile Details (Upgraded Query)
 $stmt = $conn->prepare("
-    SELECT service_role, department_id
-    FROM personnel 
-    WHERE user_id = ?
+    SELECT u.school_id, u.email, 
+           p.full_name, p.service_role, p.department_id,
+           d.name AS department_name
+    FROM users u
+    LEFT JOIN personnel p ON u.id = p.user_id
+    LEFT JOIN departments d ON p.department_id = d.id
+    WHERE u.id = ?
 ");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$res = $stmt->get_result();
+$profile = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-$personnel = $res->fetch_assoc();
+$_SESSION['service_role'] = $profile['service_role'] ?? '';
+$_SESSION['department_id'] = $profile['department_id'] ?? 0;
 
-$_SESSION['service_role'] = $personnel['service_role'];
-$_SESSION['department_id'] = $personnel['department_id'];
-
-$serviceRole = $personnel['service_role'] ?? 'Personnel';
+$serviceRole = $profile['service_role'] ?? 'Personnel';
 
 ?>
 
@@ -63,13 +66,14 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
         <div class="flex items-center gap-4">
             <div class="text-right hidden sm:block">
                 <p class="text-[11px] text-blue-200 font-medium uppercase tracking-wider mb-0.5">Welcome, Personnel</p>
-                <p class="text-sm font-bold"><?php echo htmlspecialchars($_SESSION['school_id']); ?></p>
+                <p class="text-sm font-bold"><?php echo htmlspecialchars($profile['school_id'] ?? 'Unknown'); ?></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-blue-800 border border-blue-400/50 flex items-center justify-center shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200" viewBox="0 0 20 20" fill="currentColor">
+            
+            <button onclick="openMyProfile()" class="w-10 h-10 rounded-full bg-blue-800 border border-blue-400/50 flex items-center justify-center shadow-inner hover:bg-blue-700 hover:ring-2 hover:ring-blue-300 transition-all focus:outline-none group">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200 group-hover:text-white transition-colors" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                 </svg>
-            </div>
+            </button>
         </div>
     </header>
 
@@ -192,35 +196,27 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                     case 'submissions_g_ai':
                         include "../personnel/personnel-research-services/submissions_g_ai.php";
                         break;
-
                     case 'submissions_ethics':
                         include "../personnel/personnel-research-services/submissions_ethics.php";
                         break;
-
                     case 'submissions_statistician':
                         include "../personnel/personnel-research-services/submissions_statistician.php";
                         break;
-
                     case 'submissions_librarian':
                         include "../personnel/personnel-research-services/submissions_librarian.php";
                         break;
-
                     case 'submissions_human_grammarian':
                         include "../personnel/personnel-research-services/submissions_human_grammarian.php";
                         break;
-
                     case 'receipt_verification':
                         include "../personnel/personnel-research-services/receipt_verification.php";
                         break;
-
                     case 'personnel_feedback':
                         include "../feedback/feedback-personnel/view_feedback.php";
                         break;
-
                     case 'personnel_chat':
                         include "../communicate/personnel-communicate/personnel_chat.php";
                         break;
-
                     case 'personnel_settings':
                         include "../settings/personnel-settings/personnel_settings.php";
                         break;
@@ -239,17 +235,73 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 <?php
                         break;
                 }
-
                 ?>
 
             </div>
         </main>
-
     </div>
 
-    <div id="toastContainer"
-        class="fixed top-6 right-6 space-y-3 z-[9999]"></div>
+    <div id="myProfileModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold tracking-wide flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                    My Profile
+                </h3>
+                <button onclick="closeMyProfile()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto max-h-[80vh]">
+                <div class="grid grid-cols-1 gap-y-5 text-sm text-gray-800">
+                    
+                    <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
+                        <div class="w-14 h-14 bg-blue-200 text-blue-800 rounded-full flex items-center justify-center shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Full Name</p>
+                            <p class="font-bold text-xl text-gray-900 leading-none"><?php echo htmlspecialchars($profile['full_name'] ?? 'N/A'); ?></p>
+                            <p class="text-blue-600 text-xs font-medium mt-1"><?php echo htmlspecialchars($profile['email'] ?? 'N/A'); ?></p>
+                        </div>
+                    </div>
 
+                    <div class="border-t border-gray-100 my-1"></div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                            <p class="font-bold text-gray-900"><?php echo htmlspecialchars($profile['school_id'] ?? 'N/A'); ?></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Role</p>
+                            <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block break-words">
+                                <?php echo htmlspecialchars($profile['service_role'] ?? 'N/A'); ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Assigned Department</p>
+                        <?php if ($profile['service_role'] === 'Grammarly & AI Checking'): ?>
+                            <p class="font-semibold text-gray-900 leading-snug">Global Service (All Departments)</p>
+                        <?php else: ?>
+                            <p class="font-semibold text-gray-900 leading-snug"><?php echo htmlspecialchars($profile['department_name'] ?? 'N/A'); ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-end">
+                    <button onclick="closeMyProfile()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed top-6 right-6 space-y-3 z-[9999]"></div>
 
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
@@ -282,6 +334,19 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
             });
         });
 
+        // NEW: Modal Javascript functions
+        function openMyProfile() {
+            const modal = document.getElementById('myProfileModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeMyProfile() {
+            const modal = document.getElementById('myProfileModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
         window.openProfileStudent = function(data) {
             document.getElementById("sp_research_leader").textContent = data.research_leader || "-";
             document.getElementById("sp_control_number").textContent = data.control_number || "-";
@@ -311,15 +376,11 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
         }
 
         function viewSubmissionWithComments(submissionId) {
-
             const url = `../personnel/personnel-access-file/process_${serviceType}.php?id=${submissionId}&viewOnly=1`;
-
             fetch(url)
                 .then(res => res.text())
                 .then(html => {
                     document.getElementById('main-content').innerHTML = html;
-
-                    // After loading, automatically open the comment modal
                     setTimeout(() => {
                         openViewCommentModal(submissionId);
                     }, 300);
@@ -327,25 +388,17 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 .catch(err => console.error('Error loading submission:', err));
         }
 
-
         function updateSubmissionStatus(submissionId, status) {
             fetch(`../../backend/ajax/access_file_${serviceType}.php`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: submissionId,
-                        status: status
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: submissionId, status: status })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         showToast(`Submission ${status}!`, "success");
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
+                        setTimeout(() => { location.reload(); }, 1500);
                     } else {
                         showToast("Failed to update status.", "error");
                     }
@@ -368,29 +421,21 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
         let commentCount = 0;
 
         function openCommentModal(submissionId) {
-
             currentSubmissionId = submissionId;
-            // Always sync from DOM before opening
             const hiddenCount = document.getElementById('initialCommentCount');
             if (hiddenCount) {
                 commentCount = parseInt(hiddenCount.value) || 0;
             }
-
             const modal = document.getElementById('commentModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-
-            document.getElementById('commentCounter').innerText =
-                "Comment No." + (commentCount + 1);
+            document.getElementById('commentCounter').innerText = "Comment No." + (commentCount + 1);
         }
-
-
 
         function closeCommentModal() {
             const modal = document.getElementById('commentModal');
             modal.classList.remove('flex');
             modal.classList.add('hidden');
-
             document.getElementById('commentText').value = '';
             document.getElementById('commentPage').value = '';
             document.getElementById('commentParagraph').value = '';
@@ -398,7 +443,6 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
 
         document.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'saveCommentBtn') {
-
                 const page = document.getElementById('commentPage').value;
                 const paragraph = document.getElementById('commentParagraph').value;
                 const text = document.getElementById('commentText').value;
@@ -406,16 +450,12 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
 
                 if (!page || !paragraph || !text) {
                     errorDiv.classList.remove('hidden');
-                    setTimeout(() => {
-                        errorDiv.classList.add('hidden');
-                    }, 1500);
+                    setTimeout(() => { errorDiv.classList.add('hidden'); }, 1500);
                     return;
                 }
                 fetch(`../../backend/ajax/save_${serviceType}_comment.php`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             [`${serviceType}_id`]: currentSubmissionId,
                             page_number: page,
@@ -427,35 +467,19 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                     .then(data => {
                         if (data.success) {
                             commentCount++;
-                            // Update hidden field too
                             const hiddenCount = document.getElementById('initialCommentCount');
-                            if (hiddenCount) {
-                                hiddenCount.value = commentCount;
-                            }
-                            // Update header text live
+                            if (hiddenCount) hiddenCount.value = commentCount;
+                            
                             const header = document.getElementById('commentHeaderCount');
                             if (header) {
-                                header.innerText =
-                                    "You Currently Added " + commentCount +
-                                    (commentCount === 1 ? " Comment" : " Comments");
+                                header.innerText = "You Currently Added " + commentCount + (commentCount === 1 ? " Comment" : " Comments");
                             }
-                            // Enable View Comment button
+                            
                             const viewBtn = document.getElementById('viewCommentBtn');
                             if (viewBtn) {
                                 viewBtn.disabled = false;
-                                // Remove ALL gray styles
-                                viewBtn.classList.remove(
-                                    'bg-gray-300',
-                                    'text-gray-500',
-                                    'opacity-50',
-                                    'hidden'
-                                );
-                                // Add active styles
-                                viewBtn.classList.add(
-                                    'bg-blue-600',
-                                    'text-white',
-                                    'hover:bg-blue-700'
-                                );
+                                viewBtn.classList.remove('bg-gray-300', 'text-gray-500', 'opacity-50', 'hidden');
+                                viewBtn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
                             }
                             showToast("Comment added successfully!", "success");
                             closeCommentModal();
@@ -476,7 +500,6 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
             fetch(`../../backend/ajax/get_${serviceType}_comments.php?id=` + submissionId)
                 .then(res => res.json())
                 .then(data => {
-
                     if (data.length === 0) {
                         container.innerHTML = "<p class='text-gray-500'>No comments found.</p>";
                     } else {
@@ -497,7 +520,6 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                     `;
                         });
                     }
-
                     modal.classList.remove('hidden');
                     modal.classList.add('flex');
                 });
@@ -509,69 +531,42 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
             modal.classList.add('hidden');
         }
 
-
         function showToast(message, type = "success") {
-
             const container = document.getElementById("toastContainer");
-
             const toast = document.createElement("div");
 
-            const baseClasses =
-                "flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transform transition-all duration-300 translate-x-full opacity-0";
-
-            const typeClasses = type === "success" ?
-                "bg-green-600 text-white" :
-                "bg-red-600 text-white";
+            const baseClasses = "flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transform transition-all duration-300 translate-x-full opacity-0";
+            const typeClasses = type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white";
 
             toast.className = `${baseClasses} ${typeClasses}`;
             toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    ${
-                        type === "success"
-                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M5 13l4 4L19 7"/>`
-                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"/>`
-                    }
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    ${ type === "success"
+                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>`
+                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>` }
                 </svg>
                 <span>${message}</span>
             `;
-
             container.appendChild(toast);
 
-            // Trigger animation
-            setTimeout(() => {
-                toast.classList.remove("translate-x-full", "opacity-0");
-            }, 50);
-
-            // Auto remove Notif
+            setTimeout(() => { toast.classList.remove("translate-x-full", "opacity-0"); }, 50);
             setTimeout(() => {
                 toast.classList.add("translate-x-full", "opacity-0");
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // For Updating the Status of Receipt
         function updateReceiptStatus(id, status) {
             fetch(`../../backend/ajax/update_receipt_verification.php`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: id,
-                        status: status
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, status: status })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Using your existing custom toast notifications!
                         showToast(`Receipt ${status}!`, "success");
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
+                        setTimeout(() => { location.reload(); }, 1500);
                     } else {
                         showToast("Failed to update receipt status.", "error");
                     }
@@ -579,7 +574,6 @@ $serviceRole = $personnel['service_role'] ?? 'Personnel';
                 .catch(err => console.error(err));
         }
     </script>
-
 </body>
 
 </html>

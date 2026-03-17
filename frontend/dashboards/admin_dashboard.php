@@ -4,6 +4,17 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../auth/login.php");
     exit();
 }
+
+require_once "../../backend/config/database.php";
+
+$user_id = $_SESSION['user'];
+
+// 1. Get Admin Profile Details
+$stmt = $conn->prepare("SELECT school_id, email FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$admin_profile = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,13 +50,14 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
         <div class="flex items-center gap-4">
             <div class="text-right hidden sm:block">
                 <p class="text-[11px] text-blue-200 font-medium uppercase tracking-wider mb-0.5">Welcome, Admin</p>
-                <p class="text-sm font-bold"><?php echo htmlspecialchars($_SESSION['school_id']); ?></p>
+                <p class="text-sm font-bold"><?php echo htmlspecialchars($admin_profile['school_id'] ?? 'Admin'); ?></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-blue-800 border border-blue-400/50 flex items-center justify-center shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200" viewBox="0 0 20 20" fill="currentColor">
+
+            <button onclick="openMyAdminProfile()" class="w-10 h-10 rounded-full bg-blue-800 border border-blue-400/50 flex items-center justify-center shadow-inner hover:bg-blue-700 hover:ring-2 hover:ring-blue-300 transition-all focus:outline-none group">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200 group-hover:text-white transition-colors" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                 </svg>
-            </div>
+            </button>
         </div>
     </header>
 
@@ -119,31 +131,31 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                     </div>
 
                     <div x-show="open" class="flex flex-col gap-0.5 px-3" x-cloak>
-                        <a href="#" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                        <a href="admin_dashboard.php?page=analytics_grammarly_ai" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                             Grammarly & AI
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                        <a href="admin_dashboard.php?page=analytics_ethics" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             Ethics
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                        <a href="admin_dashboard.php?page=analytics_human_grammarian" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                             </svg>
                             Human Grammarian
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                        <a href="admin_dashboard.php?page=analytics_librarian" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
                             </svg>
                             Librarian
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                        <a href="admin_dashboard.php?page=analytics_statistician" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                             </svg>
@@ -205,7 +217,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         </div>
                     </div>
 
-                    <a href="#" class="mt-2 flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
+                    <a href="admin_dashboard.php?page=manage_transactions" class="mt-2 flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group">
                         <div class="w-4 h-4 flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -242,77 +254,77 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div id="main-content" class="max-w-7xl mx-auto">
 
                 <?php
-                require_once "../../backend/config/database.php";
-
                 $page = $_GET['page'] ?? 'dashboard';
 
                 switch ($page) {
                     case 'students':
                         include '../students/students_list.php';
                         break;
-
                     case 'edit_student':
                         include '../dashboards/admin_edit_student.php';
                         break;
-
                     case 'add_student':
                         include '../students/admin_add_student.php';
                         break;
-
                     case 'personnel':
                         include '../personnel/personnel_list.php';
                         break;
-
                     case 'edit_personnel':
                         include '../dashboards/admin_edit_personnel.php';
                         break;
-
                     case 'add_personnel':
                         include '../personnel/admin_add_personnel.php';
                         break;
-
                     case 'view_departments':
                         include '../department-courses/view_department.php';
                         break;
-
                     case 'add_department':
                         include '../department-courses/add_department.php';
                         break;
-
                     case 'edit_department':
                         include '../department-courses/edit_department.php';
                         break;
-
                     case 'view_courses':
                         include '../department-courses/view_course.php';
                         break;
-
                     case 'add_course':
                         include '../department-courses/add_course.php';
                         break;
-
                     case 'edit_course':
                         include '../department-courses/edit_course.php';
                         break;
-
                     case 'feedback_admin':
                         include '../feedback/feedback-admin/admin_feedback.php';
                         break;
-
                     case 'feedback_admin_add':
                         include '../feedback/feedback-admin/admin_add_feedback.php';
                         break;
-
                     case 'feedback_admin_view':
                         include '../feedback/feedback-admin/admin_view_feedback.php';
                         break;
-
                     case 'feedback_admin_edit':
                         include '../feedback/feedback-admin/admin_edit_feedback.php';
                         break;
-
                     case 'admin_settings':
                         include '../settings/admin-settings/admin_settings.php';
+                        break;
+                    case 'manage_transactions':
+                        include '../transactions/manage_transactions.php';
+                        break;
+                    case 'analytics_ethics':
+                        include '../analytics/ethics_analytics.php';
+                        break;
+                    case 'analytics_grammarly_ai':
+                        include '../analytics/grammarly_ai_analytics.php';
+                        break;
+                    case 'analytics_human_grammarian':
+                        include '../analytics/human_grammarian_analytics.php';
+                        break;
+                    case 'analytics_librarian':
+                        include '../analytics/librarian_analytics.php';
+                        break;
+                    case 'analytics_statistician':
+                        include '../analytics/statistician_analytics.php';
                         break;
 
                     case 'grammarly_ai_files':
@@ -320,25 +332,21 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         $archive_table = "grammarly_ai";
                         include '../archives/archive_list.php';
                         break;
-
                     case 'ethics_files':
                         $archive_title = "Ethics";
                         $archive_table = "ethics";
                         include '../archives/archive_list.php';
                         break;
-
                     case 'human-grammarian_files':
                         $archive_title = "Human Grammarian";
                         $archive_table = "human_grammarian";
                         include '../archives/archive_list.php';
                         break;
-
                     case 'librarian_files':
                         $archive_title = "Librarian";
                         $archive_table = "librarian";
                         include '../archives/archive_list.php';
                         break;
-
                     case 'statistician_files':
                         $archive_title = "Statistician";
                         $archive_table = "statistician";
@@ -366,10 +374,159 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 
     </div>
 
-    <div id="profileModalStudent" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[9999] backdrop-blur-sm">
+    <div id="profileModalStudent" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[9999] backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold tracking-wide">Student Profile</h3>
+                <button onclick="closeProfileStudent()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[80vh]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800">
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                        <p class="font-bold text-gray-900" id="p_school_id"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
+                        <p class="font-medium text-gray-800" id="p_email"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Department</p>
+                        <p class="font-medium text-gray-800" id="p_department_id"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Course</p>
+                        <p class="font-medium text-gray-800" id="p_course_id"></p>
+                    </div>
+                    <div class="md:col-span-2 border-t border-gray-100 my-1"></div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Control Number</p>
+                        <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block" id="p_control_number"></span>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Research Leader</p>
+                        <p class="font-medium text-gray-800" id="p_research_leader"></p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Account Status</p>
+                        <span id="p_status" class="inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-gray-100 text-gray-800"></span>
+                    </div>
+                    <div class="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 mt-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thesis Title</p>
+                        <p class="font-semibold text-gray-900 leading-snug" id="p_thesis_title"></p>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button onclick="closeProfileStudent()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="profileModalPersonnel" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[9999] backdrop-blur-sm">
+    <div id="masterModalPersonnel" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[9999] backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold tracking-wide">Personnel Profile</h3>
+                <button onclick="closeProfilePersonnel()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[80vh]">
+                <div class="grid grid-cols-1 gap-y-5 text-sm text-gray-800">
+                    <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
+                        <div class="w-14 h-14 bg-blue-200 text-blue-800 rounded-full flex items-center justify-center shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Full Name</p>
+                            <p class="font-bold text-xl text-gray-900 leading-none" id="master_p_full_name"></p>
+                            <p class="text-blue-600 text-xs font-medium mt-1" id="master_p_email"></p>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                            <p class="font-bold text-gray-900" id="master_p_school_id"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Role</p>
+                            <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block break-words" id="master_p_service_role"></span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Assigned Department</p>
+                        <p class="font-semibold text-gray-900 leading-snug" id="master_p_dept"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Account Status</p>
+                        <span id="master_p_status" class="inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-gray-100 text-gray-800"></span>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button onclick="closeProfilePersonnel()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="myAdminProfileModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold tracking-wide flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                    </svg>
+                    My Profile
+                </h3>
+                <button onclick="closeMyAdminProfile()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto">
+                <div class="grid grid-cols-1 gap-y-5 text-sm text-gray-800">
+
+                    <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
+                        <div class="w-14 h-14 bg-blue-200 text-blue-800 rounded-full flex items-center justify-center shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Admin School ID</p>
+                            <p class="font-bold text-xl text-gray-900 leading-none"><?php echo htmlspecialchars($admin_profile['school_id'] ?? 'N/A'); ?></p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-100 my-1"></div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">System Role</p>
+                            <span class="font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 inline-block break-words">
+                                System Administrator
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Account Status</p>
+                            <span class="font-bold text-green-700 bg-green-50 px-2.5 py-0.5 rounded border border-green-100 inline-block break-words">
+                                Active
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Email Address</p>
+                        <p class="font-semibold text-gray-900 leading-snug"><?php echo htmlspecialchars($admin_profile['email'] ?? 'N/A'); ?></p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end">
+                    <button onclick="closeMyAdminProfile()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-bold transition shadow-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -393,17 +550,29 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             });
         });
 
-        // Make sure your dynamically loaded files contain the actual HTML elements for these IDs, 
-        // otherwise they will throw a JS error when called.
+        // Admin Profile Modal Functions
+        function openMyAdminProfile() {
+            const modal = document.getElementById('myAdminProfileModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeMyAdminProfile() {
+            const modal = document.getElementById('myAdminProfileModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Student Profile Modal Functions
         window.openProfileStudent = function(data) {
             document.getElementById("p_school_id").textContent = data.school_id || "-";
             document.getElementById("p_email").textContent = data.email || "-";
-            document.getElementById("p_thesis_title").textContent = data.thesis_title || "-";
+            document.getElementById("p_department_id").textContent = data.department_name || data.department || "-";
+            document.getElementById("p_course_id").textContent = data.course_name || data.course || "-";
             document.getElementById("p_control_number").textContent = data.control_number || "-";
             document.getElementById("p_research_leader").textContent = data.research_leader || "-";
             document.getElementById("p_status").textContent = data.status || "-";
-            document.getElementById("p_department_id").textContent = data.department_name || "-";
-            document.getElementById("p_course_id").textContent = data.course_name || "-";
+            document.getElementById("p_thesis_title").textContent = data.thesis_title || "-";
 
             const modal = document.getElementById("profileModalStudent");
             modal.classList.remove("hidden");
@@ -416,21 +585,24 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             modal.classList.remove("flex");
         }
 
+        // 3. Personnel Profile Modal Functions (MASTER)
         window.openProfilePersonnel = function(data) {
-            document.getElementById("p_school_id").textContent = data.school_id || "-";
-            document.getElementById("p_email").textContent = data.email || "-";
-            document.getElementById("p_full_name").textContent = data.full_name || "-";
-            document.getElementById("p_service_role").textContent = data.service_role || "-";
-            document.getElementById("p_status").textContent = data.status || "-";
-            document.getElementById("p_department_id").textContent = data.department_name || "-";
+            document.getElementById("master_p_school_id").textContent = data.school_id || data.School_ID || "-";
+            document.getElementById("master_p_email").textContent = data.email || data.Email || "-";
+            document.getElementById("master_p_full_name").textContent = data.full_name || data.name || "-";
+            document.getElementById("master_p_service_role").textContent = data.service_role || data.role || "-";
+            document.getElementById("master_p_status").textContent = data.status || data.Status || "-";
 
-            const modalp = document.getElementById("profileModalPersonnel");
+            // Check if department_name exists, otherwise fallback to "Global Service"
+            document.getElementById("master_p_dept").textContent = data.department_name || data.department || "Global Service";
+
+            const modalp = document.getElementById("masterModalPersonnel");
             modalp.classList.remove("hidden");
             modalp.classList.add("flex");
         }
 
         window.closeProfilePersonnel = function() {
-            const modalp = document.getElementById("profileModalPersonnel");
+            const modalp = document.getElementById("masterModalPersonnel");
             modalp.classList.add("hidden");
             modalp.classList.remove("flex");
         }

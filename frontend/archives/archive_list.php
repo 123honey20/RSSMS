@@ -72,7 +72,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
                     <th class="px-6 py-4 font-semibold text-center">Round</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Document</th>
-                    <th class="px-6 py-4 font-semibold text-center">Action</th>
+                    <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
                 </tr>
             </thead>
             <tbody id="archiveTableBody" class="divide-y divide-gray-100"></tbody>
@@ -207,7 +207,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
                     }
 
                     row.innerHTML = `
-                        <td class="px-6 py-4 text-center font-semibold text-gray-800">${rec.school_id}</td>
+                        <td class="px-6 py-4 text-center text-xs text-gray-800">${rec.school_id}</td>
                         <td class="px-6 py-4 font-medium text-gray-600 truncate max-w-[200px]" title="${rec.thesis_title}">${rec.thesis_title}</td>
                         <td class="px-6 py-4 text-center font-semibold">R${rec.round}</td>
                         <td class="px-6 py-4 text-center">

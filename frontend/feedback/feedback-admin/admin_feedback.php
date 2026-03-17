@@ -1,3 +1,21 @@
+<?php
+require_once "../../backend/config/database.php"; // Make sure to include DB connection for the SY query!
+
+// Fetch Active School Year
+$sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
+$active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
+
+// UNIVERSITY STANDARD SCHOOL YEAR GENERATION
+$start_year = 2024;
+$current_calendar_year = (int)date("Y");
+$max_year = $current_calendar_year + 2;
+
+$generated_years = [];
+for ($y = $max_year; $y >= $start_year; $y--) {
+    $generated_years[] = $y . "-" . ($y + 1);
+}
+?>
+
 <div class="bg-white p-6 rounded-xl shadow min-h-[80vh]">
 
     <div class="flex items-center justify-between mb-6 pb-4 border-b">
@@ -11,9 +29,27 @@
         </a>
     </div>
 
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
-        <input type="text" id="feedbackSearch" placeholder="Search by Control No..."
-            class="w-full md:w-1/3 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <input type="text" id="feedbackSearch" placeholder="Search Control No. or Personnel..."
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm">
+        
+        <select id="syFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All School Years</option>
+            <?php foreach ($generated_years as $year): ?>
+                <option value="<?php echo $year; ?>" <?= ($year === $active_sy) ? 'selected' : '' ?>>
+                    SY <?php echo $year; ?> <?= ($year === $active_sy) ? '(Active)' : '' ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <select id="serviceFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            <option value="All">All Services</option>
+            <option value="Grammarly">Grammarly & AI</option>
+            <option value="Ethics">Ethics</option>
+            <option value="grammarian">Human Grammarian</option>
+            <option value="Librarian">Librarian</option>
+            <option value="Statistician">Statistician</option>
+        </select>
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-200">
@@ -36,7 +72,7 @@
     </div>
 </div>
 
-<div id="profileModalStudent" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-opacity">
+<div id="profileModalStudent" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[9999] p-4 transition-opacity">
     <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         <div class="bg-blue-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
             <h3 class="text-lg font-bold">Student Profile</h3>
@@ -96,7 +132,7 @@
     </div>
 </div>
 
-<div id="feedbackDetailModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-opacity">
+<div id="feedbackDetailModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[9999] p-4 transition-opacity">
     <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
             <h3 class="text-lg font-bold text-gray-800">Evaluation Details</h3>
@@ -145,8 +181,11 @@
     function fetchFeedback(page = 1) {
         currentPage = page;
         const search = document.getElementById('feedbackSearch').value;
+        const sy = document.getElementById('syFilter').value;
+        const service = document.getElementById('serviceFilter').value;
 
-        fetch(`../../backend/ajax/fetch_student_evaluations.php?p=${page}&search=${encodeURIComponent(search)}`)
+        // Passed new SY and Service parameters to the backend
+        fetch(`../../backend/ajax/fetch_student_evaluations.php?p=${page}&search=${encodeURIComponent(search)}&sy=${encodeURIComponent(sy)}&service=${encodeURIComponent(service)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -169,6 +208,7 @@
                             </td>
                         </tr>`;
                     document.getElementById('recordInfo').textContent = '';
+                    document.getElementById('paginationContainer').innerHTML = '';
                     return;
                 }
 
@@ -193,7 +233,7 @@
                         <td class="px-6 py-4 font-semibold text-gray-800">${eval.control_number || 'N/A'}</td>
                         <td class="px-6 py-4 text-gray-700">
                             <div class="font-semibold">${eval.personnel_name || 'Unknown'}</div>
-                            <div class="text-[10px] text-gray-500 uppercase tracking-wider">${eval.service_role || 'Service'}</div>
+                            <div class="text-[10px] text-gray-500 uppercase tracking-wider">${eval.service_role || eval.service_type || 'Service'}</div>
                         </td>
                         <td class="px-6 py-4 text-center text-gray-500 text-xs">${formattedDate}</td>
                         <td class="px-6 py-4 text-center">
@@ -242,7 +282,7 @@
 
     function openFeedbackModal(data) {
         document.getElementById("f_personnel_name").textContent = data.personnel_name || "Unknown";
-        document.getElementById("f_service_role").textContent = data.service_role || "Research Services";
+        document.getElementById("f_service_role").textContent = data.service_role || data.service_type || "Research Services";
         document.getElementById("f_total_score").textContent = data.total_score || "0";
         document.getElementById("f_rubric_name").textContent = data.rubric_name || "Unknown Instrument";
         document.getElementById("f_comments").textContent = data.comments ? data.comments : "No additional comments provided by the student.";
@@ -257,6 +297,10 @@
         modal.classList.add("hidden");
         modal.classList.remove("flex");
     }
+
+    // NEW: Added Event Listeners for the dropdowns!
+    document.getElementById('syFilter').addEventListener('change', () => fetchFeedback(1));
+    document.getElementById('serviceFilter').addEventListener('change', () => fetchFeedback(1));
 
     document.getElementById('feedbackSearch').addEventListener('keyup', () => {
         clearTimeout(searchTimeout);
