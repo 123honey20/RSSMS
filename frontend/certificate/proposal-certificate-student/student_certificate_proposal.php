@@ -34,12 +34,12 @@ if ($student_id > 0) {
 }
 
 if (!$isEligible) {
-    echo "<div class='p-6 text-red-600 bg-red-50 rounded-lg max-w-4xl mx-auto mt-8'>You have not yet met the requirements to unlock the Proposal Certificate.</div>";
+    echo "<div class='p-6 text-red-600 bg-red-50 rounded-lg max-w-4xl mx-auto mt-8 shadow-sm border border-red-100 font-medium'>You have not yet met the requirements to unlock the Proposal Certificate.</div>";
     exit();
 }
 
 // Ensure you placed the image in this exact location!
-$certificateImagePath = "../images/certificates/proposal-certificate/certificate-proposal-student.png"; 
+$certificateImagePath = "../images/certificates/proposal-certificate/Proposal_Certificate.png"; 
 ?>
 
 <div class="max-w-5xl mx-auto pb-12 pt-6">
@@ -72,7 +72,7 @@ $certificateImagePath = "../images/certificates/proposal-certificate/certificate
                     Print
                 </button>
                 
-                <a href="<?php echo $certificateImagePath; ?>" download="Proposal_Certificate_<?php echo htmlspecialchars($control_number); ?>.jpg" 
+                <a href="<?php echo $certificateImagePath; ?>" download="Proposal_Certificate_<?php echo htmlspecialchars($control_number); ?>.png" 
                    class="flex-1 sm:flex-none flex justify-center items-center gap-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-md hover:from-amber-500 hover:to-yellow-600 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -82,13 +82,15 @@ $certificateImagePath = "../images/certificates/proposal-certificate/certificate
             </div>
         </div>
 
-        <div class="p-6 sm:p-12 bg-gray-200/80 flex justify-center items-center min-h-[600px] print:p-0 print:bg-white print:min-h-0">
-            <div id="printable-certificate" class="bg-white shadow-2xl border border-gray-300 w-full max-w-4xl aspect-[1.414] relative flex items-center justify-center overflow-hidden">
+        <div class="py-10 px-6 sm:px-12 bg-slate-900 flex justify-center items-center print:p-0 print:bg-transparent">
+            
+            <div id="printable-certificate" class="shadow-[0_20px_50px_rgba(0,0,0,0.6)] w-full max-w-2xl relative flex items-center justify-center overflow-hidden transition-transform duration-500 hover:scale-[1.02] bg-transparent print:shadow-none print:hover:scale-100">
                 <img src="<?php echo $certificateImagePath; ?>" 
                      alt="Proposal Certificate" 
-                     class="w-full h-full object-contain"
+                     class="w-full h-auto object-contain block"
                      onerror="this.onerror=null; this.src='https://placehold.co/1122x793/ffffff/d97706?font=montserrat&text=Proposal+Certificate\\nControl+No:+<?php echo htmlspecialchars($control_number); ?>\\n\\n(Image+Not+Found)';">
             </div>
+
         </div>
     </div>
 </div>
@@ -98,8 +100,8 @@ $certificateImagePath = "../images/certificates/proposal-certificate/certificate
         body * { visibility: hidden; }
         #printable-certificate, #printable-certificate * { visibility: visible; }
         #printable-certificate {
-            position: absolute; left: 0; top: 0; width: 100%; height: 100%; margin: 0; padding: 0; box-shadow: none !important; border: none !important;
+            position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; margin: 0; padding: 0; box-shadow: none !important; border: none !important; transform: none !important;
         }
-        html, body { overflow: hidden; }
+        html, body { overflow: hidden; background: white; }
     }
 </style>

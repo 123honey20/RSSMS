@@ -225,6 +225,15 @@ $stmt->close();
                         </div>
                         Manage Transactions
                     </a>
+
+                    <a href="admin_dashboard.php?page=completed_proposals" class="mt-2 flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-green-700 bg-green-50/50 hover:bg-green-100 hover:text-green-900 border border-transparent hover:border-green-200 transition-colors group">
+                        <div class="w-4 h-4 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 text-green-600 group-hover:text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            </svg>
+                        </div>
+                        Proposal Clearances
+                    </a>
                 </div>
 
                 <div class="my-4 border-t border-gray-100"></div>
@@ -310,6 +319,9 @@ $stmt->close();
                         break;
                     case 'manage_transactions':
                         include '../transactions/manage_transactions.php';
+                        break;
+                    case 'completed_proposals':
+                        include '../students/completed_proposals.php';
                         break;
                     case 'analytics_ethics':
                         include '../analytics/ethics_analytics.php';

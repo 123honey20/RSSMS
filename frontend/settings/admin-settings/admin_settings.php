@@ -30,6 +30,9 @@ for ($y = $max_year; $y >= $start_year; $y--) {
     $next_y = $y + 1;
     $generated_years[] = $y . "-" . $next_y;
 }
+
+// Path to current certificate for preview (add timestamp to bypass browser cache)
+$current_cert_path = "../../images/certificates/proposal-certificate/Proposal_Certificate.png?v=" . time();
 ?>
 
 <div class="max-w-5xl mx-auto pb-10" x-data="adminSettingsApp()">
@@ -68,6 +71,51 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                                 <span x-show="!isSysLoading">Apply Global Setting</span>
                                 <span x-show="isSysLoading" x-cloak>Applying...</span>
                             </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
+                <div class="p-5 border-b border-gray-100 bg-amber-50/50 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <h2 class="text-sm font-bold text-amber-900 uppercase tracking-wider">Update Proposal Certificate</h2>
+                </div>
+                <div class="p-6">
+                    <form @submit.prevent="updateCertificate">
+                        <div class="flex flex-col md:flex-row gap-6">
+                            
+                            <div class="w-full md:w-1/3 flex flex-col items-center">
+                                <span class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 self-start">Current Proposal Certificate</span>
+                                <div class="w-full aspect-[1/1.4] bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden relative flex justify-center items-center">
+                                    <template x-if="certPreview">
+                                        <img :src="certPreview" class="w-full h-full object-contain absolute inset-0 bg-white">
+                                    </template>
+                                    <template x-if="!certPreview">
+                                        <img src="<?php echo $current_cert_path; ?>" class="w-full h-full object-contain absolute inset-0 bg-white" onerror="this.style.display='none'">
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="w-full md:w-2/3 flex flex-col justify-center">
+                                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Upload New Blank Certificate</label>
+                                <p class="text-xs text-gray-400 mb-4">Upload a high-quality PNG or JPG image. This will replace the blank certificate currently shown to cleared students.</p>
+                                
+                                <input type="file" id="certFile" accept="image/png, image/jpeg, image/jpg" @change="handleFileChange" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 transition-colors border border-gray-200 rounded-lg mb-4 cursor-pointer">
+
+                                <div x-show="certMsg" class="mb-4 p-3 rounded-lg text-sm font-medium" :class="isCertError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'" x-cloak>
+                                    <span x-text="certMsg"></span>
+                                </div>
+
+                                <div>
+                                    <button type="submit" :disabled="!certFile || isCertLoading" class="bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 text-sm shadow-sm flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                        <span x-show="!isCertLoading">Upload & Replace Template</span>
+                                        <span x-show="isCertLoading" x-cloak>Uploading...</span>
+                                    </button>
+                                </div>
+                            </div>
+
                         </div>
                     </form>
                 </div>
@@ -146,15 +194,22 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 <script>
 function adminSettingsApp() {
     return {
+        // System Config
         system: { school_year: <?php echo json_encode($active_sy); ?> },
         isSysLoading: false, sysMsg: '', isSysError: false,
 
+        // Certificate Upload
+        certFile: null, certPreview: null,
+        isCertLoading: false, certMsg: '', isCertError: false,
+
+        // Admin Profile
         profile: {
             school_id: <?php echo json_encode($admin['school_id'] ?? ''); ?>,
             email: <?php echo json_encode($admin['email'] ?? ''); ?>
         },
         isProfileLoading: false, profileMsg: '', isProfileError: false,
 
+        // Password
         passwords: { current: '', new: '', confirm: '' },
         isPassLoading: false, passMsg: '', isPassError: false,
 
@@ -175,8 +230,46 @@ function adminSettingsApp() {
                 }
             })
             .catch(err => {
-                console.error(err);
                 this.isSysLoading = false; this.isSysError = true; this.sysMsg = "Connection error.";
+            });
+        },
+
+        // NEW: Handle File Selection & Preview
+        handleFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.certFile = file;
+                this.certPreview = URL.createObjectURL(file);
+                this.certMsg = ''; // clear errors
+            }
+        },
+
+        // NEW: Upload Certificate
+        updateCertificate() {
+            if (!this.certFile) return;
+
+            this.isCertLoading = true; 
+            this.certMsg = '';
+
+            let formData = new FormData();
+            formData.append("certificate", this.certFile);
+
+            fetch('../../backend/ajax/update_certificate.php', {
+                method: 'POST',
+                body: formData // No Content-Type header needed for FormData, fetch handles it!
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.isCertLoading = false;
+                this.isCertError = !data.success;
+                this.certMsg = data.message;
+                if(data.success) {
+                    // Force refresh to clear old cached image everywhere in the system
+                    setTimeout(() => { window.location.reload(true); }, 1500);
+                }
+            })
+            .catch(err => {
+                this.isCertLoading = false; this.isCertError = true; this.certMsg = "Connection error.";
             });
         },
 
@@ -195,7 +288,6 @@ function adminSettingsApp() {
                 if(data.success) setTimeout(() => { window.location.reload(); }, 1500);
             })
             .catch(err => {
-                console.error(err);
                 this.isProfileLoading = false; this.isProfileError = true; this.profileMsg = "Connection error.";
             });
         },
@@ -222,7 +314,6 @@ function adminSettingsApp() {
                 }
             })
             .catch(err => {
-                console.error(err);
                 this.isPassLoading = false; this.isPassError = true; this.passMsg = "Connection error.";
             });
         }

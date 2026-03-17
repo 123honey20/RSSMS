@@ -14,7 +14,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <input type="text" id="searchInput" placeholder="Search by Control Number..."
-            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm">
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
         
         <select id="deptFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
             <option value="All">All Departments</option>

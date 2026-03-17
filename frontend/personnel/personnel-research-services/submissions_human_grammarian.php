@@ -24,9 +24,9 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 
     <div class="flex flex-col md:flex-row gap-3 mb-4">
         <input type="text" id="searchInput" placeholder="Search by Control Number..."
-            class="w-full md:w-1/3 border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
         
-        <select id="syFilter" class="w-full md:w-1/4 border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+        <select id="syFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
             <option value="All">All School Years</option>
             <?php foreach($generated_years as $year): ?>
                 <option value="<?php echo $year; ?>" <?= ($year === $active_sy) ? 'selected' : '' ?>>
@@ -35,7 +35,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
             <?php endforeach; ?>
         </select>
 
-        <select id="statusFilter" class="w-full md:w-1/4 border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
+        <select id="statusFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-sm text-gray-700 font-medium">
             <option value="All">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
