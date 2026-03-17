@@ -44,19 +44,19 @@ if ($dept_query) {
         <input type="text" id="clearanceSearch" placeholder="Search Control No. or Title..."
             class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm transition">
 
-        <select id="statusFilter" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 font-bold transition">
+        <select id="statusFilter" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 font-semibold transition">
             <option value="Cleared">Cleared Proposals</option>
             <option value="Uncleared">Uncleared / Pending</option>
         </select>
 
-        <select id="deptFilter" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 font-bold transition truncate">
+        <select id="deptFilter" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 font-semibold transition truncate">
             <option value="All">All Departments</option>
             <?php foreach ($departments as $dept): ?>
                 <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
             <?php endforeach; ?>
         </select>
 
-        <select id="syFilter" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 font-bold transition">
+        <select id="syFilter" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 font-semibold transition">
             <option value="All">All School Years</option>
             <?php foreach ($generated_years as $year): ?>
                 <option value="<?php echo $year; ?>" <?= ($year === $active_sy) ? 'selected' : '' ?>>
@@ -71,7 +71,7 @@ if ($dept_query) {
             <thead class="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
                 <tr>
                     <th class="px-6 py-4 font-bold text-center">#</th>
-                    <th class="px-6 py-4 font-bold">Student Details</th>
+                    <th class="px-6 py-4 font-bold">Control No.</th>
                     <th class="px-6 py-4 font-bold">Thesis Title</th>
                     <th class="px-6 py-4 font-bold text-center">Clearance Status</th>
                     <th class="px-6 py-4 font-bold text-center">Actions</th>
@@ -195,6 +195,7 @@ if ($dept_query) {
 
                     // Actions HTML
                     const certificateUrl = `../images/certificates/proposal-certificate/Proposal_Certificate.png`;
+
                     let actionHtml = `
                         <div class="flex items-center justify-center gap-3">
                             <button onclick='openClearanceProfile(${JSON.stringify(row).replace(/'/g, "&#39;")})' 
@@ -218,8 +219,7 @@ if ($dept_query) {
                     tr.innerHTML = `
                         <td class="px-6 py-4 text-center font-bold text-gray-400">${counter++}.</td>
                         <td class="px-6 py-4">
-                            <div class="font-extrabold text-gray-900">${row.control_number}</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">${row.department_name || 'Dept'}</div>
+                            <div class="font-semibold text-gray-900">${row.control_number}</div>
                         </td>
                         <td class="px-6 py-4 w-1/3">
                             <div class="font-semibold text-gray-800 line-clamp-2" title="${row.thesis_title}">${row.thesis_title}</div>
