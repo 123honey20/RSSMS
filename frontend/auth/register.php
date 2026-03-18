@@ -16,15 +16,36 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
     <title>Registration | RSSMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script>
+        // Check for dark mode preference from login.php
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.documentElement.classList.add('dark');
+        }
+        
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        warmdark: {
+                            bg: '#121212',
+                            panel: '#1e1e1e',
+                            border: '#333333'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         [x-cloak] { display: none !important; }
         .bg-pattern { background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%232563eb" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); }
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen font-sans text-gray-800 antialiased selection:bg-blue-200 selection:text-blue-900 bg-pattern flex items-center justify-center p-4">
+<body class="bg-gray-50 dark:bg-warmdark-bg min-h-screen font-sans text-gray-800 dark:text-gray-200 antialiased selection:bg-blue-200 selection:text-blue-900 bg-pattern flex items-center justify-center p-4 transition-colors duration-300">
 
-    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row" x-data="registrationApp()">
+    <div class="w-full max-w-5xl bg-white dark:bg-warmdark-panel rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row border dark:border-warmdark-border" x-data="registrationApp()">
         
         <div class="w-full md:w-5/12 bg-blue-900 p-10 flex flex-col justify-between text-white relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-full bg-blue-800 opacity-20 transform -skew-y-12 scale-150 origin-top-left"></div>
@@ -41,7 +62,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                 </div>
 
                 <h1 class="text-2xl font-bold mb-4 leading-tight">Research Support Services<br>Monitoring System</h1>
-                <p class="text-blue-100 text-sm leading-relaxed mb-8">Register your account to manage your thesis documents, connect with research personnel, and track your academic progress.</p>
+                <p class="text-blue-100 text-sm leading-relaxed mb-8 opacity-80">Register your account to manage your thesis documents, connect with research personnel, and track your academic progress.</p>
                 
                 <div class="space-y-4">
                     <div class="flex items-center gap-3 text-blue-200 text-sm font-medium">
@@ -65,19 +86,19 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
             </div>
         </div>
 
-        <div class="w-full md:w-7/12 p-10 bg-white">
+        <div class="w-full md:w-7/12 p-10 bg-white dark:bg-warmdark-panel">
             
             <div class="flex justify-between items-end mb-8">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Create Account</h2>
-                    <p class="text-xs text-gray-500 mt-1">Select your role and fill in your details.</p>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Create Account</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Select your role and fill in your details.</p>
                 </div>
                 
-                <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-                    <button @click="role = 'student'" :class="role === 'student' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all">
+                <div class="flex bg-gray-100 dark:bg-warmdark-bg p-1 rounded-lg border dark:border-warmdark-border border-gray-200">
+                    <button @click="role = 'student'" :class="role === 'student' ? 'bg-white dark:bg-warmdark-panel shadow-sm text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-gray-500'" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all">
                         Student
                     </button>
-                    <button @click="role = 'personnel'" :class="role === 'personnel' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all">
+                    <button @click="role = 'personnel'" :class="role === 'personnel' ? 'bg-white dark:bg-warmdark-panel shadow-sm text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-gray-500'" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all">
                         Personnel
                     </button>
                 </div>
@@ -94,46 +115,46 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1" x-text="role === 'student' ? 'School ID' : 'School ID'"></label>
-                        <input type="text" name="school_id" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter your School ID">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">School ID</label>
+                        <input type="text" name="school_id" required class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Enter School ID">
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
-                        <input type="email" name="email" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter your Email">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Email Address</label>
+                        <input type="email" name="email" required class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Enter Email">
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
-                        <input type="password" name="password" x-model="password" required minlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="••••••••">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Password</label>
+                        <input type="password" name="password" x-model="password" required minlength="6" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="••••••••">
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Confirm Password</label>
-                        <input type="password" name="confirm_password" x-model="confirm_password" required minlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="••••••••">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Confirm Password</label>
+                        <input type="password" name="confirm_password" x-model="confirm_password" required minlength="6" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="••••••••">
                     </div>
                 </div>
 
-                <div class="w-full h-px bg-gray-100 my-6"></div>
+                <div class="w-full h-px bg-gray-100 dark:bg-warmdark-border my-6"></div>
 
                 <div x-show="role === 'student'" x-transition x-cloak class="space-y-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Control Number</label>
-                            <input type="text" name="control_number" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter you Control No.">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Control Number</label>
+                            <input type="text" name="control_number" :required="role === 'student'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Control No.">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Research Leader</label>
-                            <input type="text" name="research_leader" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Full Name">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Research Leader</label>
+                            <input type="text" name="research_leader" :required="role === 'student'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Full Name">
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Thesis Title</label>
-                        <input type="text" name="thesis_title" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter complete thesis title">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Thesis Title</label>
+                        <input type="text" name="thesis_title" :required="role === 'student'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Thesis Title">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Department</label>
-                            <select name="student_department_id" id="student_department_id" :required="role === 'student'" @change="fetchCourses" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Department</label>
+                            <select name="student_department_id" id="student_department_id" :required="role === 'student'" @change="fetchCourses" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors appearance-none">
                                 <option value="">Select Department</option>
                                 <?php
                                 $departments->data_seek(0);
@@ -144,8 +165,8 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Course</label>
-                            <select name="course_id" id="courseSelect" :required="role === 'student'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Course</label>
+                            <select name="course_id" id="courseSelect" :required="role === 'student'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors appearance-none">
                                 <option value="">Select Course</option>
                             </select>
                         </div>
@@ -154,14 +175,14 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
                 <div x-show="role === 'personnel'" x-transition x-cloak class="space-y-5">
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
-                        <input type="text" name="full_name" :required="role === 'personnel'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="Enter your Full Name">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Full Name</label>
+                        <input type="text" name="full_name" :required="role === 'personnel'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Enter Full Name">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Service Role</label>
-                            <select name="role" x-model="personnelServiceRole" :required="role === 'personnel'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Service Role</label>
+                            <select name="role" x-model="personnelServiceRole" :required="role === 'personnel'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors appearance-none">
                                 <option value="">Select Role</option>
                                 <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
                                 <option value="Human Grammarian">Human Grammarian</option>
@@ -172,8 +193,8 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                         </div>
 
                         <div x-show="personnelServiceRole !== 'Grammarly & AI Checking' && personnelServiceRole !== ''">
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Assigned Department</label>
-                            <select name="personnel_department_id" :required="role === 'personnel' && personnelServiceRole !== 'Grammarly & AI Checking'" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors appearance-none">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Assigned Department</label>
+                            <select name="personnel_department_id" :required="role === 'personnel' && personnelServiceRole !== 'Grammarly & AI Checking'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors appearance-none">
                                 <option value="">Select Department</option>
                                 <?php
                                 $departments->data_seek(0);
@@ -199,7 +220,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
     <script>
         function registrationApp() {
             return {
-                role: 'student', // 'student' or 'personnel'
+                role: 'student', 
                 password: '',
                 confirm_password: '',
                 errorMsg: '',
@@ -217,14 +238,11 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                 fetchCourses(event) {
                     const departmentId = event.target.value;
                     const courseSelect = document.getElementById("courseSelect");
-                    
                     courseSelect.innerHTML = '<option value="">Loading...</option>';
-
                     if (!departmentId) {
                         courseSelect.innerHTML = '<option value="">Select Course</option>';
                         return;
                     }
-
                     fetch("../../backend/ajax/get_courses.php?department_id=" + departmentId)
                         .then(response => response.json())
                         .then(data => {

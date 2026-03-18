@@ -6,6 +6,10 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 }
 
 require_once "../../config/database.php";
+require '../../../vendor/autoload.php'; 
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $user_id = $_SESSION['user'];
 $redirect_url = "../../../frontend/dashboards/student_dashboard.php?page=student_upload_grammarly_ai";
@@ -16,132 +20,146 @@ function redirectWithError($message, $url) {
     exit();
 }
 
-// Get student id
-$stmt = $conn->prepare("SELECT id FROM students WHERE user_id = ?");
+// 1. Get student and user details
+$stmt = $conn->prepare("
+    SELECT s.id, s.control_number, s.research_leader, s.thesis_title, u.school_id, u.email 
+    FROM students s 
+    JOIN users u ON s.user_id = u.id 
+    WHERE u.id = ?
+");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$student = $stmt->get_result()->fetch_assoc();
-$student_id = $student['id'];
+$studentData = $stmt->get_result()->fetch_assoc();
+$student_id = $studentData['id'];
+$school_id = $studentData['school_id'];
+$studentEmail = $studentData['email'];
+$studentName = $studentData['research_leader'];
+$controlNo = $studentData['control_number'];
+$thesisTitle = $studentData['thesis_title'];
 $stmt->close();
 
-// Get school_id of student
-$stmt2 = $conn->prepare("SELECT school_id FROM users WHERE id = ?");
-$stmt2->bind_param("i", $user_id);
-$stmt2->execute();
-$userRow = $stmt2->get_result()->fetch_assoc();
-$school_id = $userRow['school_id'];
-$stmt2->close();
-
-// File handling
+// 2. File handling
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
     redirectWithError("Please select a valid file to upload.", $redirect_url);
 }
 
 $file = $_FILES['submission_file'];
-$filename = time() . "_" . basename($file['name']);
+$originalName = basename($file['name']);
+$filename = time() . "_" . $originalName;
 $targetDir = "../../../uploads/grammarly_ai/submissions/";
 $targetFile = $targetDir . $filename;
 
-// Extension check
 $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-$allowed = ['pdf', 'docx', 'doc', 'odt', 'rtf', 'txt', 'pptx'];
-
-if (!in_array($ext, $allowed)) {
-    redirectWithError("Only PDF, DOCX, DOC, ODT, RTF, TXT, and PPTX files are allowed.", $redirect_url);
+if (!in_array($ext, ['pdf', 'docx', 'doc', 'odt', 'rtf', 'txt', 'pptx'])) {
+    redirectWithError("Invalid file extension.", $redirect_url);
 }
-
-// MIME type check
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$mime  = $finfo->file($file['tmp_name']);
-
-$allowedMime = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
-    'application/msword', // doc
-    'application/vnd.oasis.opendocument.text', // odt
-    'application/rtf', // rtf
-    'text/plain', // txt
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation' // pptx
-];
-
-if (!in_array($mime, $allowedMime)) {
-    redirectWithError("Invalid file format detected.", $redirect_url);
-}
-
 
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
     
-    // Get latest approved transaction
-    $stmt = $conn->prepare("
-        SELECT * FROM grammarly_ai_transactions
-        WHERE student_id = ?
-        AND status = 'Approved'
-        ORDER BY round DESC
-        LIMIT 1
-    ");
+    // Determine the round from approved transaction
+    $stmt = $conn->prepare("SELECT round FROM grammarly_ai_transactions WHERE student_id = ? AND status = 'Approved' ORDER BY round DESC LIMIT 1");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     $approvedTransaction = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
     if (!$approvedTransaction) {
-        // Delete the file we just uploaded because they aren't allowed to submit yet!
         unlink($targetFile);
-        redirectWithError("No approved transaction found. Please complete payment first.", $redirect_url);
+        redirectWithError("No approved transaction found.", $redirect_url);
     }
 
     $round = (int)$approvedTransaction['round'];
 
-    // Check if submission already exists for this round
-    $checkSubmission = $conn->prepare("SELECT * FROM grammarly_ai WHERE student_id = ? AND round = ? LIMIT 1");
+    // Check for existing submission and handler (personnel_id)
+    $checkSubmission = $conn->prepare("SELECT id, file_path, status, personnel_id FROM grammarly_ai WHERE student_id = ? AND round = ? LIMIT 1");
     $checkSubmission->bind_param("ii", $student_id, $round);
     $checkSubmission->execute();
     $existingSubmission = $checkSubmission->get_result()->fetch_assoc();
     $checkSubmission->close();
 
+    $assigned_personnel_id = null;
+
     if ($existingSubmission) {
+        $assigned_personnel_id = $existingSubmission['personnel_id']; // The "Locked" Personnel
 
         if ($existingSubmission['status'] === 'Pending') {
-            
-            // FIX: Delete the old file from the server to save space!
-            $oldFilePath = $targetDir . $existingSubmission['file_path'];
-            if (file_exists($oldFilePath) && is_file($oldFilePath)) {
-                unlink($oldFilePath);
-            }
+            $oldPath = $targetDir . $existingSubmission['file_path'];
+            if (file_exists($oldPath)) unlink($oldPath);
 
-            // Re-upload same round
-            $stmt = $conn->prepare("UPDATE grammarly_ai SET file_path = ?, status = 'Pending' WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE grammarly_ai SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $existingSubmission['id']);
             $stmt->execute();
-            $stmt->close();
-
-            $_SESSION['flash_success'] = "Submission re-uploaded for Round $round.";
-
         } elseif ($existingSubmission['status'] === 'Approved') {
-            unlink($targetFile); // Delete the file they just tried to upload
-            redirectWithError("This round is already approved. You cannot overwrite it.", $redirect_url);
-
+            unlink($targetFile);
+            redirectWithError("This round is already approved.", $redirect_url);
         } else {
-            unlink($targetFile); // Delete the file they just tried to upload
-            redirectWithError("This submission was rejected. You must request a new transaction round.", $redirect_url);
+            // Re-uploading after Rejection
+            $stmt = $conn->prepare("UPDATE grammarly_ai SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
+            $stmt->bind_param("si", $filename, $existingSubmission['id']);
+            $stmt->execute();
         }
-
     } else {
-        // Insert new submission for approved round
-        $stmt = $conn->prepare("
-            INSERT INTO grammarly_ai (student_id, school_id, file_path, status, round)
-            VALUES (?, ?, ?, 'Pending', ?)
-        ");
+        // First upload for this round
+        $stmt = $conn->prepare("INSERT INTO grammarly_ai (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', ?)");
         $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
         $stmt->execute();
-        $stmt->close();
-
-        $_SESSION['flash_success'] = "Submission uploaded successfully for Round $round.";
     }
 
+    // --- EMAIL NOTIFICATION SYSTEM ---
+    try {
+        $mail = new PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'joshuaalmodiel119@gmail.com';
+        $mail->Password   = 'nprf grsd yrxt auyz';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+        $mail->setFrom('joshuaalmodiel119@gmail.com', 'RSSMS Support');
+        $mail->isHTML(true);
+
+        $header = "<div style='background-color:#f8fafc;padding:20px;font-family:sans-serif;'><div style='max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;'>";
+        $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p>Automated Grammarly & AI Checking Notification.</p></div></div></div>";
+
+        // 1. Email to Student
+        $mail->addAddress($studentEmail, $studentName);
+        $mail->Subject = "Grammarly & AI Document Submitted - Round $round";
+        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for <strong>Grammarly & AI Checking</strong> has been uploaded for Round $round.</p></div>" . $footer;
+        $mail->send();
+
+        // 2. Email to Personnel (Targeted Logic)
+        $mail->clearAddresses();
+        if ($assigned_personnel_id) {
+            // Only email the person who already handled it
+            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
+            $stmtP->bind_param("i", $assigned_personnel_id);
+        } else {
+            // New round: Email all personnel in this service
+            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Grammarly & AI Checking'");
+        }
+        $stmtP->execute();
+        $resP = $stmtP->get_result();
+        while($p = $resP->fetch_assoc()) $mail->addAddress($p['email'], $p['full_name']);
+        
+        if ($resP->num_rows > 0) {
+            $mail->Subject = "ACTION REQUIRED: Grammarly Submission Round $round - $controlNo";
+            $mail->Body = $header . "
+                <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Checking Task</h1></div>
+                <div style='padding:30px;line-height:1.6;color:#334155;'>
+                    <p>A research document is ready for Grammarly & AI review.</p>
+                    <div style='background:#eff6ff; border-left:4px solid #2563eb; padding:15px; margin:20px 0;'>
+                        <p style='margin:0;'><strong>Student:</strong> $studentName</p>
+                        <p style='margin:0;'><strong>Control No:</strong> $controlNo</p>
+                        <p style='margin:0;'><strong>Round:</strong> $round</p>
+                        <p style='margin:5px 0 0 0;'><strong>Title:</strong> $thesisTitle</p>
+                    </div>
+                    <p>Please log in to the dashboard to process this submission.</p>
+                </div>" . $footer;
+            $mail->send();
+        }
+    } catch (Exception $e) { error_log($e->getMessage()); }
+
+    $_SESSION['flash_success'] = "Document submitted successfully.";
     header("Location: " . $redirect_url);
     exit();
-} else {
-    redirectWithError("File upload failed. Please try again.", $redirect_url);
 }
-?>

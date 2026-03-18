@@ -6,6 +6,10 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 }
 
 require_once "../../config/database.php";
+require '../../../vendor/autoload.php'; 
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $user_id = $_SESSION['user'];
 $redirect_url = "../../../frontend/dashboards/student_dashboard.php?page=student_upload_human_grammarian";
@@ -17,20 +21,21 @@ function redirectWithError($message, $url, $fileToTrash = null) {
     exit();
 }
 
-$stmt = $conn->prepare("SELECT id FROM students WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, u.email, u.school_id FROM students s JOIN users u ON s.user_id = u.id WHERE u.id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$student_id = $stmt->get_result()->fetch_assoc()['id'];
+$studentData = $stmt->get_result()->fetch_assoc();
+$student_id = $studentData['id'];
+$school_id = $studentData['school_id'];
+$studentEmail = $studentData['email'];
+$studentName = $studentData['research_leader'];
+$controlNo = $studentData['control_number'];
+$thesisTitle = $studentData['thesis_title'];
+$studentDeptId = $studentData['department_id'];
 $stmt->close();
 
-$stmt2 = $conn->prepare("SELECT school_id FROM users WHERE id = ?");
-$stmt2->bind_param("i", $user_id);
-$stmt2->execute();
-$school_id = $stmt2->get_result()->fetch_assoc()['school_id'];
-$stmt2->close();
-
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
-    redirectWithError("Please select a valid file to upload.", $redirect_url);
+    redirectWithError("Please select a valid file.", $redirect_url);
 }
 
 $file = $_FILES['submission_file'];
@@ -38,72 +43,84 @@ $filename = time() . "_" . basename($file['name']);
 $targetDir = "../../../uploads/human_grammarian/";
 $targetFile = $targetDir . $filename;
 
-$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-$allowed = ['pdf', 'docx', 'doc', 'odt', 'rtf', 'txt', 'pptx'];
-
-if (!in_array($ext, $allowed)) {
-    redirectWithError("Only PDF, DOCX, DOC, ODT, RTF, TXT, and PPTX files are allowed.", $redirect_url);
-}
-
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$mime  = $finfo->file($file['tmp_name']);
-$allowedMime = [
-    'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword', 'application/vnd.oasis.opendocument.text', 'application/rtf',
-    'text/plain', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-];
-
-if (!in_array($mime, $allowedMime)) {
-    redirectWithError("Invalid file format detected.", $redirect_url);
-}
-
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-
     $checkStmt = $conn->prepare("SELECT * FROM human_grammarian WHERE student_id = ? ORDER BY round DESC LIMIT 1");
     $checkStmt->bind_param("i", $student_id);
     $checkStmt->execute();
     $latest = $checkStmt->get_result()->fetch_assoc();
     $checkStmt->close();
 
+    $assigned_personnel_id = null; // Track if someone is already handling this
+    $round = 1;
+
     if ($latest) {
-        $currentRound = (int)$latest['round'];
-        $status = $latest['status'];
-
-        if ($status === 'Pending') {
-            $oldFilePath = $targetDir . $latest['file_path'];
-            if (file_exists($oldFilePath) && is_file($oldFilePath)) unlink($oldFilePath);
-
-            $stmt = $conn->prepare("UPDATE human_grammarian SET file_path = ?, status = 'Pending' WHERE id = ?");
+        $assigned_personnel_id = $latest['personnel_id']; // Fetch existing handler
+        if ($latest['status'] === 'Pending') {
+            if (file_exists($targetDir . $latest['file_path'])) unlink($targetDir . $latest['file_path']);
+            $stmt = $conn->prepare("UPDATE human_grammarian SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
-            $stmt->close();
-
-            $_SESSION['flash_success'] = "Submission re-uploaded (same round).";
-        } elseif ($status === 'Rejected') {
-            if ($currentRound >= 7) redirectWithError("You have reached the maximum of 7 rounds.", $redirect_url, $targetFile);
-
-            $newRound = $currentRound + 1;
-            $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', ?)");
-            $stmt->bind_param("issi", $student_id, $school_id, $filename, $newRound);
+            $round = $latest['round'];
+        } elseif ($latest['status'] === 'Rejected') {
+            $round = $latest['round'] + 1;
+            $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");
+            $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $assigned_personnel_id);
             $stmt->execute();
-            $stmt->close();
-
-            $_SESSION['flash_success'] = "New round ($newRound) submitted successfully.";
         } else {
-            redirectWithError("Submission already approved. Upload disabled.", $redirect_url, $targetFile);
+            redirectWithError("Already approved.", $redirect_url, $targetFile);
         }
     } else {
         $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', 1)");
-        $stmt->bind_param("iss", $student_id, $school_id, $filename);
+        $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
         $stmt->execute();
-        $stmt->close();
-
-        $_SESSION['flash_success'] = "Submission uploaded successfully (Round 1).";
     }
 
+    // --- EMAIL LOGIC ---
+    try {
+        $mail = new PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'joshuaalmodiel119@gmail.com';
+        $mail->Password = 'nprf grsd yrxt auyz';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+        $mail->setFrom('joshuaalmodiel119@gmail.com', 'RSSMS Support');
+        $mail->isHTML(true);
+
+        $header = "<div style='background-color:#f8fafc;padding:20px;font-family:sans-serif;'><div style='max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;'>";
+        $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p>Automated Human Grammarian Notification.</p></div></div></div>";
+
+        // Student Email
+        $mail->addAddress($studentEmail, $studentName);
+        $mail->Subject = "Human Grammarian Document Submitted - Round $round";
+        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for <strong>Human Grammarian Review</strong> has been uploaded for Round $round.</p></div>" . $footer;
+        $mail->send();
+
+        // Personnel Email Logic
+        $mail->clearAddresses();
+        if ($assigned_personnel_id) {
+            // ONLY EMAIL THE ASSIGNED PERSON
+            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
+            $stmtP->bind_param("i", $assigned_personnel_id);
+        } else {
+            // EMAIL EVERYONE IN THE DEPARTMENT (First time)
+            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Human Grammarian' AND p.department_id = ?");
+            $stmtP->bind_param("i", $studentDeptId);
+        }
+        
+        $stmtP->execute();
+        $resP = $stmtP->get_result();
+        while($p = $resP->fetch_assoc()) $mail->addAddress($p['email'], $p['full_name']);
+        
+        if ($resP->num_rows > 0) {
+            $mail->Subject = "ACTION REQUIRED: Submission Round $round - $controlNo";
+            $mail->Body = $header . "<div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Submission Task</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>A document is ready for Grammar review.</p><div style='background:#eff6ff; padding: 15px; margin: 20px 0;'><strong>Student:</strong> $studentName<br><strong>Title:</strong> $thesisTitle</div></div>" . $footer;
+            $mail->send();
+        }
+    } catch (Exception $e) { error_log($e->getMessage()); }
+
+    $_SESSION['flash_success'] = "Document submitted successfully.";
     header("Location: " . $redirect_url);
     exit();
-} else {
-    redirectWithError("File upload failed. Please try again.", $redirect_url);
 }
-?>

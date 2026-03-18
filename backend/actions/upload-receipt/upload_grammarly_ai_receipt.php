@@ -1,10 +1,7 @@
 <?php
 session_start();
 require_once "../../config/database.php";
-
-// IMPORTANT: Make sure you have PHPMailer installed (via Composer or manually included)
-// If using Composer, uncomment the line below:
-// require '../../../vendor/autoload.php'; 
+require '../../../vendor/autoload.php'; 
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -34,189 +31,125 @@ if (!$student) {
 
 $student_id = (int)$student['id'];
 
-// Verify Transaction Exists & Belongs To Student
-$stmt = $conn->prepare("
-    SELECT * FROM grammarly_ai_transactions
-    WHERE student_id = ?
-    AND round = ?
-    LIMIT 1
-");
+// Verify Transaction
+$stmt = $conn->prepare("SELECT * FROM grammarly_ai_transactions WHERE student_id = ? AND round = ? LIMIT 1");
 $stmt->bind_param("ii", $student_id, $round);
 $stmt->execute();
-$result = $stmt->get_result();
-$transaction = $result->fetch_assoc();
+$transaction = $stmt->get_result()->fetch_assoc();
 
-if (!$transaction) {
-    die("Transaction not found.");
+if (!$transaction || !in_array($transaction['status'], ['No Receipt', 'Rejected'])) {
+    die("Invalid transaction status.");
 }
 
-// Allow Upload Only If Status Is 'No Receipt' OR 'Rejected'
-if (!in_array($transaction['status'], ['No Receipt', 'Rejected'])) {
-    die("Receipt already uploaded or transaction already processed.");
-}
-
-// Validate File Upload
 if (!isset($_FILES['receipt_file']) || $_FILES['receipt_file']['error'] !== UPLOAD_ERR_OK) {
     die("File upload failed.");
 }
 
 $file = $_FILES['receipt_file'];
-$maxFileSize = 5 * 1024 * 1024; // 5MB
-
-// Check extension
 $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-$allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'txt'];
-
-if (!in_array($extension, $allowedExtensions)) {
-    die("Invalid file type. Allowed: JPG, PNG, PDF, TXT.");
-}
-
-// Check MIME type
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$mimeType = $finfo->file($file['tmp_name']);
-
-$allowedTypes = [
-    'image/jpeg',
-    'image/png',
-    'application/pdf',
-    'text/plain'
-];
-
-if (!in_array($mimeType, $allowedTypes)) {
-    die("Invalid file type.");
-}
-
-// Check file size
-if ($file['size'] > $maxFileSize) {
-    die("File too large. Maximum size is 5MB.");
-}
-
-// Generate Safe Filename
-$extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-$extension = strtolower($extension);
-
 $newFileName = "receipt_student_{$student_id}_round_{$round}_" . time() . "." . $extension;
-
-// Create Upload Directory If Not Exists
 $uploadDir = "../../../uploads/grammarly_ai/receipts/";
 
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
-}
+if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
-$destination = $uploadDir . $newFileName;
-
-if (!move_uploaded_file($file['tmp_name'], $destination)) {
+if (!move_uploaded_file($file['tmp_name'], $uploadDir . $newFileName)) {
     die("Failed to save file.");
 }
 
 // Update Transaction
-$updateStmt = $conn->prepare("
-    UPDATE grammarly_ai_transactions
-    SET receipt_path = ?, status = 'Receipt Uploaded'
-    WHERE id = ?
-");
-
+$updateStmt = $conn->prepare("UPDATE grammarly_ai_transactions SET receipt_path = ?, status = 'Receipt Uploaded' WHERE id = ?");
 $updateStmt->bind_param("si", $newFileName, $transaction['id']);
 $updateStmt->execute();
 
 // =========================================================================
-// EMAIL NOTIFICATION SYSTEM
+// MODERN EMAIL NOTIFICATION SYSTEM
 // =========================================================================
 
 try {
-    // 1. Get Student Details for the Email
-    $stmtStudentDetails = $conn->prepare("
-        SELECT u.email, u.firstname, u.lastname, s.control_number 
-        FROM users u 
-        JOIN students s ON u.id = s.user_id 
-        WHERE s.id = ?
-    ");
-    $stmtStudentDetails->bind_param("i", $student_id);
-    $stmtStudentDetails->execute();
-    $studentData = $stmtStudentDetails->get_result()->fetch_assoc();
-    $studentName = $studentData['firstname'] . ' ' . $studentData['lastname'];
+    $stmtData = $conn->prepare("SELECT u.email, s.control_number, s.research_leader FROM users u JOIN students s ON u.id = s.user_id WHERE s.id = ?");
+    $stmtData->bind_param("i", $student_id);
+    $stmtData->execute();
+    $studentData = $stmtData->get_result()->fetch_assoc();
+    
+    $studentName = $studentData['research_leader']; 
     $studentEmail = $studentData['email'];
     $controlNo = $studentData['control_number'];
 
-    // 2. Configure PHPMailer (Replace with your actual SMTP credentials)
     $mail = new PHPMailer(true);
     $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com'; // e.g., smtp.gmail.com
+    $mail->Host       = 'smtp.gmail.com'; 
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'your_email@gmail.com'; // YOUR EMAIL HERE
-    $mail->Password   = 'your_app_password';    // YOUR APP PASSWORD HERE
+    $mail->Username   = 'joshuaalmodiel119@gmail.com';
+    $mail->Password   = 'nprf grsd yrxt auyz'; 
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 465;
-    
-    $mail->setFrom('your_email@gmail.com', 'Research Support Services');
+    $mail->Port       = 587;
+    $mail->setFrom('joshuaalmodiel119@gmail.com', 'RSSMS Support');
     $mail->isHTML(true);
 
-    // 3. Send Email to the Student (Confirmation)
-    $mail->clearAddresses();
+    // --- SHARED MODERN CSS ---
+    $emailHeader = "
+        <div style='background-color: #f8fafc; padding: 20px; font-family: sans-serif;'>
+            <div style='max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'>";
+    $emailFooter = "
+                <div style='background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
+                    <p style='margin: 0;'>This is an automated notification from the Research Support Services Management System.</p>
+                    <p style='margin: 5px 0 0 0;'>&copy; 2026 RSSMS. All rights reserved.</p>
+                </div>
+            </div>
+        </div>";
+
+    // 1. EMAIL TO STUDENT (BLUE THEME)
     $mail->addAddress($studentEmail, $studentName);
-    $mail->Subject = "Receipt Upload Successful - Grammarly & AI Checking (Round {$round})";
-    
-    $studentMsg = "
-        <div style='font-family: Arial, sans-serif; color: #333; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;'>
-            <h2 style='color: #1e3a8a;'>Receipt Upload Confirmation</h2>
-            <p>Hello <strong>{$studentName}</strong>,</p>
-            <p>Your payment receipt for <strong>Grammarly & AI Checking (Round {$round})</strong> has been successfully uploaded.</p>
-            <p><strong>Control Number:</strong> {$controlNo}</p>
-            <p>The assigned personnel will review your receipt shortly. You will receive another email once it has been approved or rejected.</p>
-            <br>
-            <p style='font-size: 12px; color: #6b7280;'>This is an automated message. Please do not reply.</p>
+    $mail->Subject = "Receipt Uploaded Successfully (Round {$round})";
+    $mail->Body = $emailHeader . "
+        <div style='background: #2563eb; padding: 30px; text-align: center;'>
+            <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>Receipt Received</h1>
         </div>
-    ";
-    $mail->Body = $studentMsg;
+        <div style='padding: 30px; line-height: 1.6; color: #334155;'>
+            <p style='font-size: 18px;'>Hello <strong>{$studentName}</strong>,</p>
+            <p>Your payment receipt for <strong>Grammarly & AI Checking</strong> has been uploaded successfully for processing.</p>
+            <div style='background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                <p style='margin: 0;'><strong>Control Number:</strong> <span style='color: #2563eb;'>{$controlNo}</span></p>
+                <p style='margin: 5px 0 0 0;'><strong>Submission Round:</strong> Round {$round}</p>
+            </div>
+            <p>Our personnel will review your receipt shortly. You will be notified via email once your payment is verified so you can proceed with your document upload.</p>
+            <a href='' style='display: inline-block; background: #2563eb; color: #ffffff; padding: 12px 25px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px;'>Check Dashboard Status</a>
+        </div>" . $emailFooter;
     $mail->send();
 
-    // 4. Send Email to ALL Grammarly & AI Checking Personnel (Notification)
-    $stmtPersonnel = $conn->prepare("
-        SELECT u.email, p.full_name 
-        FROM users u 
-        JOIN personnel p ON u.id = p.user_id 
-        WHERE p.service_role = 'Grammarly & AI Checking'
-    ");
+    // 2. EMAIL TO PERSONNEL (ORANGE THEME)
+    $stmtPersonnel = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Grammarly & AI Checking'");
     $stmtPersonnel->execute();
     $personnelRes = $stmtPersonnel->get_result();
 
     if ($personnelRes->num_rows > 0) {
-        $mail->clearAddresses(); // Clear student address
-        
-        while ($personnel = $personnelRes->fetch_assoc()) {
-            $mail->addAddress($personnel['email'], $personnel['full_name']);
+        $mail->clearAddresses(); 
+        while ($pRow = $personnelRes->fetch_assoc()) {
+            $mail->addAddress($pRow['email'], $pRow['full_name']);
         }
-
-        $mail->Subject = "New Receipt Uploaded - Control No: {$controlNo}";
-        
-        $personnelMsg = "
-            <div style='font-family: Arial, sans-serif; color: #333; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;'>
-                <h2 style='color: #d97706;'>Action Required: New Receipt</h2>
-                <p>A student has uploaded a payment receipt for Grammarly & AI Checking.</p>
-                <ul>
-                    <li><strong>Student Name:</strong> {$studentName}</li>
-                    <li><strong>Control Number:</strong> {$controlNo}</li>
-                    <li><strong>Round:</strong> {$round}</li>
-                </ul>
-                <p>Please log in to the personnel dashboard to review and approve/reject this receipt.</p>
-                <br>
-                <p style='font-size: 12px; color: #6b7280;'>This is an automated system notification.</p>
+        $mail->Subject = "ACTION REQUIRED: New Receipt (Control No: {$controlNo})";
+        $mail->Body = $emailHeader . "
+            <div style='background: #ea580c; padding: 30px; text-align: center;'>
+                <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>New Receipt for Review</h1>
             </div>
-        ";
-        $mail->Body = $personnelMsg;
+            <div style='padding: 30px; line-height: 1.6; color: #334155;'>
+                <p style='font-size: 18px;'>Dear Personnel,</p>
+                <p>A new payment receipt has been submitted and is waiting for your verification.</p>
+                <div style='background: #fff7ed; border: 1px solid #ffedd5; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                    <p style='margin: 0;'><strong>Student:</strong> {$studentName}</p>
+                    <p style='margin: 5px 0;'><strong>Control No:</strong> {$controlNo}</p>
+                    <p style='margin: 5px 0 0 0;'><strong>Service:</strong> Grammarly & AI Checking (Round {$round})</p>
+                </div>
+                <p>Please log in to the system to approve or reject this transaction.</p>
+                <a href='' style='display: inline-block; background: #ea580c; color: #ffffff; padding: 12px 25px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px;'>Review Receipt Now</a>
+            </div>" . $emailFooter;
         $mail->send();
     }
 
 } catch (Exception $e) {
-    // If email fails, we don't want to break the upload process completely.
-    // The receipt is already in the database, so we just log the error or ignore it.
     error_log("Mailer Error: " . $mail->ErrorInfo);
 }
 
-// =========================================================================
-
-// Redirect Back
 $_SESSION['flash_success'] = "Receipt uploaded successfully for Round {$round}.";
 header("Location: ../../../frontend/dashboards/student_dashboard.php?page=student_transaction_grammarly_ai");
 exit();
