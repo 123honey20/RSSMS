@@ -6,8 +6,8 @@ require_once "../../backend/config/database.php";
 
 $user_id = $_SESSION['user'];
 $service_role = $_SESSION['service_role'] ?? '';
-$department_id = $_SESSION['department_id'] ?? 0;
 
+// 1. Get the actual personnel ID
 $stmtP = $conn->prepare("SELECT id FROM personnel WHERE user_id = ?");
 $stmtP->bind_param("i", $user_id);
 $stmtP->execute();
@@ -15,9 +15,22 @@ $resP = $stmtP->get_result()->fetch_assoc();
 $actual_personnel_id = $resP ? $resP['id'] : 0;
 $stmtP->close();
 
+// 2. Fetch all assigned departments from the new junction table
+$assigned_depts = [];
+$stmtDepts = $conn->prepare("SELECT department_id FROM personnel_departments WHERE user_id = ?");
+$stmtDepts->bind_param("i", $user_id);
+$stmtDepts->execute();
+$resDepts = $stmtDepts->get_result();
+while ($row = $resDepts->fetch_assoc()) {
+    $assigned_depts[] = $row['department_id'];
+}
+$stmtDepts->close();
+
 $student_list = [];
 
+// 3. Fetch students based on the role and assigned departments
 if ($service_role === 'Grammarly & AI Checking') {
+    // Global Access: Fetch everyone
     $stmt = $conn->prepare("SELECT id, research_leader as full_name, control_number FROM students ORDER BY id DESC");
     $stmt->execute();
     $res = $stmt->get_result();
@@ -26,14 +39,21 @@ if ($service_role === 'Grammarly & AI Checking') {
     }
     $stmt->close();
 } else {
-    $stmt = $conn->prepare("SELECT id, research_leader as full_name, control_number FROM students WHERE department_id = ? ORDER BY id DESC");
-    $stmt->bind_param("i", $department_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $student_list[] = $row;
+    // Specific Departments: Only fetch if they have departments assigned
+    if (!empty($assigned_depts)) {
+        // Create placeholders (e.g., "?, ?, ?") based on how many departments they have
+        $placeholders = implode(',', array_fill(0, count($assigned_depts), '?'));
+        $types = str_repeat('i', count($assigned_depts));
+        
+        $stmt = $conn->prepare("SELECT id, research_leader as full_name, control_number FROM students WHERE department_id IN ($placeholders) ORDER BY id DESC");
+        $stmt->bind_param($types, ...$assigned_depts);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $student_list[] = $row;
+        }
+        $stmt->close();
     }
-    $stmt->close();
 }
 ?>
 

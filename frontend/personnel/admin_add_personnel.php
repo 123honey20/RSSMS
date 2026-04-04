@@ -4,6 +4,9 @@ require_once "../../backend/config/database.php";
 $error = "";
 $success = "";
 
+// Fetch Departments
+$departments = $conn->query("SELECT * FROM departments ORDER BY name ASC");
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $school_id       = trim($_POST['school_id']);
@@ -14,11 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name       = trim($_POST['full_name']);
     $service_role    = trim($_POST['service_role']);
     
-    // Force department to NULL if role is Grammarly & AI Checking
+    // NEW: Capture array of departments
+    $selected_departments = isset($_POST['departments']) ? $_POST['departments'] : [];
+    
+    // Force primary department to NULL if role is Grammarly & AI Checking, else use the first chosen
     if ($service_role === 'Grammarly & AI Checking') {
-        $department_id = NULL;
+        $primary_dept = NULL;
     } else {
-        $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : NULL;
+        $primary_dept = !empty($selected_departments) ? intval($selected_departments[0]) : NULL;
     }
 
     $role   = "personnel";
@@ -49,9 +55,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     INSERT INTO personnel (user_id, full_name, department_id, service_role)
                     VALUES (?, ?, ?, ?)
                 ");
-                $stmt2->bind_param("isis", $user_id, $full_name, $department_id, $service_role);
+                $stmt2->bind_param("isis", $user_id, $full_name, $primary_dept, $service_role);
                 
                 if ($stmt2->execute()) {
+                    
+                    // NEW: Insert into Junction Table
+                    if ($service_role !== 'Grammarly & AI Checking' && !empty($selected_departments)) {
+                        $stmt3 = $conn->prepare("INSERT INTO personnel_departments (user_id, department_id) VALUES (?, ?)");
+                        foreach ($selected_departments as $d_id) {
+                            $d_id = intval($d_id);
+                            $stmt3->bind_param("ii", $user_id, $d_id);
+                            $stmt3->execute();
+                        }
+                        $stmt3->close();
+                    }
+
                     $success = "Personnel added successfully!";
                 } else {
                     $error = "Failed to save personnel profile.";
@@ -134,19 +152,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div id="deptContainer" class="hidden transition-all duration-300">
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Assigned Department</label>
-                <select name="department_id" id="departmentSelect" 
-                    class="w-full border border-gray-300 dark:border-warmdark-border px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-warmdark-bg focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
-                    <option value="">Select Department...</option>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Assigned Departments</label>
+                <div class="space-y-2 max-h-48 overflow-y-auto p-3 border border-gray-300 dark:border-warmdark-border rounded-lg bg-gray-50 dark:bg-warmdark-bg shadow-inner">
                     <?php
-                    $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC");
-                    while ($d = $departments->fetch_assoc()):
+                    $departments->data_seek(0); 
+                    while ($d = $departments->fetch_assoc()): 
                     ?>
-                        <option value="<?= $d['id']; ?>">
-                            <?= htmlspecialchars($d['name']); ?>
-                        </option>
+                        <label class="flex items-center gap-3 cursor-pointer p-1 hover:bg-gray-200 dark:hover:bg-warmdark-hover rounded transition-colors">
+                            <input type="checkbox" name="departments[]" value="<?= $d['id'] ?>" 
+                                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                            <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"><?= htmlspecialchars($d['name']); ?></span>
+                        </label>
                     <?php endwhile; ?>
-                </select>
+                </div>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 italic">* You can select multiple departments.</p>
             </div>
 
         </div>
@@ -167,30 +186,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
     const roleSelect = document.getElementById("serviceRole");
     const deptContainer = document.getElementById("deptContainer");
-    const departmentSelect = document.getElementById("departmentSelect");
 
     function toggleDepartment() {
         const role = roleSelect.value;
 
-        // If it's Grammarly, HIDE the department dropdown entirely
-        if (role === "Grammarly & AI Checking") {
+        // HIDE if Grammarly or empty, SHOW for everyone else
+        if (role === "Grammarly & AI Checking" || role === "") {
             deptContainer.classList.add("hidden");
-            departmentSelect.value = "";
-            departmentSelect.removeAttribute("required");
-        } 
-        // If no role is selected yet, hide it to keep it clean
-        else if (role === "") {
-            deptContainer.classList.add("hidden");
-            departmentSelect.removeAttribute("required");
-        } 
-        // For the other 4 roles, SHOW it and make it required
-        else {
+        } else {
             deptContainer.classList.remove("hidden");
-            departmentSelect.setAttribute("required", "required");
         }
     }
 
     roleSelect.addEventListener("change", toggleDepartment);
-    
     toggleDepartment();
 </script>

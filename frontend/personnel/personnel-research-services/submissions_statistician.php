@@ -3,16 +3,31 @@
 $sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
 $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
-// UNIVERSITY STANDARD SCHOOL YEAR GENERATION
 $start_year = 2024;
 $current_calendar_year = (int)date("Y"); 
-
-// Generate up to 2 years into the future
 $max_year = $current_calendar_year + 2; 
 
 $generated_years = [];
 for ($y = $max_year; $y >= $start_year; $y--) {
     $generated_years[] = $y . "-" . ($y + 1);
+}
+
+// Fetch assigned departments from junction table for this specific personnel
+$user_id = $_SESSION['user'];
+$assigned_depts = [];
+
+$deptStmt = $conn->prepare("
+    SELECT d.id, d.name 
+    FROM personnel_departments pd
+    JOIN departments d ON pd.department_id = d.id
+    WHERE pd.user_id = ?
+    ORDER BY d.name ASC
+");
+$deptStmt->bind_param("i", $user_id);
+$deptStmt->execute();
+$resDepts = $deptStmt->get_result();
+while ($d = $resDepts->fetch_assoc()) {
+    $assigned_depts[] = $d;
 }
 ?>
 
@@ -22,7 +37,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Student Submissions</h2>
     </div>
 
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
         <input type="text" id="searchInput" placeholder="Search by Control Number..."
             class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg focus:ring-2 focus:ring-blue-900 dark:focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 dark:text-gray-200 font-medium transition-colors">
 
@@ -40,6 +55,13 @@ for ($y = $max_year; $y >= $start_year; $y--) {
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
+        </select>
+
+        <select id="personnelDeptFilter" class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg focus:ring-2 focus:ring-blue-900 dark:focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 dark:text-gray-200 font-medium transition-colors">
+            <option value="All">All Handled Depts</option>
+            <?php foreach($assigned_depts as $d): ?>
+                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
+            <?php endforeach; ?>
         </select>
     </div>
 
@@ -72,8 +94,10 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         const search = document.getElementById('searchInput').value;
         const status = document.getElementById('statusFilter').value; 
         const sy = document.getElementById('syFilter').value; 
+        const pDept = document.getElementById('personnelDeptFilter').value; // Get Dept Value
 
-        fetch(`../../backend/ajax/fetch_statistician_submissions.php?p=${page}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&sy=${encodeURIComponent(sy)}`)
+        // Pass the dept parameter to the backend
+        fetch(`../../backend/ajax/fetch_statistician_submissions.php?p=${page}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&sy=${encodeURIComponent(sy)}&dept=${encodeURIComponent(pDept)}`)
             .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('tableBody');
@@ -159,7 +183,8 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         }
     }
 
-    ['statusFilter', 'syFilter'].forEach(id => {
+    // Attach event listener to the new dropdown
+    ['statusFilter', 'syFilter', 'personnelDeptFilter'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => fetchSubmissions(1));
     });
 

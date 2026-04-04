@@ -6,6 +6,7 @@ require_once "../../backend/config/database.php";
 
 $student_id = $_SESSION['user'];
 
+// 1. Get the student's department ID
 $stmtStudent = $conn->prepare("SELECT id, department_id FROM students WHERE user_id = ?");
 $stmtStudent->bind_param("i", $student_id);
 $stmtStudent->execute();
@@ -15,10 +16,18 @@ $student_dept_id = $student_res ? $student_res['department_id'] : 0;
 $stmtStudent->close();
 
 $service_role_name = 'Statistician';
-$stmtP = $conn->prepare("SELECT id as personnel_id, full_name, service_role FROM personnel WHERE service_role = ? AND department_id = ?");
+
+// 2. FIXED QUERY: Now we check the new personnel_departments junction table!
+$stmtP = $conn->prepare("
+    SELECT p.id as personnel_id, p.full_name, p.service_role 
+    FROM personnel p
+    JOIN personnel_departments pd ON p.user_id = pd.user_id
+    WHERE p.service_role = ? AND pd.department_id = ?
+");
 $stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();
 $resP = $stmtP->get_result();
+
 $personnel_list = [];
 while ($row = $resP->fetch_assoc()) {
     $personnel_list[] = $row;
@@ -151,6 +160,7 @@ function studentChatApp() {
         },
 
         fetchUnreadCounts() {
+            // Note: Make sure backend filename matches this fetch URL (get_unread_counts_student.php vs get_unread_counts_students.php)
             fetch(`../../backend/ajax/get_unread_counts_student.php?student_id=${this.studentId}&service_type=${encodeURIComponent(this.serviceType)}`)
             .then(res => res.json())
             .then(data => {

@@ -1,0 +1,24 @@
+CREATE TABLE student_evaluations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    personnel_id INT NOT NULL,
+    submission_id INT NOT NULL,
+    rubric_id INT NOT NULL,
+    total_score INT NOT NULL, -- Out of 100 or Max Points
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (personnel_id) REFERENCES personnel(id) ON DELETE CASCADE,
+    FOREIGN KEY (rubric_id) REFERENCES rubrics(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- This creates a sub-table if you want to store the exact score for EACH criterion. 
+-- For a basic system, storing the 'total_score' above is usually enough. 
+CREATE TABLE student_evaluation_ratings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    evaluation_id INT NOT NULL,
+    criterion_id INT NOT NULL,
+    score INT NOT NULL,
+    FOREIGN KEY (evaluation_id) REFERENCES student_evaluations(id) ON DELETE CASCADE,
+    FOREIGN KEY (criterion_id) REFERENCES rubric_criteria(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

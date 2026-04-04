@@ -21,7 +21,7 @@ function redirectWithError($message, $url, $fileToTrash = null) {
     exit();
 }
 
-// Fetch student data including department_id and thesis_title
+// Fetch student data
 $stmt = $conn->prepare("SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, u.email, u.school_id FROM students s JOIN users u ON s.user_id = u.id WHERE u.id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -56,7 +56,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
     $checkStmt->close();
 
     $round = 1;
-    $assigned_personnel_id = null; // Track existing handler
+    $assigned_personnel_id = null; 
 
     if ($latest) {
         $assigned_personnel_id = $latest['personnel_id'];
@@ -69,7 +69,6 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         } elseif ($latest['status'] === 'Rejected') {
             if ($latest['round'] >= 7) redirectWithError("Maximum rounds reached.", $redirect_url, $targetFile);
             $round = $latest['round'] + 1;
-            // Carry over the personnel_id to keep the same person assigned
             $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");
             $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $assigned_personnel_id);
             $stmt->execute();
@@ -104,23 +103,38 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for <strong>Librarian review</strong> has been uploaded for Round $round.</p><p><strong>Control No:</strong> $controlNo</p></div>" . $footer;
         $mail->send();
 
-        // 2. Email to Personnel
+        // 2. Email to Personnel (UPDATED TO USE JUNCTION TABLE)
         $mail->clearAddresses();
+        $personnelEmailsFound = false;
+
         if ($assigned_personnel_id) {
-            // ONLY email the person who previously handled this student
             $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
             $stmtP->bind_param("i", $assigned_personnel_id);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         } else {
-            // New submission: Email all Librarians in the student's department
-            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Librarian' AND p.department_id = ?");
+            $stmtP = $conn->prepare("
+                SELECT u.email, p.full_name 
+                FROM personnel_departments pd
+                JOIN personnel p ON pd.user_id = p.user_id
+                JOIN users u ON p.user_id = u.id
+                WHERE p.service_role = 'Librarian' 
+                AND pd.department_id = ?
+            ");
             $stmtP->bind_param("i", $studentDeptId);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         }
         
-        $stmtP->execute();
-        $resP = $stmtP->get_result();
-        while($p = $resP->fetch_assoc()) $mail->addAddress($p['email'], $p['full_name']);
-        
-        if ($resP->num_rows > 0) {
+        if ($personnelEmailsFound) {
             $mail->Subject = "ACTION REQUIRED: Librarian Submission Round $round - $controlNo";
             $mail->Body = $header . "
                 <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Submission Task</h1></div>

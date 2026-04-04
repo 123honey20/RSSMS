@@ -16,7 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $school_id = trim($_POST['school_id']);
     $email = trim($_POST['email']);
     $full_name = trim($_POST['full_name']);
-    $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+    
+    // Get array of selected departments
+    $selected_departments = isset($_POST['departments']) ? $_POST['departments'] : [];
+    // Fallback: save the first selected department to the original column to satisfy existing foreign keys
+    $primary_dept = !empty($selected_departments) ? $selected_departments[0] : null;
 
     $checkDup = $conn->prepare("SELECT id FROM users WHERE (school_id = ? OR email = ?) AND id != ?");
     $checkDup->bind_param("ssi", $school_id, $email, $user_id);
@@ -25,28 +29,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($checkDup->get_result()->num_rows > 0) {
         $error = "This School ID or Email is already in use by another account.";
     } else {
-        // Get service role first
         $roleStmt = $conn->prepare("SELECT service_role FROM personnel WHERE user_id = ?");
         $roleStmt->bind_param("i", $user_id);
         $roleStmt->execute();
-        $roleResult = $roleStmt->get_result()->fetch_assoc();
-        $service_role = $roleResult['service_role'] ?? null;
+        $service_role = $roleStmt->get_result()->fetch_assoc()['service_role'] ?? null;
 
-        // Update users table
         $stmt1 = $conn->prepare("UPDATE users SET school_id = ?, email = ? WHERE id = ?");
         $stmt1->bind_param("ssi", $school_id, $email, $user_id);
         $stmt1->execute();
 
-        // Check if personnel row exists
         $check = $conn->prepare("SELECT id FROM personnel WHERE user_id = ?");
         $check->bind_param("i", $user_id);
         $check->execute();
-        $res = $check->get_result();
 
-        if ($res->num_rows > 0) {
+        if ($check->get_result()->num_rows > 0) {
             if ($service_role !== 'Grammarly & AI Checking') {
                 $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ?, department_id = ? WHERE user_id = ?");
-                $stmt2->bind_param("sii", $full_name, $department_id, $user_id);
+                $stmt2->bind_param("sii", $full_name, $primary_dept, $user_id);
             } else {
                 $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ? WHERE user_id = ?");
                 $stmt2->bind_param("si", $full_name, $user_id);
@@ -54,8 +53,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt2->execute();
         } else {
             $stmt2 = $conn->prepare("INSERT INTO personnel (user_id, full_name, department_id) VALUES (?, ?, ?)");
-            $stmt2->bind_param("isi", $user_id, $full_name, $department_id);
+            $stmt2->bind_param("isi", $user_id, $full_name, $primary_dept);
             $stmt2->execute();
+        }
+
+        // === NEW: JUNCTION TABLE SYNC ===
+        if ($service_role !== 'Grammarly & AI Checking') {
+            // 1. Delete old mappings
+            $delStmt = $conn->prepare("DELETE FROM personnel_departments WHERE user_id = ?");
+            $delStmt->bind_param("i", $user_id);
+            $delStmt->execute();
+
+            // 2. Insert new mappings
+            if (!empty($selected_departments)) {
+                $insStmt = $conn->prepare("INSERT INTO personnel_departments (user_id, department_id) VALUES (?, ?)");
+                foreach ($selected_departments as $dept_id) {
+                    $insStmt->bind_param("ii", $user_id, $dept_id);
+                    $insStmt->execute();
+                }
+            }
         }
 
         echo "<script>window.location.href = '../dashboards/admin_dashboard.php?page=personnel&updated=1';</script>";
@@ -66,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch Personnel data
 $stmt = $conn->prepare("
     SELECT u.school_id, u.email,
-           s.full_name, s.department_id, s.service_role
+           s.full_name, s.service_role
     FROM users u
     LEFT JOIN personnel s ON u.id = s.user_id
     WHERE u.id = ?
@@ -75,8 +91,16 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $data = $stmt->get_result()->fetch_assoc();
 
-if (!$data) {
-    die("Personnel not found");
+if (!$data) die("Personnel not found");
+
+// Fetch assigned departments from the Junction Table
+$assigned_depts = [];
+$deptMapStmt = $conn->prepare("SELECT department_id FROM personnel_departments WHERE user_id = ?");
+$deptMapStmt->bind_param("i", $user_id);
+$deptMapStmt->execute();
+$resMap = $deptMapStmt->get_result();
+while ($rowMap = $resMap->fetch_assoc()) {
+    $assigned_depts[] = $rowMap['department_id'];
 }
 ?>
 
@@ -128,21 +152,21 @@ if (!$data) {
 
             <?php if ($data['service_role'] !== 'Grammarly & AI Checking'): ?>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Department</label>
-                    <select name="department_id" required
-                        class="w-full border border-gray-300 dark:border-warmdark-border px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-warmdark-bg focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
-                        <option value="">Select Department...</option>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Assigned Departments</label>
+                    <div class="space-y-2 max-h-48 overflow-y-auto p-3 border border-gray-300 dark:border-warmdark-border rounded-lg bg-gray-50 dark:bg-warmdark-bg shadow-inner">
                         <?php
                         $departmentsQuery->data_seek(0); 
                         while ($row = $departmentsQuery->fetch_assoc()): 
-                            $selected_dept = $_POST['department_id'] ?? $data['department_id'];
+                            $isChecked = in_array($row['id'], $assigned_depts) ? 'checked' : '';
                         ?>
-                            <option value="<?= $row['id']; ?>"
-                                <?= ($selected_dept == $row['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($row['name']); ?>
-                            </option>
+                            <label class="flex items-center gap-3 cursor-pointer p-1 hover:bg-gray-200 dark:hover:bg-warmdark-hover rounded transition-colors">
+                                <input type="checkbox" name="departments[]" value="<?= $row['id'] ?>" <?= $isChecked ?> 
+                                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"><?= htmlspecialchars($row['name']); ?></span>
+                            </label>
                         <?php endwhile; ?>
-                    </select>
+                    </div>
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 italic">* You can select multiple departments.</p>
                 </div>
             <?php else: ?>
                 <div class="flex items-center justify-start pt-6">

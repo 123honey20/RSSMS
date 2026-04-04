@@ -50,11 +50,11 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
     $latest = $checkStmt->get_result()->fetch_assoc();
     $checkStmt->close();
 
-    $assigned_personnel_id = null; // Track if someone is already handling this
+    $assigned_personnel_id = null; 
     $round = 1;
 
     if ($latest) {
-        $assigned_personnel_id = $latest['personnel_id']; // Fetch existing handler
+        $assigned_personnel_id = $latest['personnel_id']; 
         if ($latest['status'] === 'Pending') {
             if (file_exists($targetDir . $latest['file_path'])) unlink($targetDir . $latest['file_path']);
             $stmt = $conn->prepare("UPDATE human_grammarian SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
@@ -70,7 +70,8 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             redirectWithError("Already approved.", $redirect_url, $targetFile);
         }
     } else {
-        $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', 1)");
+        // FIXED: Replaced '1' with '?' so it accepts the 4th bound variable ($round)
+        $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', ?)");
         $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
         $stmt->execute();
     }
@@ -97,23 +98,38 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for <strong>Human Grammarian Review</strong> has been uploaded for Round $round.</p></div>" . $footer;
         $mail->send();
 
-        // Personnel Email Logic
+        // Personnel Email Logic (UPDATED TO USE JUNCTION TABLE)
         $mail->clearAddresses();
+        $personnelEmailsFound = false;
+
         if ($assigned_personnel_id) {
-            // ONLY EMAIL THE ASSIGNED PERSON
             $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
             $stmtP->bind_param("i", $assigned_personnel_id);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         } else {
-            // EMAIL EVERYONE IN THE DEPARTMENT (First time)
-            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Human Grammarian' AND p.department_id = ?");
+            $stmtP = $conn->prepare("
+                SELECT u.email, p.full_name 
+                FROM personnel_departments pd
+                JOIN personnel p ON pd.user_id = p.user_id
+                JOIN users u ON p.user_id = u.id
+                WHERE p.service_role = 'Human Grammarian' 
+                AND pd.department_id = ?
+            ");
             $stmtP->bind_param("i", $studentDeptId);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         }
         
-        $stmtP->execute();
-        $resP = $stmtP->get_result();
-        while($p = $resP->fetch_assoc()) $mail->addAddress($p['email'], $p['full_name']);
-        
-        if ($resP->num_rows > 0) {
+        if ($personnelEmailsFound) {
             $mail->Subject = "ACTION REQUIRED: Submission Round $round - $controlNo";
             $mail->Body = $header . "<div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Submission Task</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>A document is ready for Grammar review.</p><div style='background:#eff6ff; padding: 15px; margin: 20px 0;'><strong>Student:</strong> $studentName<br><strong>Title:</strong> $thesisTitle</div></div>" . $footer;
             $mail->send();

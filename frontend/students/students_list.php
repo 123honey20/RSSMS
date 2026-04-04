@@ -7,7 +7,10 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 $sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
 $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
-// 2. UNIVERSITY STANDARD SCHOOL YEAR GENERATION
+// 2. Fetch departments for the filter dropdown
+$dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC");
+
+// 3. UNIVERSITY STANDARD SCHOOL YEAR GENERATION
 $start_year = 2024; // The permanent year your system went live
 $current_calendar_year = (int)date("Y"); 
 
@@ -36,9 +39,16 @@ for ($y = $max_year; $y >= $start_year; $y--) {
             type="text"
             id="studentSearch"
             placeholder="Search by School ID..."
-            class="w-full md:w-1/3 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+            class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
-        <select id="syFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+        <select id="deptFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
+            <option value="All">All Departments</option>
+            <?php while($d = $dept_query->fetch_assoc()): ?>
+                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
+            <?php endwhile; ?>
+        </select>
+
+        <select id="syFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
             <option value="All">All School Years</option>
             <?php foreach($generated_years as $year): ?>
                 <option value="<?= htmlspecialchars($year) ?>" <?= ($year === $active_sy) ? 'selected' : '' ?>>
@@ -64,11 +74,12 @@ for ($y = $max_year; $y >= $start_year; $y--) {
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-warmdark-border transition-colors">
-        <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
+        <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300 border-collapse">
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b dark:border-warmdark-border">
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">#</th>
                     <th class="px-6 py-4 font-semibold">School ID</th>
+                    <th class="px-6 py-4 font-semibold max-w-xs">Department</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
@@ -91,8 +102,9 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         currentPage = page;
         const search = document.getElementById('studentSearch').value;
         const schoolYear = document.getElementById('syFilter').value; 
+        const dept = document.getElementById('deptFilter').value; // NEW: Get Department value
 
-        fetch(`../../backend/ajax/fetch_students.php?p=${page}&search=${encodeURIComponent(search)}&status=${currentStatusFilter}&sy=${encodeURIComponent(schoolYear)}`)
+        fetch(`../../backend/ajax/fetch_students.php?p=${page}&search=${encodeURIComponent(search)}&status=${currentStatusFilter}&sy=${encodeURIComponent(schoolYear)}&dept=${encodeURIComponent(dept)}`)
             .then(response => response.json())
             .then(data => {
                 const tbody = document.getElementById('studentTableBody');
@@ -101,7 +113,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                 if (data.students.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                 </svg>
@@ -122,6 +134,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                     row.innerHTML = `
                         <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">${counter++}.</td>
                         <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"></td>
+                        <td class="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs"></td>
                         <td class="px-6 py-4 text-center"></td>
                         <td class="px-6 py-4 text-center">
                             <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs"
@@ -137,10 +150,17 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                         </td>
                     `;
 
+                    // 1. Inject School ID
                     row.children[1].textContent = student.school_id;
 
+                    // 2. Inject Simple Department Text
+                    let deptName = student.department_name ? student.department_name : 'N/A';
+                    row.children[2].textContent = deptName;
+                    row.children[2].title = deptName; // Helps if the name is too long and gets truncated
+
+                    // 3. Inject Status Logic
                     if (student.status === 'Pending') {
-                        row.children[2].innerHTML = `
+                        row.children[3].innerHTML = `
                             <form action="../../backend/actions/approve_user.php" method="POST" class="inline">
                                 <input type="hidden" name="user_id" value="${student.id}">
                                 <button type="submit" class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 transition shadow-sm border border-blue-100 dark:border-blue-900/50">
@@ -149,7 +169,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                             </form>
                         `;
                     } else {
-                        row.children[2].innerHTML = `
+                        row.children[3].innerHTML = `
                             <span class="bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100 dark:border-green-500/20">
                                 Approved
                             </span>
@@ -204,7 +224,10 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         fetchStudents(1);
     }
 
-    document.getElementById('syFilter').addEventListener('change', () => fetchStudents(1));
+    // Attach event listeners to filters
+    ['syFilter', 'deptFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => fetchStudents(1));
+    });
 
     document.getElementById('studentSearch').addEventListener('keyup', () => {
         clearTimeout(searchTimeout);

@@ -10,14 +10,12 @@ require_once "../../backend/config/database.php";
 
 $user_id = $_SESSION['user'];
 
-// 1. Get ALL Personnel Profile Details (Upgraded Query)
+// 1. Get Personnel Profile Details
 $stmt = $conn->prepare("
     SELECT u.school_id, u.email, 
-           p.full_name, p.service_role, p.department_id,
-           d.name AS department_name
+           p.full_name, p.service_role
     FROM users u
     LEFT JOIN personnel p ON u.id = p.user_id
-    LEFT JOIN departments d ON p.department_id = d.id
     WHERE u.id = ?
 ");
 $stmt->bind_param("i", $user_id);
@@ -26,9 +24,26 @@ $profile = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 $_SESSION['service_role'] = $profile['service_role'] ?? '';
-$_SESSION['department_id'] = $profile['department_id'] ?? 0;
-
 $serviceRole = $profile['service_role'] ?? 'Personnel';
+
+// 2. NEW: Fetch ALL assigned departments from the Junction Table
+$assigned_departments = [];
+if ($serviceRole !== 'Grammarly & AI Checking') {
+    $deptStmt = $conn->prepare("
+        SELECT d.id, d.name 
+        FROM personnel_departments pd
+        JOIN departments d ON pd.department_id = d.id
+        WHERE pd.user_id = ?
+        ORDER BY d.name ASC
+    ");
+    $deptStmt->bind_param("i", $user_id);
+    $deptStmt->execute();
+    $resDepts = $deptStmt->get_result();
+    while ($row = $resDepts->fetch_assoc()) {
+        $assigned_departments[] = $row;
+    }
+    $deptStmt->close();
+}
 
 ?>
 
@@ -313,11 +328,24 @@ $serviceRole = $profile['service_role'] ?? 'Personnel';
                     </div>
 
                     <div class="bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2 transition-colors">
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Assigned Department</p>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Assigned Departments</p>
+                        
                         <?php if ($profile['service_role'] === 'Grammarly & AI Checking'): ?>
-                            <p class="font-semibold text-gray-900 dark:text-gray-100 leading-snug">Global Service (All Departments)</p>
+                            <span class="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 px-2.5 py-1 rounded-md text-xs font-bold">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                Global Service (All Departments)
+                            </span>
+                        <?php elseif (empty($assigned_departments)): ?>
+                            <span class="text-gray-500 dark:text-gray-400 text-sm italic">No departments currently assigned.</span>
                         <?php else: ?>
-                            <p class="font-semibold text-gray-900 dark:text-gray-100 leading-snug"><?php echo htmlspecialchars($profile['department_name'] ?? 'N/A'); ?></p>
+                            <div class="flex flex-wrap gap-2">
+                                <?php foreach ($assigned_departments as $dept): ?>
+                                    <span class="inline-flex items-center gap-1.5 bg-white dark:bg-warmdark-panel text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                        <?php echo htmlspecialchars($dept['name']); ?>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -443,7 +471,6 @@ $serviceRole = $profile['service_role'] ?? 'Personnel';
                 .catch(err => console.error('Error loading submission:', err));
         }
 
-        // NEW FIX: Ensure loadReceiptProcess is globally accessible!
         window.loadReceiptProcess = function(id) {
             const url = `../personnel/personnel-access-file/process_receipt_verification.php?id=${id}`;
             fetch(url)

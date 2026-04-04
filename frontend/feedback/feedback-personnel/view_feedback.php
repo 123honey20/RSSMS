@@ -11,6 +11,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 
 $user_id = $_SESSION['user'];
 $service_role_name = $_SESSION['service_role'] ?? '';
+$is_global = ($service_role_name === 'Grammarly & AI Checking');
 
 // 1. Map the service role to the DB service_type string
 $serviceMap = [
@@ -40,16 +41,25 @@ if (!$personnelResult) {
 }
 $personnel_id = $personnelResult['id'];
 
-// 3. Fetch Overall Average per Rubric
+// 3. Fetch Overall Average per Rubric (STRICTLY FILTERED BY CURRENT JUNCTION TABLE ASSIGNMENTS)
 $rubricAverages = [];
-$stmtRubrics = $conn->prepare("
+$sqlRubrics = "
     SELECT r.id, r.name, COUNT(se.id) as total_evaluations, AVG(se.total_score) as average_total_score
     FROM rubrics r
     JOIN student_evaluations se ON r.id = se.rubric_id
-    WHERE se.personnel_id = ? AND se.service_type = ?
-    GROUP BY r.id, r.name
-");
-$stmtRubrics->bind_param("is", $personnel_id, $service_type);
+    JOIN students s ON se.student_id = s.id
+";
+if (!$is_global) {
+    $sqlRubrics .= " JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ? ";
+}
+$sqlRubrics .= " WHERE se.personnel_id = ? AND se.service_type = ? GROUP BY r.id, r.name";
+
+$stmtRubrics = $conn->prepare($sqlRubrics);
+if (!$is_global) {
+    $stmtRubrics->bind_param("iis", $user_id, $personnel_id, $service_type);
+} else {
+    $stmtRubrics->bind_param("is", $personnel_id, $service_type);
+}
 $stmtRubrics->execute();
 $resRubrics = $stmtRubrics->get_result();
 while ($row = $resRubrics->fetch_assoc()) {
@@ -62,16 +72,25 @@ while ($row = $resRubrics->fetch_assoc()) {
 }
 $stmtRubrics->close();
 
-// 4. Fetch Average Score per Criterion
-$stmtCriteria = $conn->prepare("
+// 4. Fetch Average Score per Criterion (STRICTLY FILTERED)
+$sqlCriteria = "
     SELECT rc.rubric_id, rc.name as criterion_name, AVG(ser.score) as average_score
     FROM rubric_criteria rc
     JOIN student_evaluation_ratings ser ON rc.id = ser.criterion_id
     JOIN student_evaluations se ON ser.evaluation_id = se.id
-    WHERE se.personnel_id = ? AND se.service_type = ?
-    GROUP BY rc.rubric_id, rc.id, rc.name
-");
-$stmtCriteria->bind_param("is", $personnel_id, $service_type);
+    JOIN students s ON se.student_id = s.id
+";
+if (!$is_global) {
+    $sqlCriteria .= " JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ? ";
+}
+$sqlCriteria .= " WHERE se.personnel_id = ? AND se.service_type = ? GROUP BY rc.rubric_id, rc.id, rc.name";
+
+$stmtCriteria = $conn->prepare($sqlCriteria);
+if (!$is_global) {
+    $stmtCriteria->bind_param("iis", $user_id, $personnel_id, $service_type);
+} else {
+    $stmtCriteria->bind_param("is", $personnel_id, $service_type);
+}
 $stmtCriteria->execute();
 $resCriteria = $stmtCriteria->get_result();
 while ($row = $resCriteria->fetch_assoc()) {
@@ -84,15 +103,24 @@ while ($row = $resCriteria->fetch_assoc()) {
 }
 $stmtCriteria->close();
 
-// 5. Fetch Anonymous Comments
+// 5. Fetch Anonymous Comments (STRICTLY FILTERED)
 $comments = [];
-$stmtComments = $conn->prepare("
-    SELECT comments, created_at 
-    FROM student_evaluations 
-    WHERE personnel_id = ? AND service_type = ? AND comments IS NOT NULL AND comments != ''
-    ORDER BY created_at DESC
-");
-$stmtComments->bind_param("is", $personnel_id, $service_type);
+$sqlComments = "
+    SELECT se.comments, se.created_at 
+    FROM student_evaluations se
+    JOIN students s ON se.student_id = s.id
+";
+if (!$is_global) {
+    $sqlComments .= " JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ? ";
+}
+$sqlComments .= " WHERE se.personnel_id = ? AND se.service_type = ? AND se.comments IS NOT NULL AND se.comments != '' ORDER BY se.created_at DESC";
+
+$stmtComments = $conn->prepare($sqlComments);
+if (!$is_global) {
+    $stmtComments->bind_param("iis", $user_id, $personnel_id, $service_type);
+} else {
+    $stmtComments->bind_param("is", $personnel_id, $service_type);
+}
 $stmtComments->execute();
 $resComments = $stmtComments->get_result();
 while ($row = $resComments->fetch_assoc()) {
@@ -125,7 +153,7 @@ $stmtComments->close();
                 </svg>
             </div>
             <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200">No Evaluations Yet</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">You do not have any ratings or feedback from students at this time. Data will appear here once students submit their evaluations.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">You do not have any ratings or feedback from your currently assigned departments.</p>
         </div>
     <?php else: ?>
 
@@ -245,7 +273,7 @@ $stmtComments->close();
             </h2>
 
             <?php if (empty($comments)): ?>
-                <div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No written feedback has been provided yet.</div>
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No written feedback has been provided from your assigned departments yet.</div>
             <?php else: ?>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <?php foreach ($comments as $comment): ?>

@@ -63,6 +63,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             $round = $latest['round'];
         } elseif ($latest['status'] === 'Rejected') {
             $round = $latest['round'] + 1;
+            // FIXED: Ensured parameter count matches question marks
             $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");
             $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $assigned_personnel_id);
             $stmt->execute();
@@ -70,7 +71,8 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             redirectWithError("Already approved.", $redirect_url, $targetFile);
         }
     } else {
-        $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', 1)");
+        // FIXED: The SQL Query error is solved here
+        $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', ?)");
         $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
         $stmt->execute();
     }
@@ -96,25 +98,47 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for Statistical Review has been uploaded for Round $round.</p></div>" . $footer;
         $mail->send();
 
-        // Personnel Logic
+        // Personnel Email Logic
         $mail->clearAddresses();
+        $personnelEmailsFound = false;
+
         if ($assigned_personnel_id) {
+            // If they are on round 2+, notify the specific personnel assigned to them
             $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
             $stmtP->bind_param("i", $assigned_personnel_id);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         } else {
-            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Statistician' AND p.department_id = ?");
+            // FIXED: Using the new Junction Table to find all Statisticians handling this student's department
+            $stmtP = $conn->prepare("
+                SELECT u.email, p.full_name 
+                FROM personnel_departments pd
+                JOIN personnel p ON pd.user_id = p.user_id
+                JOIN users u ON p.user_id = u.id
+                WHERE p.service_role = 'Statistician' 
+                AND pd.department_id = ?
+            ");
             $stmtP->bind_param("i", $studentDeptId);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         }
-        $stmtP->execute();
-        $resP = $stmtP->get_result();
-        while($p = $resP->fetch_assoc()) $mail->addAddress($p['email'], $p['full_name']);
         
-        if ($resP->num_rows > 0) {
+        if ($personnelEmailsFound) {
             $mail->Subject = "ACTION REQUIRED: Statistical Submission Round $round - $controlNo";
             $mail->Body = $header . "<div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Statistician Task</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>A document is ready for statistical review.</p><div style='background:#eff6ff; padding: 15px; margin: 20px 0;'><strong>Student:</strong> $studentName<br><strong>Title:</strong> $thesisTitle</div></div>" . $footer;
             $mail->send();
         }
-    } catch (Exception $e) { error_log($e->getMessage()); }
+    } catch (Exception $e) { 
+        error_log("Mailer Error: " . $e->getMessage()); 
+    }
 
     $_SESSION['flash_success'] = "Document submitted to Statistician.";
     header("Location: " . $redirect_url);

@@ -15,9 +15,14 @@ $actual_student_id = $student_res ? $student_res['id'] : 0;
 $student_dept_id = $student_res ? $student_res['department_id'] : 0;
 $stmtStudent->close();
 
-// 2. Fetch Personnel for THIS specific service AND who are in the SAME department
+// 2. FIXED QUERY: Fetch Personnel for THIS specific service using the Junction Table
 $service_role_name = 'Ethics';
-$stmtP = $conn->prepare("SELECT id as personnel_id, full_name, service_role FROM personnel WHERE service_role = ? AND department_id = ?");
+$stmtP = $conn->prepare("
+    SELECT p.id as personnel_id, p.full_name, p.service_role 
+    FROM personnel p
+    JOIN personnel_departments pd ON p.user_id = pd.user_id
+    WHERE p.service_role = ? AND pd.department_id = ?
+");
 $stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();
 $resP = $stmtP->get_result();
@@ -98,7 +103,6 @@ $stmtP->close();
                     </template>
                     <template x-for="(msg, index) in messages" :key="index">
                         <div class="w-full">
-                            
                             <template x-if="msg.sender === 'personnel'">
                                 <div class="flex items-end gap-2 max-w-[80%] mt-2">
                                     <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 transition-colors">P</div>
@@ -108,7 +112,6 @@ $stmtP->close();
                                     </div>
                                 </div>
                             </template>
-                            
                             <template x-if="msg.sender === 'student'">
                                 <div class="flex items-end justify-end gap-2 w-full mt-2">
                                     <div class="bg-blue-600 dark:bg-blue-700 p-3.5 rounded-2xl rounded-br-sm shadow-sm max-w-[80%] transition-colors">
@@ -123,7 +126,7 @@ $stmtP->close();
 
                 <div class="p-4 bg-white dark:bg-warmdark-panel border-t border-gray-200 dark:border-warmdark-border shrink-0 transition-colors">
                     <form @submit.prevent="sendMessage()" class="flex items-center gap-2">
-                        <input type="text" x-model="newMessage" placeholder="Type your message here..." class="flex-1 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-full px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-400 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-warmdark-panel transition-colors" required>
+                        <input type="text" x-model="newMessage" placeholder="Type your message here..." class="flex-1 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-warmdark-panel transition-colors" required>
                         <button type="submit" :disabled="isSending" class="bg-blue-600 dark:bg-blue-700 text-white p-2.5 rounded-full hover:bg-blue-700 dark:hover:bg-blue-600 shadow-sm transition-colors flex items-center justify-center disabled:opacity-50">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                         </button>
@@ -145,8 +148,8 @@ function studentChatApp() {
         serviceType: '<?php echo addslashes($service_role_name); ?>',
         chatInterval: null,
         isSending: false,
-        unreadCounts: {}, // NEW
-        globalInterval: null, // NEW
+        unreadCounts: {}, 
+        globalInterval: null, 
 
         init() {
             this.fetchUnreadCounts();
@@ -168,7 +171,6 @@ function studentChatApp() {
         },
 
         markAsRead() {
-            // Note: reader is 'student' so it marks personnel messages as read
             fetch('../../backend/ajax/mark_chat_read.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -186,7 +188,6 @@ function studentChatApp() {
             this.activeName = name;
             this.messages = [];
             
-            // Mark immediately as read when clicking the personnel
             this.markAsRead();
             this.fetchMessages();
 
@@ -209,7 +210,6 @@ function studentChatApp() {
                     
                     if (scrollToBottom || isNewMessage) {
                         this.scrollToBottom();
-                        // If we are actively looking at this chat and a new message arrives, mark it as read immediately!
                         if (isNewMessage) {
                             this.markAsRead();
                         }

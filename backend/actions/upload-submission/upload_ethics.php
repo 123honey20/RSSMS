@@ -111,20 +111,38 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             </div>" . $footer;
         $mail->send();
 
-        // --- 2. Personnel Email (More Detailed) ---
+        // --- 2. Personnel Email (UPDATED TO USE JUNCTION TABLE) ---
         $mail->clearAddresses();
+        $personnelEmailsFound = false;
+
         if ($assigned_personnel_id) {
             $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
             $stmtP->bind_param("i", $assigned_personnel_id);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         } else {
-            $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.service_role = 'Ethics' AND p.department_id = ?");
+            $stmtP = $conn->prepare("
+                SELECT u.email, p.full_name 
+                FROM personnel_departments pd
+                JOIN personnel p ON pd.user_id = p.user_id
+                JOIN users u ON p.user_id = u.id
+                WHERE p.service_role = 'Ethics' 
+                AND pd.department_id = ?
+            ");
             $stmtP->bind_param("i", $studentDeptId);
+            $stmtP->execute();
+            $resP = $stmtP->get_result();
+            while($p = $resP->fetch_assoc()) {
+                $mail->addAddress($p['email'], $p['full_name']);
+                $personnelEmailsFound = true;
+            }
         }
-        $stmtP->execute();
-        $resP = $stmtP->get_result();
-        while($p = $resP->fetch_assoc()) $mail->addAddress($p['email'], $p['full_name']);
         
-        if ($resP->num_rows > 0) {
+        if ($personnelEmailsFound) {
             $mail->Subject = "ACTION REQUIRED: Ethics Review (Round $round) - $controlNo";
             $mail->Body = $header . "
                 <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Ethics Submission</h1></div>

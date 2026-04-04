@@ -14,8 +14,14 @@ $actual_student_id = $student_res ? $student_res['id'] : 0;
 $student_dept_id = $student_res ? $student_res['department_id'] : 0;
 $stmtStudent->close();
 
+// FIXED QUERY: Fetch Personnel for THIS specific service using the Junction Table
 $service_role_name = 'Librarian';
-$stmtP = $conn->prepare("SELECT id as personnel_id, full_name, service_role FROM personnel WHERE service_role = ? AND department_id = ?");
+$stmtP = $conn->prepare("
+    SELECT p.id as personnel_id, p.full_name, p.service_role 
+    FROM personnel p
+    JOIN personnel_departments pd ON p.user_id = pd.user_id
+    WHERE p.service_role = ? AND pd.department_id = ?
+");
 $stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();
 $resP = $stmtP->get_result();
@@ -138,8 +144,8 @@ function studentChatApp() {
         serviceType: '<?php echo addslashes($service_role_name); ?>',
         chatInterval: null,
         isSending: false,
-        unreadCounts: {},
-        globalInterval: null,
+        unreadCounts: {}, 
+        globalInterval: null, 
 
         init() {
             this.fetchUnreadCounts();

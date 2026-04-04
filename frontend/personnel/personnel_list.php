@@ -9,7 +9,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
 <div class="bg-white dark:bg-warmdark-panel p-6 rounded-xl shadow-sm border border-transparent dark:border-warmdark-border min-h-[80vh] transition-colors duration-200">
 
-    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border transition-colors">
+    <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-warmdark-border transition-colors">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Personnel Accounts</h2>
         <a href="../dashboards/admin_dashboard.php?page=add_personnel"
             class="bg-blue-900 dark:bg-blue-800 text-white text-sm px-5 py-2.5 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-700 transition font-medium shadow-sm flex items-center gap-2">
@@ -61,6 +61,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">#</th>
                     <th class="px-6 py-4 font-semibold">School ID</th>
+                    <th class="px-6 py-4 font-semibold max-w-xs">Department(s)</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
@@ -71,58 +72,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
         <div id="paginationContainer" class="mt-4 flex justify-center gap-2 text-sm pb-4"></div>
         <div id="recordInfo" class="flex justify-end mt-2 text-xs text-gray-500 dark:text-gray-400 text-center pb-4 pr-6"></div>
-    </div>
-</div>
-
-<div id="profileModalPersonnel" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity">
-    <div class="bg-white dark:bg-warmdark-panel w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-all duration-300 ease-out border border-transparent dark:border-warmdark-border">
-        <div class="bg-gradient-to-r from-blue-700 to-blue-900 dark:from-warmdark-bg dark:to-warmdark-bg text-white px-6 py-4 flex items-center justify-between dark:border-b dark:border-warmdark-border">
-            <h3 class="text-lg font-semibold tracking-wide">Personnel Profile</h3>
-            <button onclick="closeProfilePersonnel()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
-        </div>
-        <div class="p-6 overflow-y-auto">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
-                
-                <div class="md:col-span-2 bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mb-2 flex items-center gap-4 transition-colors">
-                    <div class="w-12 h-12 bg-blue-100 dark:bg-warmdark-hover text-blue-700 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0 shadow-inner">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    </div>
-                    <div>
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Full Name</p>
-                        <p class="font-bold text-lg text-gray-900 dark:text-gray-100 leading-none" id="p_full_name"></p>
-                    </div>
-                </div>
-
-                <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
-                    <p class="font-bold text-gray-900 dark:text-gray-100" id="p_school_id"></p>
-                </div>
-                <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
-                    <p class="font-medium text-gray-800 dark:text-gray-300 break-all" id="p_email"></p>
-                </div>
-
-                <div class="md:col-span-2 border-t border-gray-100 dark:border-warmdark-border my-1"></div>
-
-                <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Department</p>
-                    <p class="font-medium text-gray-800 dark:text-gray-300" id="p_department_id"></p>
-                </div>
-                <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Role</p>
-                    <span class="font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/50 inline-block" id="p_service_role"></span>
-                </div>
-
-                <div class="md:col-span-2">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Account Status</p>
-                    <span id="p_status" class="inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide"></span>
-                </div>
-
-            </div>
-            <div class="mt-8 flex justify-end">
-                <button onclick="closeProfilePersonnel()" class="bg-white dark:bg-warmdark-hover border border-gray-300 dark:border-warmdark-border px-6 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-warmdark-border text-gray-700 dark:text-gray-200 text-sm font-bold transition shadow-sm">Close</button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -146,7 +95,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 if (data.personnel.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                 </svg>
@@ -167,6 +116,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     row.innerHTML = `
                         <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">${counter++}.</td>
                         <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"></td>
+                        <td class="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs" title=""></td>
                         <td class="px-6 py-4 text-center"></td>
                         <td class="px-6 py-4 text-center">
                             <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs"
@@ -182,10 +132,22 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         </td>
                     `;
 
+                    // Inject School ID
                     row.children[1].textContent = person.school_id;
+                    
+                    // Inject Department Name(s) logically
+                    let displayDept = person.department_name;
+                    if (person.service_role === 'Grammarly & AI Checking') {
+                        displayDept = 'Global Service (All Depts)';
+                    } else if (!displayDept || displayDept.trim() === '') {
+                        displayDept = 'Unassigned';
+                    }
+                    row.children[2].textContent = displayDept;
+                    row.children[2].title = displayDept; // Hover tooltip for long lists
 
+                    // Inject Status Logic
                     if (person.status === 'Pending') {
-                        row.children[2].innerHTML = `
+                        row.children[3].innerHTML = `
                             <form action="../../backend/actions/approve_user.php" method="POST" class="inline">
                                 <input type="hidden" name="user_id" value="${person.id}">
                                 <button type="submit" class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 transition shadow-sm border border-blue-100 dark:border-blue-900/50">
@@ -194,7 +156,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                             </form>
                         `;
                     } else {
-                        row.children[2].innerHTML = `
+                        row.children[3].innerHTML = `
                             <span class="bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100 dark:border-green-500/20">
                                 Approved
                             </span>
@@ -242,32 +204,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         });
 
         fetchPersonnel(1);
-    }
-
-    function openProfilePersonnel(data) {
-        document.getElementById('p_full_name').textContent = data.full_name || 'N/A';
-        document.getElementById('p_school_id').textContent = data.school_id || 'N/A';
-        document.getElementById('p_email').textContent = data.email || 'N/A';
-        document.getElementById('p_department_id').textContent = data.department_name || 'Global Service (All Departments)';
-        document.getElementById('p_service_role').textContent = data.service_role || 'N/A';
-        
-        const statusEl = document.getElementById('p_status');
-        statusEl.textContent = data.status;
-        if(data.status === 'Approved') {
-            statusEl.className = "inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
-        } else {
-            statusEl.className = "inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
-        }
-
-        const modal = document.getElementById('profileModalPersonnel');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-
-    function closeProfilePersonnel() {
-        const modal = document.getElementById('profileModalPersonnel');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
     }
 
     ['deptFilter', 'roleFilter'].forEach(id => {

@@ -17,7 +17,6 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script>
-        // Check for dark mode preference from login.php
         if (localStorage.getItem('darkMode') === 'enabled') {
             document.documentElement.classList.add('dark');
         }
@@ -112,6 +111,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
             <form :action="role === 'student' ? '../../backend/actions/register_student_action.php' : '../../backend/actions/register_personnel_action.php'" method="POST" @submit="validateForm">
                 
                 <input type="hidden" name="school_year" value="<?php echo htmlspecialchars($active_sy); ?>">
+                <input type="hidden" name="role" :value="role">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                     <div>
@@ -179,7 +179,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                         <input type="text" name="full_name" :required="role === 'personnel'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Enter Full Name">
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="grid grid-cols-1 gap-5">
                         <div>
                             <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Service Role</label>
                             <select name="role" x-model="personnelServiceRole" :required="role === 'personnel'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors appearance-none">
@@ -193,16 +193,20 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                         </div>
 
                         <div x-show="personnelServiceRole !== 'Grammarly & AI Checking' && personnelServiceRole !== ''">
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Assigned Department</label>
-                            <select name="personnel_department_id" :required="role === 'personnel' && personnelServiceRole !== 'Grammarly & AI Checking'" class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors appearance-none">
-                                <option value="">Select Department</option>
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Departments</label>
+                            <div class="space-y-2 max-h-48 overflow-y-auto p-3 border border-gray-200 dark:border-warmdark-border rounded-lg bg-gray-50 dark:bg-warmdark-bg shadow-inner">
                                 <?php
-                                $departments->data_seek(0);
-                                while ($row = $departments->fetch_assoc()):
+                                $departments->data_seek(0); 
+                                while ($d = $departments->fetch_assoc()): 
                                 ?>
-                                    <option value="<?= $row['id']; ?>"><?= htmlspecialchars($row['name']); ?></option>
+                                    <label class="flex items-center gap-3 cursor-pointer p-1 hover:bg-gray-200 dark:hover:bg-warmdark-hover rounded transition-colors">
+                                        <input type="checkbox" name="personnel_departments[]" value="<?= $d['id'] ?>" 
+                                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                        <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"><?= htmlspecialchars($d['name']); ?></span>
+                                    </label>
                                 <?php endwhile; ?>
-                            </select>
+                            </div>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 italic">* You can select multiple departments.</p>
                         </div>
                     </div>
                 </div>

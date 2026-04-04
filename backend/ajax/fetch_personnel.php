@@ -26,8 +26,9 @@ if (!empty($search)) {
     $params[] = "%" . $search . "%";
     $types .= "s";
 }
+// NEW: Filter using the Junction Table
 if ($dept !== 'All' && !empty($dept)) {
-    $where .= " AND s.department_id = ?";
+    $where .= " AND EXISTS (SELECT 1 FROM personnel_departments pd WHERE pd.user_id = u.id AND pd.department_id = ?)";
     $params[] = $dept;
     $types .= "i";
 }
@@ -46,7 +47,6 @@ $countSql = "
     SELECT COUNT(*) as total
     FROM users u
     LEFT JOIN personnel s ON u.id = s.user_id
-    LEFT JOIN departments d ON s.department_id = d.id
     $where
 ";
 
@@ -57,14 +57,19 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 if ($page > $totalPages && $totalPages > 0) { $page = $totalPages; }
 
+// NEW: Use GROUP_CONCAT to get all assigned department names combined into one string
 $sql = "
     SELECT 
         u.id, u.school_id, u.email, u.status,
-        s.full_name, s.department_id, s.service_role,
-        d.name AS department_name
+        s.full_name, s.service_role,
+        (
+            SELECT GROUP_CONCAT(d.name SEPARATOR ', ') 
+            FROM personnel_departments pd 
+            JOIN departments d ON pd.department_id = d.id 
+            WHERE pd.user_id = u.id
+        ) AS department_name
     FROM users u
     LEFT JOIN personnel s ON u.id = s.user_id
-    LEFT JOIN departments d ON s.department_id = d.id
     $where
     ORDER BY CASE WHEN u.status = 'Pending' THEN 1 ELSE 2 END, u.created_at DESC
     LIMIT ? OFFSET ?

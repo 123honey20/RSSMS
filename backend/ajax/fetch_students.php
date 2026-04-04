@@ -21,8 +21,9 @@ $offset = ($page - 1) * $limit;
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status = isset($_GET['status']) ? $_GET['status'] : 'All';
-// NEW: Capture the school year parameter
 $sy = isset($_GET['sy']) ? $_GET['sy'] : 'All';
+// NEW: Capture the department parameter
+$dept = isset($_GET['dept']) ? $_GET['dept'] : 'All'; 
 
 $where = "WHERE u.role = 'student'";
 $params = [];
@@ -42,12 +43,18 @@ if ($status !== 'All' && in_array($status, ['Pending', 'Approved'])) {
     $types .= "s";
 }
 
-// NEW: School Year filter
+// School Year filter
 if ($sy !== 'All' && !empty($sy)) {
-    // We target the 's' (students) table alias since that's where the year belongs
     $where .= " AND s.school_year = ?";
     $params[] = $sy;
     $types .= "s";
+}
+
+// NEW: Department filter
+if ($dept !== 'All' && !empty($dept)) {
+    $where .= " AND s.department_id = ?";
+    $params[] = $dept;
+    $types .= "i"; // 'i' for integer
 }
 
 // Count total
