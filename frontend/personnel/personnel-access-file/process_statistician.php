@@ -76,21 +76,6 @@ $totalComments = $countResult['total_comments'] ?? 0;
                     else echo 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-900/50'; ?>">
                 <?php echo $currentStatus; ?>
             </div>
-
-            <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
-                <div class="flex gap-3">
-                    <button
-                        class="btn-approve px-5 py-2 text-xs font-bold bg-gray-100 dark:bg-warmdark-bg rounded-lg transition-colors text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-warmdark-border"
-                        data-id="<?= $submission['id'] ?>">
-                        Approve
-                    </button>
-                    <button
-                        class="btn-reject px-5 py-2 text-xs font-bold bg-gray-100 dark:bg-warmdark-bg rounded-lg transition-colors text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-warmdark-border"
-                        data-id="<?= $submission['id'] ?>">
-                        Reject
-                    </button>
-                </div>
-            <?php endif; ?>
         </div>
 
     </div>
@@ -121,6 +106,35 @@ $totalComments = $countResult['total_comments'] ?? 0;
             </div>
         <?php endif; ?>
     </div>
+
+    <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
+        <div class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-xl p-6 transition-colors">
+            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400 mb-1">Process Student Submission</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Attach your processed statistical result or feedback file below, then finalize your decision.</p>
+            
+            <form action="../../backend/actions/personnel_process_statistician.php" method="POST" enctype="multipart/form-data" class="space-y-5">
+                <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
+                
+                <div class="bg-white dark:bg-warmdark-bg p-4 rounded-lg border border-gray-200 dark:border-warmdark-border">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Step 1: Attach Result/Feedback File (Required)</label>
+                    <input type="file" id="resultFileInput" name="result_file" accept=".docx,.pdf,.txt,.csv,.xlsx,.sav,.png,.jpg" required class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400">
+                    <p class="text-[11px] text-gray-400 mt-2 italic">Allowed: .docx, .pdf, .txt, .csv, .xlsx, .sav, .png, .jpg</p>
+                </div>
+
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Step 2: Finalize Decision</label>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" name="action" value="Approve" onclick="if(!document.getElementById('resultFileInput').value) { alert('Please attach a file before approving.'); return false; }" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors w-full sm:w-auto">
+                            Approve Submission
+                        </button>
+                        <button type="submit" name="action" value="Reject" onclick="if(!document.getElementById('resultFileInput').value) { alert('Please attach a feedback file before rejecting.'); return false; }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto">
+                            Reject Submission
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    <?php endif; ?>
 
     <div class="flex justify-between pt-6 border-t border-gray-200 dark:border-warmdark-border transition-colors">
         <div>

@@ -311,7 +311,7 @@ if ($appStatus === 'Approved') {
                                                 View
                                             </a>
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors">
                                                 View
                                             </span>
                                         <?php endif; ?>
@@ -332,7 +332,7 @@ if ($appStatus === 'Approved') {
                                             </a>
 
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block cursor-not-allowed">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block">
                                                 Re-upload
                                             </span>
                                         <?php endif; ?>

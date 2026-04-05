@@ -163,7 +163,7 @@ if ($appStatus === 'Approved') {
             ?>
 
             <?php if ($currentStatus === 'Approved'): ?>
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 cursor-not-allowed transition-colors">
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
                         <p class="font-semibold text-green-700 dark:text-green-500">Upload Disabled</p>
@@ -190,7 +190,7 @@ if ($appStatus === 'Approved') {
                 </a>
 
             <?php else: ?>
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 cursor-not-allowed transition-colors">
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
                         <p class="font-semibold text-gray-600 dark:text-gray-300">Pending Submission</p>
@@ -298,7 +298,7 @@ if ($appStatus === 'Approved') {
                                                 View
                                             </a>
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors">
                                                 View
                                             </span>
                                         <?php endif; ?>
@@ -313,7 +313,7 @@ if ($appStatus === 'Approved') {
                                                 Re-upload
                                             </a>
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block cursor-not-allowed">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block">
                                                 Re-upload
                                             </span>
                                         <?php endif; ?>
