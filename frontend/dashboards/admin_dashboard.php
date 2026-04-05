@@ -23,7 +23,7 @@ $stmt->close();
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <script>
         tailwind.config = {
             darkMode: 'class', // Enable class-based dark mode
@@ -31,10 +31,10 @@ $stmt->close();
                 extend: {
                     colors: {
                         warmdark: {
-                            bg: '#1c1b16',     // Base background (slight yellow dark)
-                            panel: '#26241c',  // Panel/Sidebar background (lighter)
+                            bg: '#1c1b16', // Base background (slight yellow dark)
+                            panel: '#26241c', // Panel/Sidebar background (lighter)
                             border: '#3d392b', // Borders
-                            hover: '#312e23'   // Hover states
+                            hover: '#312e23' // Hover states
                         }
                     }
                 }
@@ -103,7 +103,7 @@ $stmt->close();
 
                 <div x-data="{ open: true }">
                     <div class="px-5 flex items-center justify-between mb-1.5 group cursor-pointer" @click="open = !open">
-                        <span class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Users</span>
+                        <span class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Management</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-all" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
@@ -121,6 +121,13 @@ $stmt->close();
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                             View Personnel
+                        </a>
+
+                        <a href="admin_dashboard.php?page=personnel_requests" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Personnel Requests
                         </a>
                     </div>
                 </div>
@@ -311,6 +318,9 @@ $stmt->close();
                     case 'add_personnel':
                         include '../personnel/admin_add_personnel.php';
                         break;
+                    case 'personnel_requests':
+                        include '../personnel/personnel_requests.php';
+                        break;
                     case 'view_departments':
                         include '../department-courses/view_department.php';
                         break;
@@ -493,9 +503,10 @@ $stmt->close();
                             <span class="font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/50 inline-block break-words" id="master_p_service_role"></span>
                         </div>
                     </div>
-                    <div class="bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2">
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Assigned Department</p>
-                        <p class="font-semibold text-gray-900 dark:text-gray-100 leading-snug" id="master_p_dept"></p>
+                    <div class="bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2 transition-colors">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Assigned Departments</p>
+                        <div id="master_p_dept_container" class="flex flex-wrap gap-2">
+                        </div>
                     </div>
                     <div>
                         <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Account Status</p>
@@ -626,9 +637,44 @@ $stmt->close();
             document.getElementById("master_p_school_id").textContent = data.school_id || data.School_ID || "-";
             document.getElementById("master_p_email").textContent = data.email || data.Email || "-";
             document.getElementById("master_p_full_name").textContent = data.full_name || data.name || "-";
-            document.getElementById("master_p_service_role").textContent = data.service_role || data.role || "-";
-            document.getElementById("master_p_status").textContent = data.status || data.Status || "-";
-            document.getElementById("master_p_dept").textContent = data.department_name || data.department || "Global Service";
+
+            const role = data.service_role || data.role || "-";
+            document.getElementById("master_p_service_role").textContent = role;
+
+            const statusEl = document.getElementById("master_p_status");
+            statusEl.textContent = data.status || data.Status || "-";
+            if (data.status === 'Approved') {
+                statusEl.className = "inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
+            } else {
+                statusEl.className = "inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
+            }
+
+            // NEW: Handle Multiple Departments Parsing
+            const deptContainer = document.getElementById("master_p_dept_container");
+            deptContainer.innerHTML = ''; // Clear old badges
+
+            if (role === 'Grammarly & AI Checking') {
+                deptContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 px-2.5 py-1 rounded-md text-xs font-bold">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Global Service (All Departments)
+                    </span>
+                `;
+            } else if (!data.department_name || data.department_name.trim() === '') {
+                deptContainer.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-sm italic">No departments assigned.</span>`;
+            } else {
+                // Split the comma-separated string coming from the database
+                const depts = data.department_name.split(', ');
+                depts.forEach(dept => {
+                    const badge = document.createElement('span');
+                    badge.className = "inline-flex items-center gap-1.5 bg-white dark:bg-warmdark-panel text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm";
+                    badge.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        ${dept.trim()}
+                    `;
+                    deptContainer.appendChild(badge);
+                });
+            }
 
             const modalp = document.getElementById("masterModalPersonnel");
             modalp.classList.remove("hidden");
