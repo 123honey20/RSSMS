@@ -12,11 +12,12 @@ $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
 $offset = ($page - 1) * $limit;
 
 $search = $_GET['search'] ?? '';
-$service = $_GET['service'] ?? 'All';
+// Hardcode the service to only return Statistician records
+$service = 'Statistician'; 
 $status = $_GET['status'] ?? 'Pending';
-$dept = $_GET['dept'] ?? 'All'; // NEW: Get Department
+$dept = $_GET['dept'] ?? 'All';
 
-$where = "WHERE 1=1";
+$where = "WHERE sa.service_type = 'Statistician'"; // Hardcoded rule
 $params = [];
 $types = "";
 
@@ -25,11 +26,7 @@ if ($status !== 'All') {
     $params[] = $status;
     $types .= "s";
 }
-if ($service !== 'All') {
-    $where .= " AND sa.service_type = ?";
-    $params[] = $service;
-    $types .= "s";
-}
+
 if ($dept !== 'All' && !empty($dept)) {
     $where .= " AND s.department_id = ?";
     $params[] = $dept;

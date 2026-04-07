@@ -61,7 +61,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">#</th>
                     <th class="px-6 py-4 font-semibold">School ID</th>
-                    <th class="px-6 py-4 font-semibold max-w-xs">Department(s)</th>
+                    <th class="px-6 py-4 font-semibold max-w-xs">Department</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>

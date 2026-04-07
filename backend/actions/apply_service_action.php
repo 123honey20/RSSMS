@@ -21,19 +21,10 @@ $service_type = $_POST['service_type'] ?? '';
 $requested_personnel_id = intval($_POST['requested_personnel_id']);
 $contract_file_path = null;
 
-// Determine where to redirect based on service type
-$redirect_map = [
-    'Statistician' => 'students_rs_statistician',
-    'Ethics' => 'students_rs_ethics',
-    'Librarian' => 'students_rs_librarian',
-    'Human Grammarian' => 'students_rs_human_grammarian'
-];
-$redirect_page = $redirect_map[$service_type] ?? 'dashboard';
-$redirect_url = "../../frontend/dashboards/student_dashboard.php?page=" . $redirect_page;
-
-if (!$requested_personnel_id || empty($service_type)) {
-    $_SESSION['flash_error'] = "Invalid request.";
-    header("Location: " . $redirect_url);
+// SECURITY LOCK: Only the Statistician service uses this manual application form now.
+if ($service_type !== 'Statistician' || !$requested_personnel_id) {
+    $_SESSION['flash_error'] = "Invalid request or service type.";
+    header("Location: ../../frontend/dashboards/student_dashboard.php?page=students_rs_statistician");
     exit();
 }
 
@@ -66,6 +57,6 @@ if ($insertStmt->execute()) {
 }
 
 $insertStmt->close();
-header("Location: " . $redirect_url);
+header("Location: ../../frontend/dashboards/student_dashboard.php?page=students_rs_statistician");
 exit();
 ?>

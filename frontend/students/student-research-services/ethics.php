@@ -44,25 +44,7 @@ if ($student_id) {
     }
 }
 
-// 3. Fetch Available Personnel for this Student's Department
-$personnelList = [];
-if (!$application || $appStatus === 'Rejected') {
-    $pStmt = $conn->prepare("
-        SELECT p.id, p.full_name 
-        FROM personnel p 
-        JOIN personnel_departments pd ON p.user_id = pd.user_id 
-        WHERE p.service_role = 'Ethics' AND pd.department_id = ?
-    ");
-    $pStmt->bind_param("i", $student_dept_id);
-    $pStmt->execute();
-    $pRes = $pStmt->get_result();
-    while ($row = $pRes->fetch_assoc()) {
-        $personnelList[] = $row;
-    }
-    $pStmt->close();
-}
-
-// 4. If Application is Approved, load the actual file submissions
+// 3. If Application is Approved, load the actual file submissions
 $subs = null;
 $latest = null;
 $currentRound = 0;
@@ -79,69 +61,25 @@ if ($appStatus === 'Approved') {
 
 <div class="space-y-6 transition-colors duration-200">
 
-    <?php if (!$application || $appStatus === 'Rejected'): ?>
-        <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border max-w-2xl transition-colors">
-            <div class="mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border">
-                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Request Ethics Services</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select your preferred personnel and upload your signed contract to begin.</p>
-                
-                <?php if ($appStatus === 'Rejected' && !$hasAnySubmission): ?>
-                    <div x-data="{ show: true }" 
-                         x-show="show" 
-                         x-init="setTimeout(() => show = false, 5000)" 
-                         x-transition.opacity.duration.500ms 
-                         class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-100 dark:border-red-900/30">
-                        <span class="font-bold">Notice:</span> Your previous request was rejected. Please submit a new request.
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <form action="../../backend/actions/apply_service_action.php" method="POST" enctype="multipart/form-data" class="space-y-6">
-                <input type="hidden" name="service_type" value="Ethics">
-                
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Select Personnel</label>
-                    <select name="requested_personnel_id" required class="w-full border border-gray-300 dark:border-warmdark-border bg-gray-50 dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-3 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors appearance-none">
-                        <option value="">-- Choose an available Ethics --</option>
-                        <?php foreach ($personnelList as $p): ?>
-                            <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['full_name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Upload Contract (Optional)</label>
-                    <input type="file" name="contract_file" accept=".pdf,.jpg,.jpeg,.png" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400">
-                    <p class="text-[11px] text-gray-400 mt-2 italic">Accepted formats: PDF, JPG, PNG. Max size: 5MB.</p>
-                </div>
-
-                <div class="pt-4 border-t border-gray-100 dark:border-warmdark-border">
-                    <button type="submit" class="w-full bg-blue-700 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
-                        Submit Application Request
-                    </button>
-                </div>
-            </form>
-        </div>
-
-    <?php elseif ($appStatus === 'Pending'): ?>
-        <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl shadow-sm border border-yellow-200 dark:border-yellow-900/50 max-w-2xl transition-colors">
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <?php if ($appStatus !== 'Approved'): ?>
+        <div class="bg-indigo-50 dark:bg-indigo-900/20 p-8 rounded-2xl shadow-sm border border-indigo-200 dark:border-indigo-900/50 max-w-2xl transition-colors">
+            <div class="flex items-start sm:items-center gap-5">
+                <div class="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Application Pending</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Waiting for the System Administrator to verify your contract and officially assign your personnel.</p>
+                    <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100">Waiting for Ethics Reviewer Assignment</h2>
+                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mt-2 leading-relaxed">
+                        Your research profile is currently pending personnel assignment. The System Administrator will officially assign a dedicated Ethics Reviewer to your group soon. 
+                        Once assigned, your upload dashboard will automatically unlock here.
+                    </p>
                 </div>
-            </div>
-            <div class="bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-100 dark:border-warmdark-border mt-6">
-                <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-1">Requested Personnel</p>
-                <p class="text-gray-800 dark:text-gray-200 font-semibold"><?= htmlspecialchars($application['requested_name']) ?></p>
             </div>
         </div>
 
     <?php else: ?>
-        
         <?php if (!$hasAnySubmission): ?>
             <div x-data="{ show: true }" 
                  x-show="show" 
@@ -149,7 +87,7 @@ if ($appStatus === 'Approved') {
                  x-transition.opacity.duration.500ms 
                  class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="text-sm text-green-800 dark:text-green-300 font-medium">Your Ethics application was approved! You may now submit your documents for review.</span>
+                <span class="text-sm text-green-800 dark:text-green-300 font-medium">An Ethics Reviewer has been assigned to you! You may now submit your documents for review.</span>
             </div>
         <?php endif; ?>
 
@@ -272,7 +210,7 @@ if ($appStatus === 'Approved') {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
-                        <?php if ($subs->num_rows > 0): ?>
+                        <?php if ($subs && $subs->num_rows > 0): ?>
                             <?php $i = 1; ?>
                             <?php while ($row = $subs->fetch_assoc()): ?>
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
@@ -311,7 +249,7 @@ if ($appStatus === 'Approved') {
                                                 View
                                             </a>
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
                                                 View
                                             </span>
                                         <?php endif; ?>
@@ -332,7 +270,7 @@ if ($appStatus === 'Approved') {
                                             </a>
 
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block cursor-not-allowed">
                                                 Re-upload
                                             </span>
                                         <?php endif; ?>

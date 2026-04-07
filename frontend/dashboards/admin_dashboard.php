@@ -129,6 +129,13 @@ $stmt->close();
                             </svg>
                             Personnel Requests
                         </a>
+
+                        <a href="admin_dashboard.php?page=assign_personnel" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Assign Personnel
+                        </a>
                     </div>
                 </div>
 
@@ -317,6 +324,9 @@ $stmt->close();
                         break;
                     case 'add_personnel':
                         include '../personnel/admin_add_personnel.php';
+                        break;
+                    case 'assign_personnel':
+                        include '../personnel/assign_personnel.php';
                         break;
                     case 'personnel_requests':
                         include '../personnel/personnel_requests.php';

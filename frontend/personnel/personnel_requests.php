@@ -12,29 +12,20 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border transition-colors">
         <div>
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Personnel Requests</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Review student applications for research personnel and verify contracts.</p>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Statistician Personnel Requests</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Review student applications for Statistician personnel and verify contracts.</p>
         </div>
     </div>
 
     <div class="flex flex-col md:flex-row gap-4 mb-4 items-center">
         <input type="text" id="reqSearchInput" placeholder="Search Control No..."
-            class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
+            class="w-full md:w-1/3 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
-        <select id="reqDeptFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
+        <select id="reqDeptFilter" class="w-full md:w-1/3 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
             <option value="All">All Departments</option>
             <?php while ($d = $dept_query->fetch_assoc()): ?>
                 <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
             <?php endwhile; ?>
-        </select>
-
-        <select id="reqServiceFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
-            <option value="All">All Services</option>
-            <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
-            <option value="Human Grammarian">Human Grammarian</option>
-            <option value="Statistician">Statistician</option>
-            <option value="Librarian">Librarian</option>
-            <option value="Ethics">Ethics</option>
         </select>
 
         <div class="flex gap-2 bg-gray-50 dark:bg-warmdark-bg p-1 rounded-lg border border-gray-200 dark:border-warmdark-border ml-auto transition-colors">
@@ -62,7 +53,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                 <tr>
                     <th class="px-6 py-4 font-semibold">Student Control No.</th>
-                    <th class="px-6 py-4 font-semibold">Service Request</th>
                     <th class="px-6 py-4 font-semibold">Requested Personnel</th>
                     <th class="px-6 py-4 font-semibold text-center">Contract</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
@@ -91,7 +81,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 <p class="font-bold text-gray-900 dark:text-gray-100" id="modal_req_student_control"></p>
                 <div class="mt-3">
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Type</p>
-                    <span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 px-2.5 py-1 rounded-md text-xs font-bold" id="modal_req_service_type"></span>
+                    <span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 px-2.5 py-1 rounded-md text-xs font-bold" id="modal_req_service_type">Statistician</span>
                 </div>
             </div>
 
@@ -141,15 +131,13 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
     window.loadAdminRequests = function(page = 1) {
         reqCurrentPage = page;
         var searchInput = document.getElementById('reqSearchInput');
-        var serviceFilter = document.getElementById('reqServiceFilter');
-        var deptFilter = document.getElementById('reqDeptFilter'); // Grab new dept filter
+        var deptFilter = document.getElementById('reqDeptFilter'); 
 
         var search = searchInput ? searchInput.value : '';
-        var service = serviceFilter ? serviceFilter.value : 'All';
         var dept = deptFilter ? deptFilter.value : 'All';
 
-        // Added dept to URL
-        fetch(`../../backend/ajax/fetch_personnel_requests.php?p=${page}&search=${encodeURIComponent(search)}&service=${encodeURIComponent(service)}&status=${encodeURIComponent(reqStatusFilter)}&dept=${encodeURIComponent(dept)}`)
+        // Hardcode 'Statistician' into the fetch URL instead of using a filter dropdown
+        fetch(`../../backend/ajax/fetch_personnel_requests.php?p=${page}&search=${encodeURIComponent(search)}&service=Statistician&status=${encodeURIComponent(reqStatusFilter)}&dept=${encodeURIComponent(dept)}`)
             .then(res => res.json())
             .then(data => {
                 var tbody = document.getElementById('requestsTableBody');
@@ -158,7 +146,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 tbody.innerHTML = '';
 
                 if (!data.requests || data.requests.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No requests found.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No requests found.</td></tr>`;
                     var pagination = document.getElementById('reqPaginationContainer');
                     if (pagination) pagination.innerHTML = '';
                     return;
@@ -184,10 +172,9 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                             <p class="font-bold text-gray-800 dark:text-gray-200">${req.control_number}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">${req.department_name || 'Global'}</p>
                         </td>
-                        <td class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300">${req.service_type}</td>
                         <td class="px-6 py-4 text-gray-600 dark:text-gray-400">${req.requested_name}</td>
                         <td class="px-6 py-4 text-center">${contractHtml}</td>
-                        <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-transparent ${statusClass}">${req.status}</span></td>
+                        <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[11px] font-bold tracking-wider border border-transparent ${statusClass}">${req.status}</span></td>
                         <td class="px-6 py-4 text-center">${actionHtml}</td>
                     `;
                     tbody.appendChild(row);
@@ -218,7 +205,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
     window.openReqModal = function(appId, deptId, serviceType, reqPersonnelId, contractPath, controlNo, status, assignedPersonnelId) {
         document.getElementById('modal_req_app_id').value = appId;
         document.getElementById('modal_req_student_control').textContent = controlNo;
-        document.getElementById('modal_req_service_type').textContent = serviceType;
 
         var contractLink = document.getElementById('modal_req_contract_link');
         var noContract = document.getElementById('modal_req_no_contract');
@@ -293,13 +279,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
     };
 
     setTimeout(() => {
-        var filterEl = document.getElementById('reqServiceFilter');
-        if (filterEl) {
-            filterEl.addEventListener('change', () => {
-                if (typeof window.loadAdminRequests === 'function') window.loadAdminRequests(1);
-            });
-        }
-
         // Listen to new Dept Filter
         var deptEl = document.getElementById('reqDeptFilter');
         if (deptEl) {
