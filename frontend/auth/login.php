@@ -35,6 +35,25 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
+
+        /* FIX BROWSER AUTOFILL STYLING FOR LIGHT MODE */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: #0f172a !important; /* text-slate-900 */
+        }
+
+        /* FIX BROWSER AUTOFILL STYLING FOR DARK MODE */
+        .dark input:-webkit-autofill,
+        .dark input:-webkit-autofill:hover, 
+        .dark input:-webkit-autofill:focus, 
+        .dark input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #1E293B inset !important; /* match dark panel bg */
+            -webkit-text-fill-color: white !important; /* white text */
+            caret-color: white;
+        }
     </style>
 </head>
 

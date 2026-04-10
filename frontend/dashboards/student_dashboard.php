@@ -9,11 +9,12 @@ require_once "../../backend/config/database.php";
 
 $user_id = $_SESSION['user'];
 
-// 1. Get ALL Student Profile Details
+// 1. Get ALL Student Profile Details AND Department Requirements
 $stmt = $conn->prepare("
     SELECT u.school_id, u.email, 
            s.id AS student_id, s.control_number, s.thesis_title, s.research_leader,
-           d.name AS department_name, c.name AS course_name
+           d.name AS department_name, c.name AS course_name,
+           d.req_grammarly_ai, d.req_ethics, d.req_human_grammarian, d.req_librarian, d.req_statistician
     FROM users u
     LEFT JOIN students s ON u.id = s.user_id
     LEFT JOIN departments d ON s.department_id = d.id
@@ -28,12 +29,18 @@ $stmt->close();
 $student_id = $profile['student_id'] ?? 0;
 $_SESSION['control_number'] = $profile['control_number'] ?? '';
 
-// 2. Check if the student is Approved in ALL 5 research services
-$services = ['grammarly_ai', 'ethics', 'human_grammarian', 'librarian', 'statistician'];
+// 2. Check if the student is Approved in ONLY their REQUIRED research services
+$servicesToCheck = [];
+if ($profile['req_grammarly_ai'] ?? 1) $servicesToCheck[] = 'grammarly_ai';
+if ($profile['req_ethics'] ?? 1) $servicesToCheck[] = 'ethics';
+if ($profile['req_human_grammarian'] ?? 1) $servicesToCheck[] = 'human_grammarian';
+if ($profile['req_librarian'] ?? 1) $servicesToCheck[] = 'librarian';
+if ($profile['req_statistician'] ?? 1) $servicesToCheck[] = 'statistician';
+
 $isEligibleForProposal = true;
 
-if ($student_id > 0) {
-    foreach ($services as $service) {
+if ($student_id > 0 && !empty($servicesToCheck)) {
+    foreach ($servicesToCheck as $service) {
         $checkStmt = $conn->prepare("SELECT id FROM $service WHERE student_id = ? AND status = 'Approved' LIMIT 1");
         $checkStmt->bind_param("i", $student_id);
         $checkStmt->execute();
@@ -138,36 +145,52 @@ if ($student_id > 0) {
                     </div>
 
                     <div x-show="open" class="flex flex-col gap-0.5 px-3" x-cloak>
+                        
+                        <?php if ($profile['req_grammarly_ai'] ?? 1): ?>
                         <a href="student_dashboard.php?page=students_rs_grammarly_ai" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                             Grammarly & AI
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_ethics'] ?? 1): ?>
                         <a href="student_dashboard.php?page=students_rs_ethics" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             Ethics
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_human_grammarian'] ?? 1): ?>
                         <a href="student_dashboard.php?page=students_rs_human_grammarian" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                             </svg>
                             Human Grammarian
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_librarian'] ?? 1): ?>
                         <a href="student_dashboard.php?page=students_rs_librarian" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
                             </svg>
                             Librarian
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_statistician'] ?? 1): ?>
                         <a href="student_dashboard.php?page=students_rs_statistician" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                             </svg>
                             Statistician
                         </a>
+                        <?php endif; ?>
+
                     </div>
                 </div>
 
@@ -180,26 +203,42 @@ if ($student_id > 0) {
                     </div>
 
                     <div x-show="open" class="flex flex-col gap-0.5 px-3" x-cloak>
+                        
+                        <?php if ($profile['req_grammarly_ai'] ?? 1): ?>
                         <a href="student_dashboard.php?page=chat_grammarly_ai" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-sm ml-1"></div>
                             Grammarly & AI
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_ethics'] ?? 1): ?>
                         <a href="student_dashboard.php?page=chat_ethics" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <div class="w-2 h-2 rounded-full bg-blue-400 shadow-sm ml-1"></div>
                             Ethics
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_human_grammarian'] ?? 1): ?>
                         <a href="student_dashboard.php?page=chat_human_grammarian" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <div class="w-2 h-2 rounded-full bg-purple-400 shadow-sm ml-1"></div>
                             Human Grammarian
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_librarian'] ?? 1): ?>
                         <a href="student_dashboard.php?page=chat_librarian" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <div class="w-2 h-2 rounded-full bg-pink-400 shadow-sm ml-1"></div>
                             Librarian
                         </a>
+                        <?php endif; ?>
+
+                        <?php if ($profile['req_statistician'] ?? 1): ?>
                         <a href="student_dashboard.php?page=chat_statistician" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <div class="w-2 h-2 rounded-full bg-red-400 shadow-sm ml-1"></div>
                             Statistician
                         </a>
+                        <?php endif; ?>
+
                     </div>
                 </div>
 
@@ -212,6 +251,8 @@ if ($student_id > 0) {
                     </div>
 
                     <div x-show="open" class="flex flex-col gap-0.5 px-3" x-cloak>
+                        
+                        <?php if ($profile['req_grammarly_ai'] ?? 1): ?>
                         <a href="student_dashboard.php?page=student_transaction_grammarly_ai" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <div class="w-4 h-4 flex items-center justify-center rounded border border-gray-300 dark:border-gray-500 text-gray-400 dark:text-gray-500 bg-white dark:bg-warmdark-bg group-hover:border-gray-400 dark:group-hover:border-gray-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -220,6 +261,8 @@ if ($student_id > 0) {
                             </div>
                             Grammarly & AI Checking
                         </a>
+                        <?php endif; ?>
+
                     </div>
                 </div>
 

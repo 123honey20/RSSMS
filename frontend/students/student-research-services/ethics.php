@@ -57,7 +57,19 @@ if ($appStatus === 'Approved') {
     $currentRound = $latest ? (int)$latest['round'] : 0;
     $currentStatus = $latest ? $latest['status'] : null;
 }
+
+// 4. Fetch the specific requirements for Ethics
+$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_ethics'");
+$ethics_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
+$ethics_requirements = json_decode($ethics_requirements_json, true);
+
+// Fallback just in case it's still old plain text
+if (!is_array($ethics_requirements)) {
+    $ethics_requirements = array_filter(explode("\n", $ethics_requirements_json));
+}
+
 ?>
+
 
 <div class="space-y-6 transition-colors duration-200">
 
@@ -70,9 +82,9 @@ if ($appStatus === 'Approved') {
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100">Waiting for Ethics Reviewer Assignment</h2>
+                    <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100">Waiting for Ethics Assignment</h2>
                     <p class="text-sm text-indigo-700 dark:text-indigo-300 mt-2 leading-relaxed">
-                        Your research profile is currently pending personnel assignment. The System Administrator will officially assign a dedicated Ethics Reviewer to your group soon. 
+                        Your research profile is currently pending personnel assignment. The System Administrator will officially assign a dedicated Ethics to your group soon.
                         Once assigned, your upload dashboard will automatically unlock here.
                     </p>
                 </div>
@@ -81,13 +93,31 @@ if ($appStatus === 'Approved') {
 
     <?php else: ?>
         <?php if (!$hasAnySubmission): ?>
-            <div x-data="{ show: true }" 
-                 x-show="show" 
-                 x-init="setTimeout(() => show = false, 5000)" 
-                 x-transition.opacity.duration.500ms 
-                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="text-sm text-green-800 dark:text-green-300 font-medium">An Ethics Reviewer has been assigned to you! You may now submit your documents for review.</span>
+            <div x-data="{ show: true }"
+                x-show="show"
+                x-init="setTimeout(() => show = false, 5000)"
+                x-transition.opacity.duration.500ms
+                class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-sm text-green-800 dark:text-green-300 font-medium">An Ethics has been assigned to you! You may now submit your documents for review.</span>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($ethics_requirements) && $appStatus === 'Approved'): ?>
+            <div class="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full mb-6">
+                <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Required Documents for Ethics
+                </h3>
+                <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-1.5 pl-2 font-medium">
+                    <?php foreach ($ethics_requirements as $req): ?>
+                        <li><?php echo htmlspecialchars($req); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 

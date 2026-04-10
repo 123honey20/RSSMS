@@ -26,6 +26,22 @@ $where = "WHERE 1=1";
 $params = [];
 $types = "";
 
+// --- NEW: Filter out students whose department does NOT require the selected service ---
+$req_column = '';
+if ($service === 'Librarian') {
+    $req_column = 'd.req_librarian';
+} elseif ($service === 'Human Grammarian') {
+    $req_column = 'd.req_human_grammarian';
+} elseif ($service === 'Ethics') {
+    $req_column = 'd.req_ethics';
+}
+
+// If we matched a column, ensure the department has it checked (value = 1)
+if (!empty($req_column)) {
+    $where .= " AND " . $req_column . " = 1";
+}
+// --------------------------------------------------------------------------------------
+
 if ($dept !== 'All' && !empty($dept)) {
     $where .= " AND s.department_id = ?";
     $params[] = $dept;
@@ -124,6 +140,6 @@ echo json_encode([
     "students" => $students, 
     "total_pages" => $total_pages, 
     "current_page" => $page,
-    "total_records" => $total_records // <-- ADD THIS LINE
+    "total_records" => $total_records
 ]);
 ?>

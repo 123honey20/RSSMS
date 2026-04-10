@@ -4,8 +4,8 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 }
 
 require_once "../../backend/config/database.php";
-// Fetch departments for the filter
-$dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC");
+// CHANGED: Fetch ALL columns so we have access to the req_ flags
+$dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
 ?>
 
 <div class="bg-white dark:bg-warmdark-panel p-6 rounded-xl shadow-sm border border-transparent dark:border-warmdark-border min-h-[80vh] transition-colors duration-200">
@@ -31,7 +31,13 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         <select id="assignDeptFilter" class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none transition-colors shadow-sm">
             <option value="All">All Departments</option>
             <?php while ($d = $dept_query->fetch_assoc()): ?>
-                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
+                <option value="<?= $d['id'] ?>" 
+                    data-req-librarian="<?= isset($d['req_librarian']) ? $d['req_librarian'] : 1 ?>"
+                    data-req-human-grammarian="<?= isset($d['req_human_grammarian']) ? $d['req_human_grammarian'] : 1 ?>"
+                    data-req-ethics="<?= isset($d['req_ethics']) ? $d['req_ethics'] : 1 ?>"
+                >
+                    <?= htmlspecialchars($d['name']) ?>
+                </option>
             <?php endwhile; ?>
         </select>
 
@@ -115,6 +121,36 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
     var assignCurrentPage = 1;
     var assignSearchTimer;
 
+    // NEW: Function to disable/hide departments that don't match the selected service
+    function updateDepartmentDropdown() {
+        var service = document.getElementById('assignServiceFilter').value;
+        var deptDropdown = document.getElementById('assignDeptFilter');
+        var options = deptDropdown.querySelectorAll('option[data-req-librarian]'); // Selects all except "All"
+        
+        var dataAttr = '';
+        if (service === 'Librarian') dataAttr = 'data-req-librarian';
+        else if (service === 'Human Grammarian') dataAttr = 'data-req-human-grammarian';
+        else if (service === 'Ethics') dataAttr = 'data-req-ethics';
+
+        var currentSelectedIsDisabled = false;
+
+        options.forEach(opt => {
+            if (opt.getAttribute(dataAttr) == '0') {
+                opt.disabled = true;
+                opt.style.display = 'none';
+                if (opt.selected) currentSelectedIsDisabled = true;
+            } else {
+                opt.disabled = false;
+                opt.style.display = '';
+            }
+        });
+
+        // If the currently selected department just became invalid, switch back to "All"
+        if (currentSelectedIsDisabled) {
+            deptDropdown.value = 'All';
+        }
+    }
+
     window.loadStudentsForAssignment = function(page = 1) {
         assignCurrentPage = page;
         var search = document.getElementById('assignSearchInput').value;
@@ -133,12 +169,11 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 if (!data.students || data.students.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No students found.</td></tr>`;
                     document.getElementById('assignPaginationContainer').innerHTML = '';
-                    document.getElementById('assignRecordInfo').textContent = ''; // Clear record info
+                    document.getElementById('assignRecordInfo').textContent = '';
                     return;
                 }
 
                 data.students.forEach(student => {
-                    // ... (KEEP YOUR EXISTING ROW GENERATION CODE EXACTLY AS IT IS) ...
                     var row = document.createElement('tr');
                     row.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
@@ -178,7 +213,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     tbody.appendChild(row);
                 });
 
-                // NEW PAGINATION & RECORD INFO LOGIC
                 renderAssignPagination(data.total_pages, data.current_page);
 
                 const totalRows = data.total_records || 0;
@@ -186,13 +220,11 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 const endRecord = Math.min(assignCurrentPage * 10, totalRows);
 
                 document.getElementById('assignRecordInfo').textContent = totalRows > 0 ?
-                    `Showing ${startRecord} - ${endRecord} of ${totalRows} Students` :
-                    '';
+                    `Showing ${startRecord} - ${endRecord} of ${totalRows} Students` : '';
             })
             .catch(err => console.error("Error fetching students:", err));
     };
 
-    // ADD THIS NEW FUNCTION RIGHT BELOW window.loadStudentsForAssignment
     function renderAssignPagination(totalPages, currentPage) {
         const container = document.getElementById('assignPaginationContainer');
         container.innerHTML = '';
@@ -247,7 +279,14 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     // Event Listeners
     setTimeout(() => {
-        ['assignServiceFilter', 'assignDeptFilter', 'assignStatusFilter'].forEach(id => {
+        // Run update on Service Filter change
+        document.getElementById('assignServiceFilter')?.addEventListener('change', () => {
+            updateDepartmentDropdown();
+            if (typeof window.loadStudentsForAssignment === 'function') window.loadStudentsForAssignment(1);
+        });
+
+        // Run assignment load on other filters changing
+        ['assignDeptFilter', 'assignStatusFilter'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', () => {
                 if (typeof window.loadStudentsForAssignment === 'function') window.loadStudentsForAssignment(1);
             });
@@ -263,6 +302,8 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             });
         }
 
+        // Initialize Everything on First Load
+        updateDepartmentDropdown();
         if (typeof window.loadStudentsForAssignment === 'function') {
             window.loadStudentsForAssignment(1);
         }

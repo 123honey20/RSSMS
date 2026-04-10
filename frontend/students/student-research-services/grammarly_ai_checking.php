@@ -33,9 +33,34 @@ $latest = $latestRes->fetch_assoc();
 $currentRound = $latest ? (int)$latest['round'] : 0;
 $currentStatus = $latest ? $latest['status'] : null;
 
+// NEW: Fetch the specific requirements for Grammarly & AI
+$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_grammarly_ai'");
+$grammarly_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
+$grammarly_requirements = json_decode($grammarly_requirements_json, true);
+
+// Fallback just in case it's still old plain text
+if (!is_array($grammarly_requirements)) {
+    $grammarly_requirements = array_filter(explode("\n", $grammarly_requirements_json));
+}
 ?>
 
 <div class="space-y-6 transition-colors duration-200">
+
+    <?php if (!empty($grammarly_requirements) && $currentStatus !== 'Approved'): ?>
+        <div class="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full">
+            <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Required Documents for Grammarly & AI Checking
+            </h3>
+            <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-1.5 pl-2 font-medium">
+                <?php foreach ($grammarly_requirements as $req): ?>
+                    <li><?php echo htmlspecialchars($req); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
 
     <div class="flex flex-wrap gap-6">
 
@@ -226,7 +251,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                                             View
                                         </a>
                                     <?php else: ?>
-                                        <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors">
+                                        <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
                                             View
                                         </span>
                                     <?php endif; ?>
@@ -247,7 +272,7 @@ $currentStatus = $latest ? $latest['status'] : null;
                                         </a>
 
                                     <?php else: ?>
-                                        <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block">
+                                        <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block cursor-not-allowed">
                                             Re-upload
                                         </span>
                                     <?php endif; ?>

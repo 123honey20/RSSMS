@@ -74,6 +74,16 @@ if ($appStatus === 'Approved') {
     $currentRound = $latest ? (int)$latest['round'] : 0;
     $currentStatus = $latest ? $latest['status'] : null;
 }
+
+// 5. Fetch the specific requirements for Statistician
+$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_statistician'");
+$statistician_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
+$statistician_requirements = json_decode($statistician_requirements_json, true);
+
+// Fallback just in case it's still old plain text
+if (!is_array($statistician_requirements)) {
+    $statistician_requirements = array_filter(explode("\n", $statistician_requirements_json));
+}
 ?>
 
 <div class="space-y-6 transition-colors duration-200">
@@ -83,13 +93,13 @@ if ($appStatus === 'Approved') {
             <div class="mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Request Statistician Services</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select your preferred personnel and upload your signed contract to begin.</p>
-                
+
                 <?php if ($appStatus === 'Rejected' && !$hasAnySubmission): ?>
-                    <div x-data="{ show: true }" 
-                         x-show="show" 
-                         x-init="setTimeout(() => show = false, 5000)" 
-                         x-transition.opacity.duration.500ms 
-                         class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-100 dark:border-red-900/30">
+                    <div x-data="{ show: true }"
+                        x-show="show"
+                        x-init="setTimeout(() => show = false, 5000)"
+                        x-transition.opacity.duration.500ms
+                        class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-100 dark:border-red-900/30">
                         <span class="font-bold">Notice:</span> Your previous request was rejected. Please submit a new request.
                     </div>
                 <?php endif; ?>
@@ -97,7 +107,7 @@ if ($appStatus === 'Approved') {
 
             <form action="../../backend/actions/apply_service_action.php" method="POST" enctype="multipart/form-data" class="space-y-6">
                 <input type="hidden" name="service_type" value="Statistician">
-                
+
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Select Personnel</label>
                     <select name="requested_personnel_id" required class="w-full border border-gray-300 dark:border-warmdark-border bg-gray-50 dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-3 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors appearance-none">
@@ -126,7 +136,9 @@ if ($appStatus === 'Approved') {
         <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl shadow-sm border border-yellow-200 dark:border-yellow-900/50 max-w-2xl transition-colors">
             <div class="flex items-center gap-4 mb-4">
                 <div class="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                 </div>
                 <div>
                     <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Application Pending</h2>
@@ -140,15 +152,33 @@ if ($appStatus === 'Approved') {
         </div>
 
     <?php else: ?>
-        
+
         <?php if (!$hasAnySubmission): ?>
-            <div x-data="{ show: true }" 
-                 x-show="show" 
-                 x-init="setTimeout(() => show = false, 5000)" 
-                 x-transition.opacity.duration.500ms 
-                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div x-data="{ show: true }"
+                x-show="show"
+                x-init="setTimeout(() => show = false, 5000)"
+                x-transition.opacity.duration.500ms
+                class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 <span class="text-sm text-green-800 dark:text-green-300 font-medium">Your Statistician application was approved! You may now submit your documents for review.</span>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($statistician_requirements) && $appStatus === 'Approved'): ?>
+            <div class="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full mb-6">
+                <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Required Documents for Statistician
+                </h3>
+                <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-1.5 pl-2 font-medium">
+                    <?php foreach ($statistician_requirements as $req): ?>
+                        <li><?php echo htmlspecialchars($req); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 
