@@ -1,0 +1,20 @@
+CREATE TABLE librarian_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    librarian_id INT NOT NULL,
+    page_number INT NOT NULL,
+    paragraph_number INT NULL,
+    comment_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (librarian_id) REFERENCES librarian(id) ON DELETE CASCADE
+);
+
+ALTER TABLE librarian_comments
+ADD paragraph_number INT NULL AFTER page_number;
+
+
+
+ccis - student3 student4
+
+cthm - student5 student9
+
+cas - student10 student11

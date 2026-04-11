@@ -39,6 +39,25 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
     <style>
         [x-cloak] { display: none !important; }
         .bg-pattern { background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%232563eb" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); }
+
+        /* FIX BROWSER AUTOFILL STYLING FOR LIGHT MODE */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #f9fafb inset !important; /* bg-gray-50 */
+            -webkit-text-fill-color: #1f2937 !important; /* text-gray-800 */
+        }
+
+        /* FIX BROWSER AUTOFILL STYLING FOR DARK MODE */
+        .dark input:-webkit-autofill,
+        .dark input:-webkit-autofill:hover, 
+        .dark input:-webkit-autofill:focus, 
+        .dark input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #121212 inset !important; /* match warmdark-bg */
+            -webkit-text-fill-color: white !important; /* white text */
+            caret-color: white;
+        }
     </style>
 </head>
 
