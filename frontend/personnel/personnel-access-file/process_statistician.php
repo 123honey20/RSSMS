@@ -102,7 +102,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
             <div class="text-xs font-bold px-4 py-1.5 rounded-full border transition-colors
                     <?php
                     if ($currentStatus == 'Approved') echo 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/20 border-green-200 dark:border-green-500/30';
-                    elseif ($currentStatus == 'Rejected') echo 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-900/50';
+                    elseif ($currentStatus == 'Needs Revision') echo 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-900/50';
                     else echo 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-900/50'; ?>">
                 <?php echo $currentStatus; ?>
             </div>
@@ -196,8 +196,8 @@ $totalComments = $countResult['total_comments'] ?? 0;
                         <button type="submit" name="action" value="Approve" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Approve.', 'error'); }" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors w-full sm:w-auto">
                             Approve Submission
                         </button>
-                        <button type="submit" name="action" value="Reject" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Reject.', 'error'); }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto">
-                            Reject Submission
+                        <button type="submit" name="action" value="Needs Revision" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Revisions Required.', 'error'); }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto">
+                            Revisions Required
                         </button>
                     </div>
                 </div>

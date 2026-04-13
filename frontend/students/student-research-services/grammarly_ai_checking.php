@@ -315,7 +315,7 @@ if (!is_array($grammarly_requirements)) {
                                         $status = $row['status'];
                                         $color = "text-gray-600 dark:text-gray-400";
                                         if ($status === "Approved") $color = "text-green-600 dark:text-green-400";
-                                        if ($status === "Rejected") $color = "text-red-600 dark:text-red-400";
+                                        if ($status === "Needs Revision") $color = "text-red-600 dark:text-red-400";
                                         if ($status === "Pending")  $color = "text-yellow-600 dark:text-yellow-400";
                                         ?>
                                         <span class="py-1 text-xs font-bold <?php echo $color; ?>">
@@ -326,7 +326,7 @@ if (!is_array($grammarly_requirements)) {
                                         <?php echo date('M d, Y', strtotime($row['uploaded_at'])); ?>
                                     </td>
                                     <td class="py-3">
-                                        <?php if ($status === 'Approved' || $status === 'Rejected'): ?>
+                                        <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                             <a href="student_dashboard.php?page=student_view_grammarly_ai_report&id=<?php echo $row['id']; ?>"
                                                 class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm">
                                                 View
@@ -343,7 +343,7 @@ if (!is_array($grammarly_requirements)) {
                                         $status = $row['status'];
 
                                         $canReuploadSameRound = ($status === 'Pending');
-                                        $disabled = ($status === 'Rejected' || $status === 'Approved');
+                                        $disabled = ($status === 'Needs Revision' || $status === 'Approved');
                                         ?>
 
                                         <?php if ($canReuploadSameRound): ?>

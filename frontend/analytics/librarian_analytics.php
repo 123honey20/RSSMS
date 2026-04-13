@@ -5,7 +5,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 $safe_sy = $conn->real_escape_string($active_sy);
 
 // 1. Fetch Document Submission Data
-$doc_status = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0];
+$doc_status = ['Pending' => 0, 'Approved' => 0, 'Needs Revision' => 0];
 $total_docs = 0;
 $doc_query = $conn->query("
     SELECT l.status, COUNT(*) as count 
@@ -214,7 +214,7 @@ $recent_query = $conn->query("
                                     $badge = 'bg-gray-100 dark:bg-warmdark-bg text-gray-600 dark:text-gray-400 border border-transparent dark:border-warmdark-border';
                                     if ($row['status'] == 'Approved') $badge = 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-transparent dark:border-green-500/30';
                                     if ($row['status'] == 'Pending') $badge = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-transparent dark:border-yellow-900/50';
-                                    if ($row['status'] == 'Rejected') $badge = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50';
+                                    if ($row['status'] == 'Needs Revision') $badge = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50';
                                     ?>
                                     <span class="px-2.5 py-1 rounded text-[10px] font-bold uppercase <?= $badge ?>"><?= $row['status'] ?></span>
                                 </td>
@@ -242,9 +242,9 @@ $recent_query = $conn->query("
         new Chart(document.getElementById('libDocStatusChart').getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Approved', 'Pending', 'Rejected'],
+                labels: ['Approved', 'Pending', 'Needs Revision'],
                 datasets: [{
-                    data: [<?= $doc_status['Approved'] ?>, <?= $doc_status['Pending'] ?>, <?= $doc_status['Rejected'] ?>],
+                    data: [<?= $doc_status['Approved'] ?>, <?= $doc_status['Pending'] ?>, <?= $doc_status['Needs Revision'] ?>],
                     backgroundColor: ['#22c55e', '#facc15', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 4

@@ -70,7 +70,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
             $round = $latest['round'];
-        } elseif ($latest['status'] === 'Rejected') {
+        } elseif ($latest['status'] === 'Needs Revision') {
             $round = (int)$latest['round'] + 1;
             $stmt = $conn->prepare("INSERT INTO ethics (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");
             $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $assigned_personnel_id);

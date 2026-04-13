@@ -59,7 +59,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
             <option value="All">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Needs Revision">Needs Revision</option>
         </select>
     </div>
 
@@ -199,7 +199,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
                     let statusBadge = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-transparent dark:border-warmdark-border";
                     if (rec.status === 'Pending') statusBadge = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-transparent dark:border-yellow-900/50";
                     if (rec.status === 'Approved') statusBadge = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-transparent dark:border-green-500/30";
-                    if (rec.status === 'Rejected') statusBadge = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
+                    if (rec.status === 'Needs Revision') statusBadge = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
 
                     let folder = currentTable;
                     if (currentTable === 'grammarly_ai') {
@@ -268,7 +268,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
         statusEl.className = "inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide ";
         if (data.status === 'Pending') statusEl.className += "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-transparent dark:border-yellow-900/50";
         if (data.status === 'Approved') statusEl.className += "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-transparent dark:border-green-500/30";
-        if (data.status === 'Rejected') statusEl.className += "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
+        if (data.status === 'Needs Revision') statusEl.className += "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
 
         const modal = document.getElementById('archiveModal');
         modal.classList.remove('hidden');

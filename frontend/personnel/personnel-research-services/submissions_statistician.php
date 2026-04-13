@@ -54,7 +54,7 @@ while ($d = $resDepts->fetch_assoc()) {
             <option value="All">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Needs Revision">Needs Revision</option>
         </select>
 
         <select id="personnelDeptFilter" class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg focus:ring-2 focus:ring-blue-900 dark:focus:ring-blue-500 focus:outline-none shadow-sm text-gray-700 dark:text-gray-200 font-medium transition-colors">
@@ -127,14 +127,14 @@ while ($d = $resDepts->fetch_assoc()) {
                     let statusBadge = '';
                     if (row.status === 'Approved') {
                         statusBadge = `<span class="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/20 border border-green-100 dark:border-green-500/30 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Approved</span>`;
-                    } else if (row.status === 'Rejected') {
-                        statusBadge = `<span class="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Rejected</span>`;
+                    } else if (row.status === 'Needs Revision') {
+                        statusBadge = `<span class="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Needs Revision</span>`;
                     } else {
                         statusBadge = `<span class="text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-100 dark:border-yellow-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Pending</span>`;
                     }
 
                     let actionButton = '';
-                    if (row.status === 'Approved' || row.status === 'Rejected') {
+                    if (row.status === 'Approved' || row.status === 'Needs Revision') {
                         actionButton = `<button onclick="viewSubmissionWithComments(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm">Review Submission</button>`;
                     } else {
                         actionButton = `<button onclick="loadProcess(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm">Process</button>`;

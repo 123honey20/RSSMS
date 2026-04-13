@@ -45,7 +45,7 @@ if ($student_id) {
 
 // 3. Fetch Available Personnel for this Student's Department
 $personnelList = [];
-if (!$application || $appStatus === 'Rejected') {
+if (!$application || $appStatus === 'Needs Revision') {
     $pStmt = $conn->prepare("
         SELECT p.id, p.full_name 
         FROM personnel p 
@@ -88,19 +88,19 @@ if (!is_array($statistician_requirements)) {
 
 <div class="space-y-6 transition-colors duration-200">
 
-    <?php if (!$application || $appStatus === 'Rejected'): ?>
+    <?php if (!$application || $appStatus === 'Needs Revision'): ?>
         <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border max-w-2xl transition-colors">
             <div class="mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Request Statistician Services</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select your preferred personnel and upload your signed contract to begin.</p>
 
-                <?php if ($appStatus === 'Rejected' && !$hasAnySubmission): ?>
+                <?php if ($appStatus === 'Needs Revision' && !$hasAnySubmission): ?>
                     <div x-data="{ show: true }"
                         x-show="show"
                         x-init="setTimeout(() => show = false, 5000)"
                         x-transition.opacity.duration.500ms
                         class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-100 dark:border-red-900/30">
-                        <span class="font-bold">Notice:</span> Your previous request was rejected. Please submit a new request.
+                        <span class="font-bold">Notice:</span> Your previous request was Needs Revision. Please submit a new request.
                     </div>
                 <?php endif; ?>
             </div>
@@ -197,7 +197,7 @@ if (!is_array($statistician_requirements)) {
             $canUploadNewRound = false;
             if (!$latest) {
                 $canUploadNewRound = true; // no submission yet
-            } elseif ($currentStatus === 'Rejected' && $currentRound < 7) {
+            } elseif ($currentStatus === 'Needs Revision' && $currentRound < 7) {
                 $canUploadNewRound = true; // can go to next round
             }
             ?>
@@ -321,7 +321,7 @@ if (!is_array($statistician_requirements)) {
                                         $status = $row['status'];
                                         $color = "text-gray-600 dark:text-gray-400";
                                         if ($status === "Approved") $color = "text-green-600 dark:text-green-400";
-                                        if ($status === "Rejected") $color = "text-red-600 dark:text-red-400";
+                                        if ($status === "Needs Revision") $color = "text-red-600 dark:text-red-400";
                                         if ($status === "Pending")  $color = "text-yellow-600 dark:text-yellow-400";
                                         ?>
                                         <span class="py-1 text-xs font-bold <?php echo $color; ?>">
@@ -332,7 +332,7 @@ if (!is_array($statistician_requirements)) {
                                         <?php echo date('M d, Y', strtotime($row['uploaded_at'])); ?>
                                     </td>
                                     <td class="py-3">
-                                        <?php if ($status === 'Approved' || $status === 'Rejected'): ?>
+                                        <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                             <a href="student_dashboard.php?page=student_view_statistician_report&id=<?php echo $row['id']; ?>"
                                                 class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm">
                                                 View

@@ -12,11 +12,11 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submission_id = intval($_POST['submission_id']);
-    $action = $_POST['action'] ?? ''; // 'Approve' or 'Reject'
+    $action = $_POST['action'] ?? ''; // 'Approve' or 'Needs Revision'
 
-    if ($action === 'Approve' || $action === 'Reject') {
+    if ($action === 'Approve' || $action === 'Needs Revision') {
         
-        $status = ($action === 'Approve') ? 'Approved' : 'Rejected';
+        $status = ($action === 'Approve') ? 'Approved' : 'Needs Revision';
         $filename = null; // Default to null if no file
         $has_file = isset($_FILES['result_file']) && $_FILES['result_file']['error'] === UPLOAD_ERR_OK;
 

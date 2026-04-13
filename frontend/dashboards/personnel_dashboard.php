@@ -510,7 +510,7 @@ $deptStmt->close();
                 updateSubmissionStatus(id, 'Approved');
             } else if (e.target.classList.contains('btn-reject')) {
                 const id = e.target.dataset.id;
-                updateSubmissionStatus(id, 'Rejected');
+                updateSubmissionStatus(id, 'Needs Revision');
             }
         });
 

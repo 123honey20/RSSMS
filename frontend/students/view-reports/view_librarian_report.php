@@ -53,7 +53,7 @@ $comments = $stmtComments->get_result();
 
 $statusColor = "text-gray-600 dark:text-gray-400";
 if ($submission['status'] === "Approved") $statusColor = "text-green-600 dark:text-green-400";
-if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text-red-400";
+if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dark:text-red-400";
 
 ?>
 <div class="max-w-7xl mx-auto space-y-6 transition-colors duration-200">
@@ -84,8 +84,8 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text
             $resultExt = strtolower(pathinfo($resultFile, PATHINFO_EXTENSION));
             $canPreviewResult = in_array($resultExt, ['pdf', 'jpg', 'jpeg', 'png', 'txt']);
 
-            // Dynamic Styling based on Approved vs Rejected for BOTH Banner and Modal
-            if ($submission['status'] === 'Rejected') {
+            // Dynamic Styling based on Approved vs Needs Revision for BOTH Banner and Modal
+            if ($submission['status'] === 'Needs Revision') {
                 $bannerTheme = "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50";
                 $titleTheme = "text-red-800 dark:text-red-400";
                 $descTheme = "text-red-700 dark:text-red-300";

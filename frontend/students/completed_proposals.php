@@ -204,7 +204,7 @@ $global_cert_url = $cert_dir . "Proposal_Certificate." . $cert_ext;
                             approvedCount++;
                             serviceBadges += `<span class="inline-block bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-green-200 dark:border-green-500/30 m-0.5" title="Approved">${s.name}</span>`;
                         } else {
-                            serviceBadges += `<span class="inline-block bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 text-[9px] font-medium px-1.5 py-0.5 rounded border border-gray-200 dark:border-warmdark-border m-0.5 opacity-60" title="Pending/Rejected">${s.name}</span>`;
+                            serviceBadges += `<span class="inline-block bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 text-[9px] font-medium px-1.5 py-0.5 rounded border border-gray-200 dark:border-warmdark-border m-0.5 opacity-60" title="Pending/Needs Revision">${s.name}</span>`;
                         }
                     });
 

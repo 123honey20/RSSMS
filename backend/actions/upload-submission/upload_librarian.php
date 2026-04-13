@@ -66,7 +66,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
             $round = $latest['round'];
-        } elseif ($latest['status'] === 'Rejected') {
+        } elseif ($latest['status'] === 'Needs Revision') {
             if ($latest['round'] >= 7) redirectWithError("Maximum rounds reached.", $redirect_url, $targetFile);
             $round = $latest['round'] + 1;
             $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");

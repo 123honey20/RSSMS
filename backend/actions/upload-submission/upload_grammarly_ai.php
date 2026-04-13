@@ -93,7 +93,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
             unlink($targetFile);
             redirectWithError("This round is already approved.", $redirect_url);
         } else {
-            // Re-uploading after Rejection
+            // Re-uploading after Needs Revision
             $stmt = $conn->prepare("UPDATE grammarly_ai SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $existingSubmission['id']);
             $stmt->execute();

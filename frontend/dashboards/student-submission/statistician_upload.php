@@ -102,7 +102,7 @@ $existing = $sub->fetch_assoc();
                     $badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-400";
                     if ($status === 'Pending') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
                     if ($status === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
-                    if ($status === 'Rejected') $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+                    if ($status === 'Needs Revision') $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
                 ?>
                 <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm transition-colors <?php echo $badgeColor; ?>">
                     Status: <?php echo $status; ?>
