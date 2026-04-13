@@ -7,11 +7,13 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
+// FIXED QUERY: Fetch the assigned personnel from the service_applications table!
 $stmt = $conn->prepare("
     SELECT hg.id as submission_id, s.control_number, p.id as personnel_id, p.full_name as personnel_name
     FROM human_grammarian hg
     JOIN students s ON hg.student_id = s.id
-    LEFT JOIN personnel p ON hg.personnel_id = p.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Human Grammarian' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON sa.assigned_personnel_id = p.id
     WHERE hg.id = ? AND s.user_id = ? AND hg.status = 'Approved'
 ");
 $stmt->bind_param("ii", $submissionId, $userId);
@@ -149,7 +151,7 @@ $jsonRubrics = json_encode($rubrics);
                                     @click="if(!rubric.isCompleted) { selectedRubricId = rubric.id; dropdownOpen = false; }"
                                     :class="{
                                         'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold': selectedRubricId === rubric.id, 
-                                        'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400': rubric.isCompleted, 
+                                        'opacity-50 bg-gray-50 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400': rubric.isCompleted, 
                                         'hover:bg-gray-50 dark:hover:bg-warmdark-hover text-gray-700 dark:text-gray-200': !rubric.isCompleted && selectedRubricId !== rubric.id
                                     }"
                                     class="w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between">
@@ -245,9 +247,9 @@ $jsonRubrics = json_encode($rubrics);
         return {
             rubrics: rubricsData,
             selectedRubricId: rubricsData.length > 0 ? rubricsData[0].id : null,
-            ratings: {},
+            ratings: {}, // Stores criterion_id -> selected score
             commentText: '',
-
+            
             // Notification State
             notification: {
                 show: false,
@@ -256,12 +258,14 @@ $jsonRubrics = json_encode($rubrics);
             },
 
             get activeRubric() {
+                // Clear ratings when switching rubrics
                 if (this.selectedRubricId) {
                     return this.rubrics.find(r => r.id == this.selectedRubricId);
                 }
                 return null;
             },
 
+            // Watch for rubric changes to clear previous ratings
             init() {
                 this.$watch('selectedRubricId', value => {
                     this.ratings = {};
@@ -274,6 +278,7 @@ $jsonRubrics = json_encode($rubrics);
 
             isFormComplete() {
                 if (!this.activeRubric) return false;
+                // Check if every criterion in the active rubric has a rating in the ratings object
                 return this.activeRubric.criteria.every(c => this.ratings[c.id] !== undefined);
             },
 
@@ -306,7 +311,6 @@ $jsonRubrics = json_encode($rubrics);
                 btn.innerHTML = 'Submitting...';
                 btn.disabled = true;
 
-                // Hit the real backend!
                 fetch('../../backend/ajax/save_student_feedback.php', {
                         method: 'POST',
                         headers: {

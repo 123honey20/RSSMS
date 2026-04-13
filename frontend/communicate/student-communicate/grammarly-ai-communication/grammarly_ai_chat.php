@@ -6,18 +6,27 @@ require_once "../../backend/config/database.php";
 
 $user_id = $_SESSION['user'];
 
-// 1. Get the Actual Student ID (No department check needed here)
-$stmtStudent = $conn->prepare("SELECT id FROM students WHERE user_id = ?");
+// 1. Get the Actual Student ID and Department ID
+$stmtStudent = $conn->prepare("SELECT id, department_id FROM students WHERE user_id = ?");
 $stmtStudent->bind_param("i", $user_id);
 $stmtStudent->execute();
 $student_res = $stmtStudent->get_result()->fetch_assoc();
 $actual_student_id = $student_res ? $student_res['id'] : 0;
+$student_dept_id = $student_res ? $student_res['department_id'] : 0;
 $stmtStudent->close();
 
-// 2. Fetch global personnel for this role (GLOBAL ACCESS)
+// 2. Fetch Approved personnel for this role mapped to the student's department (Removed Global Exception)
 $service_role_name = 'Grammarly & AI Checking';
-$stmtP = $conn->prepare("SELECT id as personnel_id, full_name, service_role FROM personnel WHERE service_role = ?");
-$stmtP->bind_param("s", $service_role_name);
+$stmtP = $conn->prepare("
+    SELECT p.id as personnel_id, p.full_name, p.service_role 
+    FROM personnel p
+    JOIN users u ON p.user_id = u.id
+    JOIN personnel_departments pd ON p.user_id = pd.user_id
+    WHERE u.status = 'Approved' 
+      AND p.service_role = ? 
+      AND pd.department_id = ?
+");
+$stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();
 $resP = $stmtP->get_result();
 $personnel_list = [];
@@ -29,12 +38,17 @@ $stmtP->close();
 
 <div class="max-w-6xl mx-auto h-[calc(100vh-120px)] flex flex-col transition-colors duration-200" x-data="studentChatApp()" x-init="init()">
     
-    <div class="mb-4">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-emerald-400 shadow-sm"></div>
-            <?php echo $service_role_name; ?> Communication
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Chat directly with the global team.</p>
+    <div class="mb-4 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-emerald-400 shadow-sm"></div>
+                <?php echo $service_role_name; ?> Communication
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Chat directly with your assigned personnel.</p>
+        </div>
+        <div class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border shadow-sm px-4 py-1.5 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider transition-colors">
+            Department Access
+        </div>
     </div>
 
     <div class="flex-1 bg-white dark:bg-warmdark-panel rounded-xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden flex transition-colors">
@@ -134,6 +148,7 @@ $stmtP->close();
                     </form>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -149,8 +164,8 @@ function studentChatApp() {
         serviceType: '<?php echo addslashes($service_role_name); ?>',
         chatInterval: null,
         isSending: false,
-        unreadCounts: {}, // NEW
-        globalInterval: null, // NEW
+        unreadCounts: {},
+        globalInterval: null,
 
         init() {
             this.fetchUnreadCounts();
@@ -172,7 +187,6 @@ function studentChatApp() {
         },
 
         markAsRead() {
-            // Note: reader is 'student' so it marks personnel messages as read
             fetch('../../backend/ajax/mark_chat_read.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -190,7 +204,6 @@ function studentChatApp() {
             this.activeName = name;
             this.messages = [];
             
-            // Mark immediately as read when clicking the personnel
             this.markAsRead();
             this.fetchMessages();
 
@@ -213,7 +226,6 @@ function studentChatApp() {
                     
                     if (scrollToBottom || isNewMessage) {
                         this.scrollToBottom();
-                        // If we are actively looking at this chat and a new message arrives, mark it as read immediately!
                         if (isNewMessage) {
                             this.markAsRead();
                         }

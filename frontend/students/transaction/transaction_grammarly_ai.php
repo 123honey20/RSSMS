@@ -14,12 +14,26 @@ $res = $stmt->get_result();
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 
+// Check if student has an assigned Grammarly & AI Checking personnel
+$checkAssignment = $conn->query("
+    SELECT id, status 
+    FROM service_applications 
+    WHERE student_id = $student_id 
+    AND service_type = 'Grammarly & AI Checking' 
+    AND status = 'Approved' 
+    LIMIT 1
+");
+$isAssigned = $checkAssignment->num_rows > 0;
+
 // Get all transactions
 $transactions = $conn->query("
     SELECT * FROM grammarly_ai_transactions
     WHERE student_id = $student_id
     ORDER BY round DESC
 ");
+
+// NEW: Check if student has ANY actual transactions so we can hide the fading alert later
+$hasAnyTransaction = $transactions->num_rows > 0;
 
 $maxRound = 7;
 
@@ -88,109 +102,139 @@ if (!$latestTransaction) {
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your payment receipts for the Grammarly & AI Checking Service.</p>
     </div>
 
-    <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border overflow-hidden transition-colors">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
-                <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border tracking-wider transition-colors">
-                    <tr>
-                        <th class="px-6 py-4 font-semibold">Round</th>
-                        <th class="px-6 py-4 font-semibold">Status</th>
-                        <th class="px-6 py-4 font-semibold">Date Created</th>
-                        <th class="px-6 py-4 font-semibold text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
-                    <?php if ($transactions->num_rows > 0): ?>
-                        <?php while ($row = $transactions->fetch_assoc()): ?>
-                            <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
-                                
-                                <td class="px-6 py-5 font-medium text-xs text-gray-800 dark:text-gray-200">
-                                    Round <?php echo (int)$row['round']; ?>
-                                </td>
-
-                                <td class="px-5 py-5">
-                                    <?php
-                                    $status = $row['status'];
-                                    $badgeColor = "text-gray-700 dark:text-gray-400";
-                                    if ($status === "Approved") $badgeColor = "text-green-700 dark:text-green-400";
-                                    if ($status === "Rejected") $badgeColor = "text-red-700 dark:text-red-400";
-                                    if ($status === "Receipt Uploaded") $badgeColor = "text-yellow-700 dark:text-yellow-400";
-                                    ?>
-                                    <span class="py-1.5 text-xs font-bold <?php echo $badgeColor; ?>">
-                                        <?php echo $status; ?>
-                                    </span>
-                                </td>
-
-                                <td class="px-6 py-5 text-gray-500 dark:text-gray-400">
-                                    <?php echo date('M d, Y h:i A', strtotime($row['created_at'])); ?>
-                                </td>
-
-                                <td class="px-6 py-5 text-center">
-                                    <?php if ($status === 'No Receipt' || $status === 'Rejected'): ?>
-                                        <a href="student_dashboard.php?page=student_transaction_receipt_grammarly_ai&round=<?php echo $row['round']; ?>"
-                                            class="inline-flex items-center justify-center bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors gap-2">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                            </svg>
-                                            <?php echo $status === 'Rejected' ? 'Re-upload Receipt' : 'Upload Receipt'; ?>
-                                        </a>
-                                    
-                                    <?php elseif ($status === 'Approved'): ?>
-                                        <span class="inline-flex items-center justify-center bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-4 py-2 rounded-lg text-xs font-semibold gap-2 transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Completed
-                                        </span>
-                                    
-                                    <?php else: ?>
-                                        <span class="inline-flex items-center justify-center bg-gray-50 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-warmdark-border px-4 py-2 rounded-lg text-xs font-semibold gap-2 transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            Under Review
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-
-                            </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
-                                <div class="flex flex-col items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <p class="font-medium text-gray-500 dark:text-gray-400">No transaction records found.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="p-6 border-t border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg transition-colors">
-            <?php if ($canCreateNewRound): ?>
-                <form method="POST" action="../../backend/actions/create-transaction/create_grammarly_ai_transaction.php">
-                    <button type="submit" class="bg-green-600 dark:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:bg-green-700 dark:hover:bg-green-600 hover:shadow-lg transition-all flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Request New Round
-                    </button>
-                </form>
-            <?php else: ?>
-                <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                    <div class="bg-gray-200 dark:bg-warmdark-panel p-1.5 rounded-full transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <span>You must complete your current submission and wait.</span>
+    <?php if (!$isAssigned): ?>
+        <div class="bg-indigo-50 dark:bg-indigo-900/20 p-8 rounded-2xl shadow-sm border border-indigo-200 dark:border-indigo-900/50 max-w-2xl transition-colors">
+            <div class="flex items-start sm:items-center gap-5">
+                <div class="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                 </div>
-            <?php endif; ?>
+                <div>
+                    <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100">Waiting for Personnel Assignment</h2>
+                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mt-2 leading-relaxed">
+                        You cannot process transactions until a Grammarly & AI Checker has been officially assigned to your group. Please wait for the system administrator to assign one.
+                    </p>
+                </div>
+            </div>
         </div>
-    </div>
+
+    <?php else: ?>
+        <?php if (!$hasAnyTransaction): ?>
+            <div x-data="{ show: true }" 
+                 x-show="show" 
+                 x-init="setTimeout(() => show = false, 5000)" 
+                 x-transition.opacity.duration.500ms 
+                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 w-full mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="text-sm text-green-800 dark:text-green-300 font-medium">A Grammarly & AI Checker has been assigned to you! You may now request your first transaction round.</span>
+            </div>
+        <?php endif; ?>
+
+        <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border overflow-hidden transition-colors">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
+                    <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border tracking-wider transition-colors">
+                        <tr>
+                            <th class="px-6 py-4 font-semibold">Round</th>
+                            <th class="px-6 py-4 font-semibold">Status</th>
+                            <th class="px-6 py-4 font-semibold">Date Created</th>
+                            <th class="px-6 py-4 font-semibold text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
+                        <?php if ($transactions->num_rows > 0): ?>
+                            <?php while ($row = $transactions->fetch_assoc()): ?>
+                                <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
+                                    
+                                    <td class="px-6 py-5 font-medium text-xs text-gray-800 dark:text-gray-200">
+                                        Round <?php echo (int)$row['round']; ?>
+                                    </td>
+
+                                    <td class="px-5 py-5">
+                                        <?php
+                                        $status = $row['status'];
+                                        $badgeColor = "text-gray-700 dark:text-gray-400";
+                                        if ($status === "Approved") $badgeColor = "text-green-700 dark:text-green-400";
+                                        if ($status === "Rejected") $badgeColor = "text-red-700 dark:text-red-400";
+                                        if ($status === "Receipt Uploaded") $badgeColor = "text-yellow-700 dark:text-yellow-400";
+                                        ?>
+                                        <span class="py-1.5 text-xs font-bold <?php echo $badgeColor; ?>">
+                                            <?php echo $status; ?>
+                                        </span>
+                                    </td>
+
+                                    <td class="px-6 py-5 text-gray-500 dark:text-gray-400">
+                                        <?php echo date('M d, Y h:i A', strtotime($row['created_at'])); ?>
+                                    </td>
+
+                                    <td class="px-6 py-5 text-center">
+                                        <?php if ($status === 'No Receipt' || $status === 'Rejected'): ?>
+                                            <a href="student_dashboard.php?page=student_transaction_receipt_grammarly_ai&round=<?php echo $row['round']; ?>"
+                                                class="inline-flex items-center justify-center bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                </svg>
+                                                <?php echo $status === 'Rejected' ? 'Re-upload Receipt' : 'Upload Receipt'; ?>
+                                            </a>
+                                        
+                                        <?php elseif ($status === 'Approved'): ?>
+                                            <span class="inline-flex items-center justify-center bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-4 py-2 rounded-lg text-xs font-semibold gap-2 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                Completed
+                                            </span>
+                                        
+                                        <?php else: ?>
+                                            <span class="inline-flex items-center justify-center bg-gray-50 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-warmdark-border px-4 py-2 rounded-lg text-xs font-semibold gap-2 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Under Review
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="4" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <p class="font-medium text-gray-500 dark:text-gray-400">No transaction records found.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="p-6 border-t border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg transition-colors">
+                <?php if ($canCreateNewRound): ?>
+                    <form method="POST" action="../../backend/actions/create-transaction/create_grammarly_ai_transaction.php">
+                        <button type="submit" class="bg-green-600 dark:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:bg-green-700 dark:hover:bg-green-600 hover:shadow-lg transition-all flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Request New Round
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                        <div class="bg-gray-200 dark:bg-warmdark-panel p-1.5 rounded-full transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <span>You must complete your current submission and wait.</span>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>

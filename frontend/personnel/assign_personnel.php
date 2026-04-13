@@ -4,7 +4,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 }
 
 require_once "../../backend/config/database.php";
-// CHANGED: Fetch ALL columns so we have access to the req_ flags
+// Fetch ALL columns so we have access to the req_ flags
 $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
 ?>
 
@@ -13,13 +13,14 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
     <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border transition-colors">
         <div>
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Direct Personnel Assignment</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select a student below to officially assign their Librarian, Human Grammarian, or Ethics.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select a student below to officially assign their research personnel.</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 items-center">
 
         <select id="assignServiceFilter" class="w-full border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-300 rounded-lg px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-blue-900 focus:outline-none transition-colors shadow-sm cursor-pointer">
+            <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
             <option value="Librarian">Librarian</option>
             <option value="Human Grammarian">Human Grammarian</option>
             <option value="Ethics">Ethics</option>
@@ -32,6 +33,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
             <option value="All">All Departments</option>
             <?php while ($d = $dept_query->fetch_assoc()): ?>
                 <option value="<?= $d['id'] ?>" 
+                    data-req-grammarly-ai="<?= isset($d['req_grammarly_ai']) ? $d['req_grammarly_ai'] : 1 ?>"
                     data-req-librarian="<?= isset($d['req_librarian']) ? $d['req_librarian'] : 1 ?>"
                     data-req-human-grammarian="<?= isset($d['req_human_grammarian']) ? $d['req_human_grammarian'] : 1 ?>"
                     data-req-ethics="<?= isset($d['req_ethics']) ? $d['req_ethics'] : 1 ?>"
@@ -121,21 +123,23 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
     var assignCurrentPage = 1;
     var assignSearchTimer;
 
-    // NEW: Function to disable/hide departments that don't match the selected service
     function updateDepartmentDropdown() {
         var service = document.getElementById('assignServiceFilter').value;
         var deptDropdown = document.getElementById('assignDeptFilter');
-        var options = deptDropdown.querySelectorAll('option[data-req-librarian]'); // Selects all except "All"
+        var options = deptDropdown.querySelectorAll('option:not([value="All"])'); 
         
         var dataAttr = '';
-        if (service === 'Librarian') dataAttr = 'data-req-librarian';
+        if (service === 'Grammarly & AI Checking') dataAttr = 'data-req-grammarly-ai';
+        else if (service === 'Librarian') dataAttr = 'data-req-librarian';
         else if (service === 'Human Grammarian') dataAttr = 'data-req-human-grammarian';
         else if (service === 'Ethics') dataAttr = 'data-req-ethics';
 
         var currentSelectedIsDisabled = false;
 
         options.forEach(opt => {
-            if (opt.getAttribute(dataAttr) == '0') {
+            // Check if department requires this service (defaults to 1 if attribute is missing)
+            var reqValue = opt.getAttribute(dataAttr);
+            if (reqValue === '0') {
                 opt.disabled = true;
                 opt.style.display = 'none';
                 if (opt.selected) currentSelectedIsDisabled = true;
@@ -145,7 +149,6 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
             }
         });
 
-        // If the currently selected department just became invalid, switch back to "All"
         if (currentSelectedIsDisabled) {
             deptDropdown.value = 'All';
         }
@@ -279,13 +282,11 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
 
     // Event Listeners
     setTimeout(() => {
-        // Run update on Service Filter change
         document.getElementById('assignServiceFilter')?.addEventListener('change', () => {
             updateDepartmentDropdown();
             if (typeof window.loadStudentsForAssignment === 'function') window.loadStudentsForAssignment(1);
         });
 
-        // Run assignment load on other filters changing
         ['assignDeptFilter', 'assignStatusFilter'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', () => {
                 if (typeof window.loadStudentsForAssignment === 'function') window.loadStudentsForAssignment(1);

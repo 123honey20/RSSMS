@@ -13,12 +13,13 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
-// Get submission, verify it belongs to this specific student, and get the personnel name
+// FIXED QUERY: Join service_applications to fetch the newly assigned personnel!
 $stmt = $conn->prepare("
     SELECT e.*, s.control_number, p.full_name AS personnel_name
     FROM ethics e
     JOIN students s ON e.student_id = s.id
-    LEFT JOIN personnel p ON e.personnel_id = p.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Ethics' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON p.id = COALESCE(sa.assigned_personnel_id, e.personnel_id)
     WHERE e.id = ? AND s.user_id = ?
 ");
 $stmt->bind_param("ii", $submissionId, $userId);

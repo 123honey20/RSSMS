@@ -42,14 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $check->bind_param("i", $user_id);
         $check->execute();
 
+        // REMOVED GRAMMARLY EXCEPTION: Now saves department_id for all roles
         if ($check->get_result()->num_rows > 0) {
-            if ($service_role !== 'Grammarly & AI Checking') {
-                $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ?, department_id = ? WHERE user_id = ?");
-                $stmt2->bind_param("sii", $full_name, $primary_dept, $user_id);
-            } else {
-                $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ? WHERE user_id = ?");
-                $stmt2->bind_param("si", $full_name, $user_id);
-            }
+            $stmt2 = $conn->prepare("UPDATE personnel SET full_name = ?, department_id = ? WHERE user_id = ?");
+            $stmt2->bind_param("sii", $full_name, $primary_dept, $user_id);
             $stmt2->execute();
         } else {
             $stmt2 = $conn->prepare("INSERT INTO personnel (user_id, full_name, department_id) VALUES (?, ?, ?)");
@@ -57,20 +53,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt2->execute();
         }
 
-        // === NEW: JUNCTION TABLE SYNC ===
-        if ($service_role !== 'Grammarly & AI Checking') {
-            // 1. Delete old mappings
-            $delStmt = $conn->prepare("DELETE FROM personnel_departments WHERE user_id = ?");
-            $delStmt->bind_param("i", $user_id);
-            $delStmt->execute();
+        // === JUNCTION TABLE SYNC ===
+        // REMOVED GRAMMARLY EXCEPTION: Now syncs departments for all roles
+        // 1. Delete old mappings
+        $delStmt = $conn->prepare("DELETE FROM personnel_departments WHERE user_id = ?");
+        $delStmt->bind_param("i", $user_id);
+        $delStmt->execute();
 
-            // 2. Insert new mappings
-            if (!empty($selected_departments)) {
-                $insStmt = $conn->prepare("INSERT INTO personnel_departments (user_id, department_id) VALUES (?, ?)");
-                foreach ($selected_departments as $dept_id) {
-                    $insStmt->bind_param("ii", $user_id, $dept_id);
-                    $insStmt->execute();
-                }
+        // 2. Insert new mappings
+        if (!empty($selected_departments)) {
+            $insStmt = $conn->prepare("INSERT INTO personnel_departments (user_id, department_id) VALUES (?, ?)");
+            foreach ($selected_departments as $dept_id) {
+                $insStmt->bind_param("ii", $user_id, $dept_id);
+                $insStmt->execute();
             }
         }
 
@@ -150,31 +145,24 @@ while ($rowMap = $resMap->fetch_assoc()) {
                     class="w-full border border-blue-200 dark:border-blue-900/50 px-4 py-2.5 rounded-lg text-sm font-bold bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-400 focus:outline-none cursor-not-allowed" readonly>
             </div>
 
-            <?php if ($data['service_role'] !== 'Grammarly & AI Checking'): ?>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Assigned Departments</label>
-                    <div class="space-y-2 max-h-48 overflow-y-auto p-3 border border-gray-300 dark:border-warmdark-border rounded-lg bg-gray-50 dark:bg-warmdark-bg shadow-inner">
-                        <?php
-                        $departmentsQuery->data_seek(0); 
-                        while ($row = $departmentsQuery->fetch_assoc()): 
-                            $isChecked = in_array($row['id'], $assigned_depts) ? 'checked' : '';
-                        ?>
-                            <label class="flex items-center gap-3 cursor-pointer p-1 hover:bg-gray-200 dark:hover:bg-warmdark-hover rounded transition-colors">
-                                <input type="checkbox" name="departments[]" value="<?= $row['id'] ?>" <?= $isChecked ?> 
-                                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"><?= htmlspecialchars($row['name']); ?></span>
-                            </label>
-                        <?php endwhile; ?>
-                    </div>
-                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 italic">* You can select multiple departments.</p>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Assigned Departments</label>
+                <div class="space-y-2 max-h-48 overflow-y-auto p-3 border border-gray-300 dark:border-warmdark-border rounded-lg bg-gray-50 dark:bg-warmdark-bg shadow-inner">
+                    <?php
+                    $departmentsQuery->data_seek(0); 
+                    while ($row = $departmentsQuery->fetch_assoc()): 
+                        $isChecked = in_array($row['id'], $assigned_depts) ? 'checked' : '';
+                    ?>
+                        <label class="flex items-center gap-3 cursor-pointer p-1 hover:bg-gray-200 dark:hover:bg-warmdark-hover rounded transition-colors">
+                            <input type="checkbox" name="departments[]" value="<?= $row['id'] ?>" <?= $isChecked ?> 
+                                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                            <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"><?= htmlspecialchars($row['name']); ?></span>
+                        </label>
+                    <?php endwhile; ?>
                 </div>
-            <?php else: ?>
-                <div class="flex items-center justify-start pt-6">
-                    <span class="bg-gray-100 dark:bg-warmdark-bg text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg text-xs font-bold border border-gray-200 dark:border-warmdark-border transition-colors">
-                        Service Scope: Global (All Departments)
-                    </span>
-                </div>
-            <?php endif; ?>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 italic">* You can select multiple departments.</p>
+            </div>
+            
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-6 mt-4 border-t border-gray-100 dark:border-warmdark-border transition-colors">

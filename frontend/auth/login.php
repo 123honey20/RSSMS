@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>RSSMS - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script> <script>
         // Check for dark mode preference
         if (localStorage.getItem('darkMode') === 'enabled' || 
             (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -35,6 +35,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
 
         /* FIX BROWSER AUTOFILL STYLING FOR LIGHT MODE */
         input:-webkit-autofill,
@@ -57,7 +58,7 @@
     </style>
 </head>
 
-<body class="bg-slate-50 dark:bg-warmdark-bg min-h-screen transition-colors duration-500">
+<body class="bg-slate-50 dark:bg-warmdark-bg min-h-screen transition-colors duration-500" x-data="{ showSuccessModal: <?php echo isset($_GET['success']) && $_GET['success'] === 'registered' ? 'true' : 'false'; ?> }">
 
     <button onclick="toggleDarkMode()" class="fixed top-8 right-8 p-3 bg-white dark:bg-warmdark-panel rounded-2xl shadow-xl border border-slate-200 dark:border-warmdark-border z-50 transition-all hover:scale-110 active:scale-95">
         <svg id="sunIcon" class="w-5 h-5 text-university-gold hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" /></svg>
@@ -153,6 +154,55 @@
             </div>
         </div>
 
+    </div>
+
+    <div x-show="showSuccessModal" class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-slate-900/60 backdrop-blur-sm transition-opacity" x-cloak>
+        <div class="absolute inset-0" @click="showSuccessModal = false; window.history.replaceState(null, '', window.location.pathname);"></div>
+        
+        <div x-show="showSuccessModal"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             class="relative w-full max-w-md p-6 mx-4 bg-white dark:bg-warmdark-panel rounded-2xl shadow-2xl border border-slate-200 dark:border-warmdark-border overflow-hidden z-10">
+            
+            <button @click="showSuccessModal = false; window.history.replaceState(null, '', window.location.pathname);" type="button" class="absolute top-4 right-4 text-slate-400 bg-transparent hover:text-slate-900 dark:hover:text-white rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center transition-colors">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 14 14" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                </svg>
+                <span class="sr-only">Close modal</span>
+            </button>
+
+            <div class="text-center pt-2">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 mb-6 border-4 border-emerald-50 dark:border-emerald-900/20">
+                    <svg class="h-8 w-8 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                
+                <h3 class="mb-3 text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Registration Successful!</h3>
+                
+                <p class="mb-6 text-sm text-slate-500 dark:text-slate-400 leading-relaxed px-4">
+                    Your account has been created. However, for security purposes, <strong class="text-slate-800 dark:text-slate-200 font-semibold">all new accounts require administrator approval</strong> before you can log in.
+                </p>
+                
+                <div class="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 mb-8 text-left border border-blue-100 dark:border-blue-900/30">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <div>
+                            <h4 class="text-sm font-bold text-blue-900 dark:text-blue-400">What's Next?</h4>
+                            <p class="text-xs text-blue-800 dark:text-blue-300 mt-1 leading-snug">Please wait for the System Administrator to review and activate your account. You will be able to sign in once your status changes from 'Pending' to 'Approved'.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <button @click="showSuccessModal = false; window.history.replaceState(null, '', window.location.pathname);" type="button" class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-bold rounded-xl text-sm px-5 py-3.5 text-center transition-colors dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                    I Understand, Back to Login
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>

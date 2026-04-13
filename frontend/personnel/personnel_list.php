@@ -135,11 +135,9 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     // Inject School ID
                     row.children[1].textContent = person.school_id;
                     
-                    // Inject Department Name(s) logically
+                    // Inject Department Name(s) logically (REMOVED GLOBAL GRAMMARLY OVERRIDE)
                     let displayDept = person.department_name;
-                    if (person.service_role === 'Grammarly & AI Checking') {
-                        displayDept = 'Global Service (All Depts)';
-                    } else if (!displayDept || displayDept.trim() === '') {
+                    if (!displayDept || displayDept.trim() === '') {
                         displayDept = 'Unassigned';
                     }
                     row.children[2].textContent = displayDept;

@@ -18,6 +18,16 @@ if (!in_array($table, $allowed_tables)) {
     exit;
 }
 
+// NEW: Map the table name to the official Service Role name used in service_applications
+$serviceMap = [
+    'grammarly_ai' => 'Grammarly & AI Checking',
+    'ethics' => 'Ethics',
+    'human_grammarian' => 'Human Grammarian',
+    'librarian' => 'Librarian',
+    'statistician' => 'Statistician'
+];
+$service_type = $serviceMap[$table];
+
 // 2. Variables & Pagination
 $limit = 10;
 $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
@@ -79,7 +89,7 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// 4. Fetch the Detailed Records
+// 4. Fetch the Detailed Records (CRITICAL FIX: COALESCE)
 $sql = "
     SELECT 
         a.id, a.file_path, a.status, a.round,
@@ -93,7 +103,8 @@ $sql = "
     JOIN users u ON s.user_id = u.id
     LEFT JOIN departments d ON s.department_id = d.id
     LEFT JOIN courses c ON s.course_id = c.id
-    LEFT JOIN personnel p ON a.personnel_id = p.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = '$service_type'
+    LEFT JOIN personnel p ON p.id = COALESCE(sa.assigned_personnel_id, a.personnel_id)
     $where
     ORDER BY a.id DESC
     LIMIT ? OFFSET ?

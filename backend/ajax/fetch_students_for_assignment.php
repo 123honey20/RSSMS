@@ -8,27 +8,29 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
-$limit = 10; // CHANGED: Now displays 10 students per page
+$limit = 10;
 $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
 $offset = ($page - 1) * $limit;
 
 $search = $_GET['search'] ?? '';
-$service = $_GET['service'] ?? 'Librarian'; 
+$service = $_GET['service'] ?? 'Grammarly & AI Checking'; 
 $dept = $_GET['dept'] ?? 'All';
 $assignment_status = $_GET['assignment_status'] ?? 'All'; 
 
 // Validate service
-if (!in_array($service, ['Librarian', 'Human Grammarian', 'Ethics'])) {
-    $service = 'Librarian';
+if (!in_array($service, ['Grammarly & AI Checking', 'Librarian', 'Human Grammarian', 'Ethics'])) {
+    $service = 'Grammarly & AI Checking';
 }
 
 $where = "WHERE 1=1";
 $params = [];
 $types = "";
 
-// --- NEW: Filter out students whose department does NOT require the selected service ---
+// --- Filter out students whose department does NOT require the selected service ---
 $req_column = '';
-if ($service === 'Librarian') {
+if ($service === 'Grammarly & AI Checking') {
+    $req_column = 'd.req_grammarly_ai';
+} elseif ($service === 'Librarian') {
     $req_column = 'd.req_librarian';
 } elseif ($service === 'Human Grammarian') {
     $req_column = 'd.req_human_grammarian';
@@ -37,8 +39,10 @@ if ($service === 'Librarian') {
 }
 
 // If we matched a column, ensure the department has it checked (value = 1)
+// We add a check for the column existence in case your DB doesn't have req_grammarly_ai yet.
 if (!empty($req_column)) {
-    $where .= " AND " . $req_column . " = 1";
+    // Only apply if the column is strictly required (fallback to safe if column missing)
+    $where .= " AND ($req_column IS NULL OR $req_column = 1)";
 }
 // --------------------------------------------------------------------------------------
 

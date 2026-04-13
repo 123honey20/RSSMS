@@ -15,6 +15,9 @@ if (!isset($_SESSION['service_role']) || strtolower(trim($_SESSION['service_role
     exit;
 }
 
+// Get the logged-in user ID
+$user_id = $_SESSION['user'];
+
 // 2. PAGINATION & FILTER VARIABLES
 $limit = 10;
 $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
@@ -25,10 +28,11 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $dept = isset($_GET['dept']) ? $_GET['dept'] : 'All';
 $status = isset($_GET['status']) ? $_GET['status'] : 'All';
 
-// 3. YOUR RECEIPT VALIDATION CHECK
-$where = "WHERE t.receipt_path IS NOT NULL AND t.receipt_path != ''";
-$params = [];
-$types = "";
+// 3. YOUR RECEIPT VALIDATION CHECK + NEW SECURITY LOCK
+// Enforce security lock - only show receipts of students assigned to this specific personnel
+$where = "WHERE p.user_id = ? AND t.receipt_path IS NOT NULL AND t.receipt_path != ''";
+$params = [$user_id];
+$types = "i";
 
 // Search Filter
 if (!empty($search)) {
@@ -51,11 +55,13 @@ if ($status !== 'All' && !empty($status)) {
     $types .= "s";
 }
 
-// 4. COUNT TOTAL FOR PAGINATION
+// 4. COUNT TOTAL FOR PAGINATION (NEW: Join service_applications and personnel)
 $countSql = "
     SELECT COUNT(*) as total
     FROM grammarly_ai_transactions t
     JOIN students s ON t.student_id = s.id
+    JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
+    JOIN personnel p ON sa.assigned_personnel_id = p.id
     $where
 ";
 
@@ -68,7 +74,7 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// 5. FETCH THE ACTUAL RECORDS
+// 5. FETCH THE ACTUAL RECORDS (NEW: Join service_applications and personnel)
 $sql = "
     SELECT 
         t.id, 
@@ -81,6 +87,8 @@ $sql = "
     FROM grammarly_ai_transactions t
     JOIN students s ON t.student_id = s.id
     JOIN departments d ON s.department_id = d.id
+    JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
+    JOIN personnel p ON sa.assigned_personnel_id = p.id
     $where
     ORDER BY 
         CASE WHEN t.status = 'Receipt Uploaded' THEN 1 ELSE 2 END,

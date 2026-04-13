@@ -14,13 +14,14 @@ $actual_student_id = $student_res ? $student_res['id'] : 0;
 $student_dept_id = $student_res ? $student_res['department_id'] : 0;
 $stmtStudent->close();
 
-// FIXED QUERY: Fetch Personnel for THIS specific service using the Junction Table
+// FIXED QUERY: Fetch APPROVED Personnel for THIS specific service using the Junction Table
 $service_role_name = 'Human Grammarian';
 $stmtP = $conn->prepare("
     SELECT p.id as personnel_id, p.full_name, p.service_role 
     FROM personnel p
+    JOIN users u ON p.user_id = u.id
     JOIN personnel_departments pd ON p.user_id = pd.user_id
-    WHERE p.service_role = ? AND pd.department_id = ?
+    WHERE u.status = 'Approved' AND p.service_role = ? AND pd.department_id = ?
 ");
 $stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();
@@ -33,12 +34,18 @@ $stmtP->close();
 ?>
 
 <div class="max-w-6xl mx-auto h-[calc(100vh-120px)] flex flex-col transition-colors duration-200" x-data="studentChatApp()" x-init="init()">
-    <div class="mb-4">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-purple-400 shadow-sm"></div>
-            <?php echo $service_role_name; ?> Communication
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Chat directly with the <?php echo $service_role_name; ?> personnel assigned to your department.</p>
+    
+    <div class="mb-4 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-purple-400 shadow-sm"></div>
+                <?php echo $service_role_name; ?> Communication
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Chat directly with the <?php echo $service_role_name; ?> personnel assigned to your department.</p>
+        </div>
+        <div class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border shadow-sm px-4 py-1.5 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider transition-colors">
+            Department Access
+        </div>
     </div>
 
     <div class="flex-1 bg-white dark:bg-warmdark-panel rounded-xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden flex transition-colors">
@@ -99,11 +106,14 @@ $stmtP->close();
                 </div>
 
                 <div id="chat-messages-container" class="flex-1 overflow-y-auto p-6 bg-[#F9FAFB] dark:bg-warmdark-bg space-y-4 custom-scrollbar flex flex-col transition-colors">
+                    
                     <template x-if="messages.length === 0">
                         <div class="text-center text-sm text-gray-400 dark:text-gray-500 mt-10">No messages yet. Say Hello!</div>
                     </template>
+
                     <template x-for="(msg, index) in messages" :key="index">
                         <div class="w-full">
+                            
                             <template x-if="msg.sender === 'personnel'">
                                 <div class="flex items-end gap-2 max-w-[80%] mt-2">
                                     <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 transition-colors">P</div>
@@ -113,6 +123,7 @@ $stmtP->close();
                                     </div>
                                 </div>
                             </template>
+
                             <template x-if="msg.sender === 'student'">
                                 <div class="flex items-end justify-end gap-2 w-full mt-2">
                                     <div class="bg-blue-600 dark:bg-blue-700 p-3.5 rounded-2xl rounded-br-sm shadow-sm max-w-[80%] transition-colors">
@@ -134,6 +145,7 @@ $stmtP->close();
                     </form>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -149,8 +161,8 @@ function studentChatApp() {
         serviceType: '<?php echo addslashes($service_role_name); ?>',
         chatInterval: null,
         isSending: false,
-        unreadCounts: {}, 
-        globalInterval: null, 
+        unreadCounts: {},
+        globalInterval: null,
 
         init() {
             this.fetchUnreadCounts();

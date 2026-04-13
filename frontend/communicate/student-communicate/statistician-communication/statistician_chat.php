@@ -17,12 +17,13 @@ $stmtStudent->close();
 
 $service_role_name = 'Statistician';
 
-// 2. FIXED QUERY: Now we check the new personnel_departments junction table!
+// 2. FIXED QUERY: Fetch ONLY Approved Personnel using the new personnel_departments junction table
 $stmtP = $conn->prepare("
     SELECT p.id as personnel_id, p.full_name, p.service_role 
     FROM personnel p
+    JOIN users u ON p.user_id = u.id
     JOIN personnel_departments pd ON p.user_id = pd.user_id
-    WHERE p.service_role = ? AND pd.department_id = ?
+    WHERE u.status = 'Approved' AND p.service_role = ? AND pd.department_id = ?
 ");
 $stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();
@@ -147,8 +148,8 @@ function studentChatApp() {
         serviceType: '<?php echo addslashes($service_role_name); ?>',
         chatInterval: null,
         isSending: false,
-        unreadCounts: {},
-        globalInterval: null,
+        unreadCounts: {}, 
+        globalInterval: null, 
 
         init() {
             this.fetchUnreadCounts();
@@ -160,7 +161,6 @@ function studentChatApp() {
         },
 
         fetchUnreadCounts() {
-            // Note: Make sure backend filename matches this fetch URL (get_unread_counts_student.php vs get_unread_counts_students.php)
             fetch(`../../backend/ajax/get_unread_counts_student.php?student_id=${this.studentId}&service_type=${encodeURIComponent(this.serviceType)}`)
             .then(res => res.json())
             .then(data => {

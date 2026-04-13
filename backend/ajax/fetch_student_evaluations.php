@@ -42,19 +42,18 @@ if ($sy !== 'All' && !empty($sy)) {
 }
 
 if ($service !== 'All' && !empty($service)) {
-    $where .= " AND se.service_type LIKE ?";
-    $serviceTerm = "%" . $service . "%";
-    $params[] = $serviceTerm;
+    $where .= " AND se.service_type = ?";
+    $params[] = $service;
     $types .= "s";
 }
 
 try {
-    // Count Query (Joined with personnel so the smart search works)
+    // Count Query (FIXED: Changed JOIN to LEFT JOIN so older/unassigned evaluations still show up)
     $countQuery = "
         SELECT COUNT(*) as total 
         FROM student_evaluations se
         JOIN students s ON se.student_id = s.id
-        JOIN personnel p ON se.personnel_id = p.id
+        LEFT JOIN personnel p ON se.personnel_id = p.id
         $where
     ";
     
@@ -72,7 +71,7 @@ try {
 
     $totalPages = ceil($totalRows / $limit);
 
-    // Main Query (Added se.service_type so the frontend badge works properly)
+    // Main Query (FIXED: Changed JOIN to LEFT JOIN so older/unassigned evaluations still show up)
     $query = "
         SELECT 
             se.id, se.total_score, se.comments, se.created_at, se.service_type,
@@ -86,7 +85,7 @@ try {
         JOIN users u ON s.user_id = u.id 
         LEFT JOIN departments d ON s.department_id = d.id
         LEFT JOIN courses c ON s.course_id = c.id
-        JOIN personnel p ON se.personnel_id = p.id
+        LEFT JOIN personnel p ON se.personnel_id = p.id
         JOIN rubrics r ON se.rubric_id = r.id
         $where
         ORDER BY se.created_at DESC

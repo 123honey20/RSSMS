@@ -26,17 +26,20 @@ if (!empty($search)) {
     $params[] = "%" . $search . "%";
     $types .= "s";
 }
-// NEW: Filter using the Junction Table
+
+// Filter using the Junction Table
 if ($dept !== 'All' && !empty($dept)) {
     $where .= " AND EXISTS (SELECT 1 FROM personnel_departments pd WHERE pd.user_id = u.id AND pd.department_id = ?)";
     $params[] = $dept;
     $types .= "i";
 }
+
 if ($role !== 'All' && !empty($role)) {
     $where .= " AND s.service_role = ?";
     $params[] = $role;
     $types .= "s";
 }
+
 if ($status !== 'All' && in_array($status, ['Pending', 'Approved'])) {
     $where .= " AND u.status = ?";
     $params[] = $status;
@@ -57,7 +60,7 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 if ($page > $totalPages && $totalPages > 0) { $page = $totalPages; }
 
-// NEW: Use GROUP_CONCAT to get all assigned department names combined into one string
+// Use GROUP_CONCAT to get all assigned department names combined into one string
 $sql = "
     SELECT 
         u.id, u.school_id, u.email, u.status,
@@ -83,7 +86,9 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $personnel = [];
-while ($row = $result->fetch_assoc()) { $personnel[] = $row; }
+while ($row = $result->fetch_assoc()) { 
+    $personnel[] = $row; 
+}
 
 echo json_encode([
     "personnel" => $personnel,

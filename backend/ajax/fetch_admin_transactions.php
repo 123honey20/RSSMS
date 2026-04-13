@@ -43,7 +43,6 @@ if ($sy !== 'All' && !empty($sy)) {
     $types .= "s";
 }
 
-// FIXED: Using your exact table name 'grammarly_ai_transactions'
 $countSql = "SELECT COUNT(*) as total FROM grammarly_ai_transactions t JOIN students s ON t.student_id = s.id $where";
 $countStmt = $conn->prepare($countSql);
 if (!empty($params)) { $countStmt->bind_param($types, ...$params); }
@@ -51,16 +50,19 @@ $countStmt->execute();
 $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 
-// FIXED: Using 'receipt_path' instead of 'file_path', and added 'thesis_title' for the profile modal
+// FIXED: Added JOIN to service_applications and personnel to fetch 'personnel_name'
 $sql = "
     SELECT t.id, t.status, t.round, t.receipt_path, 
            s.control_number, s.research_leader, s.thesis_title, u.school_id, u.email, 
-           d.name AS department_name, c.name AS course_name
+           d.name AS department_name, c.name AS course_name,
+           p.full_name AS personnel_name
     FROM grammarly_ai_transactions t
     JOIN students s ON t.student_id = s.id
     JOIN users u ON s.user_id = u.id
     JOIN departments d ON s.department_id = d.id
     LEFT JOIN courses c ON s.course_id = c.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON sa.assigned_personnel_id = p.id
     $where
     ORDER BY CASE WHEN t.status = 'Receipt Uploaded' THEN 1 ELSE 2 END, t.id DESC
     LIMIT ? OFFSET ?

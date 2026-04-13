@@ -211,7 +211,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                             </select>
                         </div>
 
-                        <div x-show="personnelServiceRole !== 'Grammarly & AI Checking' && personnelServiceRole !== ''">
+                        <div x-show="personnelServiceRole !== ''">
                             <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Departments</label>
                             <div class="space-y-2 max-h-48 overflow-y-auto p-3 border border-gray-200 dark:border-warmdark-border rounded-lg bg-gray-50 dark:bg-warmdark-bg shadow-inner">
                                 <?php
@@ -242,11 +242,24 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
     <script>
         function registrationApp() {
+            // Check PHP injected GET parameter for the specific errors
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorType = urlParams.get('error');
+            
+            let defaultErrorMsg = '';
+            if (errorType === 'duplicate_id') {
+                defaultErrorMsg = 'This School ID is already registered.';
+            } else if (errorType === 'duplicate_email') {
+                defaultErrorMsg = 'This Email Address is already registered.';
+            } else if (errorType === 'duplicate_control_number') {
+                defaultErrorMsg = 'This Control Number is already taken by another group.';
+            }
+
             return {
                 role: 'student', 
                 password: '',
                 confirm_password: '',
-                errorMsg: '',
+                errorMsg: defaultErrorMsg,
                 personnelServiceRole: '',
 
                 validateForm(e) {

@@ -28,32 +28,20 @@ $stmtDepts->close();
 
 $student_list = [];
 
-// 3. Fetch students based on the role and assigned departments
-if ($service_role === 'Grammarly & AI Checking') {
-    // Global Access: Fetch everyone
-    $stmt = $conn->prepare("SELECT id, research_leader as full_name, control_number FROM students ORDER BY id DESC");
+// 3. Fetch students based on assigned departments (REMOVED GLOBAL GRAMMARLY EXCEPTION)
+if (!empty($assigned_depts)) {
+    // Create placeholders (e.g., "?, ?, ?") based on how many departments they have
+    $placeholders = implode(',', array_fill(0, count($assigned_depts), '?'));
+    $types = str_repeat('i', count($assigned_depts));
+    
+    $stmt = $conn->prepare("SELECT id, research_leader as full_name, control_number FROM students WHERE department_id IN ($placeholders) ORDER BY id DESC");
+    $stmt->bind_param($types, ...$assigned_depts);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) {
         $student_list[] = $row;
     }
     $stmt->close();
-} else {
-    // Specific Departments: Only fetch if they have departments assigned
-    if (!empty($assigned_depts)) {
-        // Create placeholders (e.g., "?, ?, ?") based on how many departments they have
-        $placeholders = implode(',', array_fill(0, count($assigned_depts), '?'));
-        $types = str_repeat('i', count($assigned_depts));
-        
-        $stmt = $conn->prepare("SELECT id, research_leader as full_name, control_number FROM students WHERE department_id IN ($placeholders) ORDER BY id DESC");
-        $stmt->bind_param($types, ...$assigned_depts);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-            $student_list[] = $row;
-        }
-        $stmt->close();
-    }
 }
 ?>
 
@@ -68,7 +56,7 @@ if ($service_role === 'Grammarly & AI Checking') {
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage incoming messages from students requiring your assistance.</p>
         </div>
         <div class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border shadow-sm px-4 py-1.5 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider transition-colors">
-            <?php echo $service_role === 'Grammarly & AI Checking' ? 'Global Access' : 'Department Access'; ?>
+            Department Access
         </div>
     </div>
 

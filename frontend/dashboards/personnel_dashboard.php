@@ -28,23 +28,20 @@ $serviceRole = $profile['service_role'] ?? 'Personnel';
 
 // 2. NEW: Fetch ALL assigned departments from the Junction Table
 $assigned_departments = [];
-if ($serviceRole !== 'Grammarly & AI Checking') {
-    $deptStmt = $conn->prepare("
-        SELECT d.id, d.name 
-        FROM personnel_departments pd
-        JOIN departments d ON pd.department_id = d.id
-        WHERE pd.user_id = ?
-        ORDER BY d.name ASC
-    ");
-    $deptStmt->bind_param("i", $user_id);
-    $deptStmt->execute();
-    $resDepts = $deptStmt->get_result();
-    while ($row = $resDepts->fetch_assoc()) {
-        $assigned_departments[] = $row;
-    }
-    $deptStmt->close();
+$deptStmt = $conn->prepare("
+    SELECT d.id, d.name 
+    FROM personnel_departments pd
+    JOIN departments d ON pd.department_id = d.id
+    WHERE pd.user_id = ?
+    ORDER BY d.name ASC
+");
+$deptStmt->bind_param("i", $user_id);
+$deptStmt->execute();
+$resDepts = $deptStmt->get_result();
+while ($row = $resDepts->fetch_assoc()) {
+    $assigned_departments[] = $row;
 }
-
+$deptStmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -330,12 +327,7 @@ if ($serviceRole !== 'Grammarly & AI Checking') {
                     <div class="bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2 transition-colors">
                         <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Assigned Departments</p>
                         
-                        <?php if ($profile['service_role'] === 'Grammarly & AI Checking'): ?>
-                            <span class="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 px-2.5 py-1 rounded-md text-xs font-bold">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                Global Service (All Departments)
-                            </span>
-                        <?php elseif (empty($assigned_departments)): ?>
+                        <?php if (empty($assigned_departments)): ?>
                             <span class="text-gray-500 dark:text-gray-400 text-sm italic">No departments currently assigned.</span>
                         <?php else: ?>
                             <div class="flex flex-wrap gap-2">

@@ -663,14 +663,7 @@ $stmt->close();
             const deptContainer = document.getElementById("master_p_dept_container");
             deptContainer.innerHTML = ''; // Clear old badges
 
-            if (role === 'Grammarly & AI Checking') {
-                deptContainer.innerHTML = `
-                    <span class="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 px-2.5 py-1 rounded-md text-xs font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Global Service (All Departments)
-                    </span>
-                `;
-            } else if (!data.department_name || data.department_name.trim() === '') {
+            if (!data.department_name || data.department_name.trim() === '') {
                 deptContainer.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-sm italic">No departments assigned.</span>`;
             } else {
                 // Split the comma-separated string coming from the database

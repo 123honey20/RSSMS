@@ -43,11 +43,11 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 
         <select id="serviceFilter" class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-900 dark:focus:ring-blue-500 focus:outline-none shadow-sm transition-colors">
             <option value="All">All Services</option>
-            <option value="Grammarly">Grammarly & AI</option>
-            <option value="Ethics">Ethics</option>
-            <option value="grammarian">Human Grammarian</option>
-            <option value="Librarian">Librarian</option>
-            <option value="Statistician">Statistician</option>
+            <option value="grammarly_ai">Grammarly & AI</option>
+            <option value="ethics">Ethics</option>
+            <option value="human_grammarian">Human Grammarian</option>
+            <option value="librarian">Librarian</option>
+            <option value="statistician">Statistician</option>
         </select>
     </div>
 
@@ -223,6 +223,14 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                         });
                     }
 
+                    // Format the service type string for display
+                    let displayService = eval.service_type || 'Service';
+                    if(displayService === 'grammarly_ai') displayService = 'Grammarly & AI';
+                    else if(displayService === 'human_grammarian') displayService = 'Human Grammarian';
+                    else if(displayService === 'ethics') displayService = 'Ethics';
+                    else if(displayService === 'librarian') displayService = 'Librarian';
+                    else if(displayService === 'statistician') displayService = 'Statistician';
+
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
@@ -231,7 +239,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                         <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">${eval.control_number || 'N/A'}</td>
                         <td class="px-6 py-4 text-gray-700 dark:text-gray-300">
                             <div class="font-semibold text-gray-900 dark:text-gray-100">${eval.personnel_name || 'Unknown'}</div>
-                            <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">${eval.service_role || eval.service_type || 'Service'}</div>
+                            <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">${eval.service_role || displayService}</div>
                         </td>
                         <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400 text-xs">${formattedDate}</td>
                         <td class="px-6 py-4 text-center">
@@ -280,7 +288,12 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 
     function openFeedbackModal(data) {
         document.getElementById("f_personnel_name").textContent = data.personnel_name || "Unknown";
-        document.getElementById("f_service_role").textContent = data.service_role || data.service_type || "Research Services";
+        
+        let displayService = data.service_role || data.service_type || "Research Services";
+        if(displayService === 'grammarly_ai') displayService = 'Grammarly & AI';
+        else if(displayService === 'human_grammarian') displayService = 'Human Grammarian';
+        
+        document.getElementById("f_service_role").textContent = displayService;
         document.getElementById("f_total_score").textContent = data.total_score || "0";
         document.getElementById("f_rubric_name").textContent = data.rubric_name || "Unknown Instrument";
         document.getElementById("f_comments").textContent = data.comments ? data.comments : "No additional comments provided by the student.";

@@ -11,7 +11,6 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 
 $user_id = $_SESSION['user'];
 $service_role_name = $_SESSION['service_role'] ?? '';
-$is_global = ($service_role_name === 'Grammarly & AI Checking');
 
 // 1. Map the service role to the DB service_type string
 $serviceMap = [
@@ -42,24 +41,20 @@ if (!$personnelResult) {
 $personnel_id = $personnelResult['id'];
 
 // 3. Fetch Overall Average per Rubric (STRICTLY FILTERED BY CURRENT JUNCTION TABLE ASSIGNMENTS)
+// REMOVED GLOBAL EXCEPTION: Now applies to ALL services
 $rubricAverages = [];
 $sqlRubrics = "
     SELECT r.id, r.name, COUNT(se.id) as total_evaluations, AVG(se.total_score) as average_total_score
     FROM rubrics r
     JOIN student_evaluations se ON r.id = se.rubric_id
     JOIN students s ON se.student_id = s.id
+    JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ?
+    WHERE se.personnel_id = ? AND se.service_type = ? 
+    GROUP BY r.id, r.name
 ";
-if (!$is_global) {
-    $sqlRubrics .= " JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ? ";
-}
-$sqlRubrics .= " WHERE se.personnel_id = ? AND se.service_type = ? GROUP BY r.id, r.name";
 
 $stmtRubrics = $conn->prepare($sqlRubrics);
-if (!$is_global) {
-    $stmtRubrics->bind_param("iis", $user_id, $personnel_id, $service_type);
-} else {
-    $stmtRubrics->bind_param("is", $personnel_id, $service_type);
-}
+$stmtRubrics->bind_param("iis", $user_id, $personnel_id, $service_type);
 $stmtRubrics->execute();
 $resRubrics = $stmtRubrics->get_result();
 while ($row = $resRubrics->fetch_assoc()) {
@@ -79,18 +74,13 @@ $sqlCriteria = "
     JOIN student_evaluation_ratings ser ON rc.id = ser.criterion_id
     JOIN student_evaluations se ON ser.evaluation_id = se.id
     JOIN students s ON se.student_id = s.id
+    JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ?
+    WHERE se.personnel_id = ? AND se.service_type = ? 
+    GROUP BY rc.rubric_id, rc.id, rc.name
 ";
-if (!$is_global) {
-    $sqlCriteria .= " JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ? ";
-}
-$sqlCriteria .= " WHERE se.personnel_id = ? AND se.service_type = ? GROUP BY rc.rubric_id, rc.id, rc.name";
 
 $stmtCriteria = $conn->prepare($sqlCriteria);
-if (!$is_global) {
-    $stmtCriteria->bind_param("iis", $user_id, $personnel_id, $service_type);
-} else {
-    $stmtCriteria->bind_param("is", $personnel_id, $service_type);
-}
+$stmtCriteria->bind_param("iis", $user_id, $personnel_id, $service_type);
 $stmtCriteria->execute();
 $resCriteria = $stmtCriteria->get_result();
 while ($row = $resCriteria->fetch_assoc()) {
@@ -109,18 +99,14 @@ $sqlComments = "
     SELECT se.comments, se.created_at 
     FROM student_evaluations se
     JOIN students s ON se.student_id = s.id
+    JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ?
+    WHERE se.personnel_id = ? AND se.service_type = ? 
+    AND se.comments IS NOT NULL AND se.comments != '' 
+    ORDER BY se.created_at DESC
 ";
-if (!$is_global) {
-    $sqlComments .= " JOIN personnel_departments pd ON s.department_id = pd.department_id AND pd.user_id = ? ";
-}
-$sqlComments .= " WHERE se.personnel_id = ? AND se.service_type = ? AND se.comments IS NOT NULL AND se.comments != '' ORDER BY se.created_at DESC";
 
 $stmtComments = $conn->prepare($sqlComments);
-if (!$is_global) {
-    $stmtComments->bind_param("iis", $user_id, $personnel_id, $service_type);
-} else {
-    $stmtComments->bind_param("is", $personnel_id, $service_type);
-}
+$stmtComments->bind_param("iis", $user_id, $personnel_id, $service_type);
 $stmtComments->execute();
 $resComments = $stmtComments->get_result();
 while ($row = $resComments->fetch_assoc()) {

@@ -61,6 +61,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">No.</th>
                     <th class="px-6 py-4 font-semibold">Control No.</th>
+                    <th class="px-6 py-4 font-semibold">Assigned Personnel</th>
                     <th class="px-6 py-4 font-semibold text-center">Round</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Document</th>
@@ -111,7 +112,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                 tbody.innerHTML = '';
 
                 if (data.transactions.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No transactions found.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No transactions found.</td></tr>`;
                     document.getElementById('recordInfo').textContent = '';
                     document.getElementById('paginationContainer').innerHTML = '';
                     return;
@@ -131,6 +132,12 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 
                     let statusBadge = `<span class="px-3 py-1 rounded-md text-[10px] font-bold uppercase ${badgeColor}">${row.status}</span>`;
 
+                    // LOGIC FOR ASSIGNED PERSONNEL
+                    let personnelDisplay = row.personnel_name 
+                        ? `<div class="font-semibold text-gray-800 dark:text-gray-200">${row.personnel_name}</div>
+                           <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grammarly & AI</div>` 
+                        : `<span class="text-xs text-amber-600 dark:text-amber-500 font-semibold italic bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded border border-amber-200 dark:border-amber-900/30">Pending Assignment</span>`;
+
                     let viewButton = '';
                     if (row.status === 'No Receipt' || !row.receipt_path) {
                         viewButton = `<span class="text-gray-400 dark:text-gray-500 text-[11px] font-medium italic">Not Submitted</span>`;
@@ -145,6 +152,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                     tr.innerHTML = `
                         <td class="px-6 py-4 text-center text-xs text-gray-500 dark:text-gray-400">${counter++}.</td>
                         <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">${row.control_number}</td>
+                        <td class="px-6 py-4">${personnelDisplay}</td>
                         <td class="px-6 py-4 text-center font-bold text-gray-600 dark:text-gray-300">R${row.round}</td>
                         <td class="px-6 py-4 text-center">${statusBadge}</td>
                         <td class="px-6 py-4 text-center">

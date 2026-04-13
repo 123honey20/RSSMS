@@ -13,12 +13,13 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
-// Get submission, verify it belongs to this specific student, and get the personnel name
+// FIXED QUERY: Join service_applications to fetch the newly assigned personnel!
 $stmt = $conn->prepare("
     SELECT l.*, s.control_number, p.full_name AS personnel_name
     FROM librarian l
     JOIN students s ON l.student_id = s.id
-    LEFT JOIN personnel p ON l.personnel_id = p.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Librarian' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON p.id = COALESCE(sa.assigned_personnel_id, l.personnel_id)
     WHERE l.id = ? AND s.user_id = ?
 ");
 $stmt->bind_param("ii", $submissionId, $userId);
@@ -214,7 +215,7 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Document Viewer</h3>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Original Document Viewer</h3>
             </div>
             <button onclick="closeFileModal()" class="text-gray-500 hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-red-500 p-1.5 rounded-full transition-colors shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

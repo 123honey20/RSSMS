@@ -7,11 +7,13 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
+// FIXED QUERY: Fetch the assigned personnel from the service_applications table!
 $stmt = $conn->prepare("
     SELECT e.id as submission_id, s.control_number, p.id as personnel_id, p.full_name as personnel_name
     FROM ethics e
     JOIN students s ON e.student_id = s.id
-    LEFT JOIN personnel p ON e.personnel_id = p.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Ethics' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON sa.assigned_personnel_id = p.id
     WHERE e.id = ? AND s.user_id = ? AND e.status = 'Approved'
 ");
 $stmt->bind_param("ii", $submissionId, $userId);
@@ -233,7 +235,7 @@ $jsonRubrics = json_encode($rubrics);
             </p>
 
             <button @click="submitFeedback"
-                class="w-full sm:w-auto bg-blue-900 dark:bg-blue-800 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 flex justify-center items-center gap-2"
+                class="w-full sm:w-auto bg-blue-900 dark:bg-blue-800 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                 :disabled="!isFormComplete()">
                 Submit Evaluation
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,7 +317,6 @@ $jsonRubrics = json_encode($rubrics);
                 btn.innerHTML = 'Submitting...';
                 btn.disabled = true;
 
-                // Hit the real backend!
                 fetch('../../backend/ajax/save_student_feedback.php', {
                         method: 'POST',
                         headers: {

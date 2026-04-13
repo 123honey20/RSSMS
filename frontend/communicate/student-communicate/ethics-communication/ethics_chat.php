@@ -15,13 +15,14 @@ $actual_student_id = $student_res ? $student_res['id'] : 0;
 $student_dept_id = $student_res ? $student_res['department_id'] : 0;
 $stmtStudent->close();
 
-// 2. FIXED QUERY: Fetch Personnel for THIS specific service using the Junction Table
+// 2. FIXED QUERY: Fetch ONLY Approved Personnel for THIS specific service using the Junction Table
 $service_role_name = 'Ethics';
 $stmtP = $conn->prepare("
     SELECT p.id as personnel_id, p.full_name, p.service_role 
     FROM personnel p
+    JOIN users u ON p.user_id = u.id
     JOIN personnel_departments pd ON p.user_id = pd.user_id
-    WHERE p.service_role = ? AND pd.department_id = ?
+    WHERE u.status = 'Approved' AND p.service_role = ? AND pd.department_id = ?
 ");
 $stmtP->bind_param("si", $service_role_name, $student_dept_id);
 $stmtP->execute();

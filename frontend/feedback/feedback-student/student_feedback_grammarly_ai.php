@@ -7,11 +7,13 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
+// FIXED QUERY: Fetch the assigned personnel from the service_applications table!
 $stmt = $conn->prepare("
     SELECT ga.id as submission_id, s.control_number, p.id as personnel_id, p.full_name as personnel_name
     FROM grammarly_ai ga
     JOIN students s ON ga.student_id = s.id
-    LEFT JOIN personnel p ON ga.personnel_id = p.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON sa.assigned_personnel_id = p.id
     WHERE ga.id = ? AND s.user_id = ? AND ga.status = 'Approved'
 ");
 $stmt->bind_param("ii", $submissionId, $userId);

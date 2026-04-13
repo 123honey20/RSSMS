@@ -20,12 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // NEW: Capture array of departments
     $selected_departments = isset($_POST['departments']) ? $_POST['departments'] : [];
     
-    // Force primary department to NULL if role is Grammarly & AI Checking, else use the first chosen
-    if ($service_role === 'Grammarly & AI Checking') {
-        $primary_dept = NULL;
-    } else {
-        $primary_dept = !empty($selected_departments) ? intval($selected_departments[0]) : NULL;
-    }
+    // REMOVED GRAMMARLY EXCEPTION: Now captures the primary dept for all roles
+    $primary_dept = !empty($selected_departments) ? intval($selected_departments[0]) : NULL;
 
     $role   = "personnel";
     $status = "Approved";
@@ -59,8 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($stmt2->execute()) {
                     
-                    // NEW: Insert into Junction Table
-                    if ($service_role !== 'Grammarly & AI Checking' && !empty($selected_departments)) {
+                    // REMOVED GRAMMARLY EXCEPTION: Insert into Junction Table for all roles
+                    if (!empty($selected_departments)) {
                         $stmt3 = $conn->prepare("INSERT INTO personnel_departments (user_id, department_id) VALUES (?, ?)");
                         foreach ($selected_departments as $d_id) {
                             $d_id = intval($d_id);
@@ -190,8 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     function toggleDepartment() {
         const role = roleSelect.value;
 
-        // HIDE if Grammarly or empty, SHOW for everyone else
-        if (role === "Grammarly & AI Checking" || role === "") {
+        // REMOVED GRAMMARLY EXCEPTION: HIDE only if empty, SHOW for all roles
+        if (role === "") {
             deptContainer.classList.add("hidden");
         } else {
             deptContainer.classList.remove("hidden");

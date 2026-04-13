@@ -12,52 +12,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'Approve' || $action === 'Reject') {
         
-        // Handle File Upload for BOTH Approve and Reject
-        if (!isset($_FILES['result_file']) || $_FILES['result_file']['error'] !== UPLOAD_ERR_OK) {
-            // Tell them they missed the file for whichever button they clicked
-            $_SESSION['flash_error'] = "You must upload a file to " . strtolower($action) . " this submission.";
-            header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_statistician");
-            exit();
-        }
-
-        $file = $_FILES['result_file'];
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $status = ($action === 'Approve') ? 'Approved' : 'Rejected';
         
-        // Define the strictly allowed file extensions
-        $allowed_exts = ['docx', 'pdf', 'txt', 'csv', 'xlsx', 'sav', 'png', 'jpg'];
+        // Check if a file was actually uploaded
+        $has_file = isset($_FILES['result_file']) && $_FILES['result_file']['error'] === UPLOAD_ERR_OK;
 
-        if (!in_array($ext, $allowed_exts)) {
-            $_SESSION['flash_error'] = "Invalid file type. Allowed: .docx, .pdf, .txt, .csv, .xlsx, .sav, .png, .jpg";
-            header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_statistician");
-            exit();
-        }
-        
-        // Generate safe unique filename
-        $filename = "result_" . time() . "_" . $submission_id . "." . $ext;
-        
-        // Define target directory (create it if it doesn't exist)
-        $targetDir = "../../uploads/statistician_results/";
-        if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true);
-        }
+        if ($has_file) {
+            // --- SCENARIO 1: File WAS Attached ---
+            $file = $_FILES['result_file'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed_exts = ['docx', 'pdf', 'txt', 'csv', 'xlsx', 'sav', 'png', 'jpg'];
 
-        if (move_uploaded_file($file['tmp_name'], $targetDir . $filename)) {
+            if (!in_array($ext, $allowed_exts)) {
+                $_SESSION['flash_error'] = "Invalid file type. Allowed: .docx, .pdf, .txt, .csv, .xlsx, .sav, .png, .jpg";
+                header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_statistician");
+                exit();
+            }
             
-            // Set the correct status string for the database based on the button clicked
-            $status = ($action === 'Approve') ? 'Approved' : 'Rejected';
+            // Generate safe unique filename
+            $filename = "result_" . time() . "_" . $submission_id . "." . $ext;
+            
+            // Define target directory
+            $targetDir = "../../uploads/statistician_results/";
+            if (!is_dir($targetDir)) {
+                mkdir($targetDir, 0777, true);
+            }
 
-            // Update Database with the Status AND the File Path for both actions
-            $stmt = $conn->prepare("UPDATE statistician SET status = ?, result_file_path = ? WHERE id = ?");
-            $stmt->bind_param("ssi", $status, $filename, $submission_id);
+            if (move_uploaded_file($file['tmp_name'], $targetDir . $filename)) {
+                // Update Database with Status AND File Path
+                $stmt = $conn->prepare("UPDATE statistician SET status = ?, result_file_path = ? WHERE id = ?");
+                $stmt->bind_param("ssi", $status, $filename, $submission_id);
+                
+                if ($stmt->execute()) {
+                    $_SESSION['flash_success'] = "Submission $status and File Uploaded successfully!";
+                } else {
+                    $_SESSION['flash_error'] = "Database error. Please try again.";
+                }
+                $stmt->close();
+            } else {
+                $_SESSION['flash_error'] = "Failed to save the uploaded file.";
+            }
+
+        } else {
+            // --- SCENARIO 2: No File Attached ---
+            // Update Database with Status ONLY
+            $stmt = $conn->prepare("UPDATE statistician SET status = ? WHERE id = ?");
+            $stmt->bind_param("si", $status, $submission_id);
             
             if ($stmt->execute()) {
-                $_SESSION['flash_success'] = "Submission $status and File Uploaded successfully!";
+                $_SESSION['flash_success'] = "Submission $status successfully without an attachment!";
             } else {
                 $_SESSION['flash_error'] = "Database error. Please try again.";
             }
             $stmt->close();
-        } else {
-            $_SESSION['flash_error'] = "Failed to save the uploaded file.";
         }
     }
 
