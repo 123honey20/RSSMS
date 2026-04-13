@@ -31,8 +31,15 @@ if (!$submission) {
     exit();
 }
 
+// Original Student Submission Paths
 $relativePath = "/RSSMS/uploads/grammarly_ai/submissions/" . $submission['file_path'];
 $absolutePath = $_SERVER['DOCUMENT_ROOT'] . $relativePath;
+
+// NEW: Processed Result Paths
+$resultFile = $submission['result_file_path'] ?? null;
+$resultRelativePath = $resultFile ? "/RSSMS/uploads/grammarly_ai_results/" . $resultFile : null;
+$resultAbsolutePath = $resultFile ? $_SERVER['DOCUMENT_ROOT'] . $resultRelativePath : null;
+$resultExists = $resultAbsolutePath && file_exists($resultAbsolutePath);
 
 // Fetch Comments from personnel
 $stmtComments = $conn->prepare("
@@ -71,11 +78,75 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text
         </div>
     </div>
 
+    <?php if ($resultExists): ?>
+        <?php
+            // Check if the file is previewable in an iframe
+            $resultExt = strtolower(pathinfo($resultFile, PATHINFO_EXTENSION));
+            $canPreviewResult = in_array($resultExt, ['pdf', 'jpg', 'jpeg', 'png', 'txt']);
+
+            // Dynamic Styling based on Approved vs Rejected for BOTH Banner and Modal
+            if ($submission['status'] === 'Rejected') {
+                $bannerTheme = "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50";
+                $titleTheme = "text-red-800 dark:text-red-400";
+                $descTheme = "text-red-700 dark:text-red-300";
+                $btnSolidTheme = "bg-red-600 hover:bg-red-700 text-white";
+                $btnOutlineTheme = "bg-white dark:bg-warmdark-panel border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30";
+                $bannerTitle = "Feedback Document Ready";
+                $bannerDesc = "Your assigned personnel has returned your document with feedback or required corrections.";
+                
+                // Modal specific theme mapping
+                $modalHeaderBg = "bg-red-50 dark:bg-warmdark-bg";
+                $modalIconBg = "bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400";
+                $modalTitleText = "text-red-900 dark:text-red-400";
+                $modalTitleString = "Feedback Document Viewer";
+            } else {
+                $bannerTheme = "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-900/50";
+                $titleTheme = "text-indigo-800 dark:text-indigo-400";
+                $descTheme = "text-indigo-700 dark:text-indigo-300";
+                $btnSolidTheme = "bg-indigo-600 hover:bg-indigo-700 text-white";
+                $btnOutlineTheme = "bg-white dark:bg-warmdark-panel border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30";
+                $bannerTitle = "Processed Result Ready";
+                $bannerDesc = "Your assigned personnel has uploaded your finalized Grammarly & AI Checking result file.";
+                
+                // Modal specific theme mapping
+                $modalHeaderBg = "bg-indigo-50 dark:bg-warmdark-bg";
+                $modalIconBg = "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400";
+                $modalTitleText = "text-indigo-900 dark:text-indigo-400";
+                $modalTitleString = "Processed Result Viewer";
+            }
+        ?>
+        <div class="<?php echo $bannerTheme; ?> border rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-colors shadow-sm">
+            <div>
+                <h3 class="text-base font-bold <?php echo $titleTheme; ?> flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <?php echo $bannerTitle; ?>
+                </h3>
+                <p class="text-xs <?php echo $descTheme; ?> mt-0.5">
+                    <?php echo $bannerDesc; ?>
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <?php if ($canPreviewResult): ?>
+                    <button onclick="openResultModal()" class="<?php echo $btnSolidTheme; ?> px-4 py-2 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Preview File
+                    </button>
+                <?php endif; ?>
+                <a href="<?= htmlspecialchars($resultRelativePath) ?>" download="<?= htmlspecialchars(basename($resultFile)) ?>" class="<?php echo $btnOutlineTheme; ?> border px-4 py-2 rounded-md text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Download File
+                </a>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <div class="lg:col-span-2 bg-white dark:bg-warmdark-panel rounded-lg shadow-sm border border-transparent dark:border-warmdark-border p-6 flex flex-col h-[775px] transition-colors">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-warmdark-border shrink-0 transition-colors">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Submitted Document</h3>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Original Submitted Document</h3>
                 <?php if (file_exists($absolutePath)): ?>
                     <button onclick="openFileModal()" class="text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-lg flex items-center gap-2 transition font-semibold border border-blue-100 dark:border-blue-900/50 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -215,7 +286,7 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Document Viewer</h3>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Original Document Viewer</h3>
             </div>
             <button onclick="closeFileModal()" class="text-gray-500 hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-red-500 p-1.5 rounded-full transition-colors shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -231,7 +302,36 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text
     </div>
 </div>
 
+<?php if ($resultExists && isset($canPreviewResult) && $canPreviewResult): ?>
+<div id="resultDetailModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 backdrop-blur-md p-4 sm:p-6 transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[95vh] border border-transparent dark:border-warmdark-border transition-colors">
+
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-warmdark-border flex justify-between items-center <?php echo $modalHeaderBg; ?> shrink-0 transition-colors">
+            <div class="flex items-center gap-3">
+                <div class="<?php echo $modalIconBg; ?> p-1.5 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold <?php echo $modalTitleText; ?>"><?php echo $modalTitleString; ?></h3>
+            </div>
+            <button onclick="closeResultModal()" class="text-gray-500 hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-red-500 p-1.5 rounded-full transition-colors shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex-1 w-full bg-gray-200 dark:bg-warmdark-panel p-2 sm:p-4 transition-colors">
+            <iframe src="<?php echo $resultRelativePath; ?>" class="w-full h-full rounded-xl border bg-white dark:bg-warmdark-bg border-gray-300 dark:border-warmdark-border shadow-sm transition-colors" frameborder="0"></iframe>
+        </div>
+
+    </div>
+</div>
+<?php endif; ?>
+
 <script>
+    // === COMMENT MODAL SCRIPTS ===
     function openCommentModalDetails(btn) {
         document.getElementById('modalCommentTitle').innerText = 'Comment #' + btn.getAttribute('data-num');
         document.getElementById('modalCommentPage').innerText = btn.getAttribute('data-page');
@@ -274,6 +374,32 @@ if ($submission['status'] === "Rejected") $statusColor = "text-red-600 dark:text
             closeFileModal();
         }
     });
+
+    // === RESULT MODAL SCRIPTS ===
+    function openResultModal() {
+        const modal = document.getElementById('resultDetailModal');
+        if(modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    }
+
+    function closeResultModal() {
+        const modal = document.getElementById('resultDetailModal');
+        if(modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+
+    const resultModalEl = document.getElementById('resultDetailModal');
+    if (resultModalEl) {
+        resultModalEl.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeResultModal();
+            }
+        });
+    }
 </script>
 
 <style>

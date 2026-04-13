@@ -17,10 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'Approve' || $action === 'Reject') {
         
         $status = ($action === 'Approve') ? 'Approved' : 'Rejected';
-        $filename = null; 
+        $filename = null; // Default to null if no file
         $has_file = isset($_FILES['result_file']) && $_FILES['result_file']['error'] === UPLOAD_ERR_OK;
 
-        // --- 1. HANDLE FILE UPLOAD ---
+        // --- 1. HANDLE FILE UPLOAD (IF PROVIDED) ---
         if ($has_file) {
             $file = $_FILES['result_file'];
             $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -28,39 +28,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!in_array($ext, $allowed_exts)) {
                 $_SESSION['flash_error'] = "Invalid file type. Allowed: .docx, .pdf, .txt, .csv, .xlsx, .sav, .png, .jpg";
-                header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_statistician");
+                header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_ethics");
                 exit();
             }
             
-            // Generate safe unique filename
             $filename = "result_" . time() . "_" . $submission_id . "." . $ext;
-            
-            // Define target directory (Unique to statistician)
-            $targetDir = "../../uploads/statistician_results/";
+            $targetDir = "../../uploads/ethics_results/";
             if (!is_dir($targetDir)) {
                 mkdir($targetDir, 0777, true);
             }
 
             if (!move_uploaded_file($file['tmp_name'], $targetDir . $filename)) {
                 $_SESSION['flash_error'] = "Failed to save the uploaded file.";
-                header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_statistician");
+                header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_ethics");
                 exit();
             }
         }
 
         // --- 2. UPDATE DATABASE ---
         if ($filename) {
-            $stmt = $conn->prepare("UPDATE statistician SET status = ?, result_file_path = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE ethics SET status = ?, result_file_path = ? WHERE id = ?");
             $stmt->bind_param("ssi", $status, $filename, $submission_id);
         } else {
-            $stmt = $conn->prepare("UPDATE statistician SET status = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE ethics SET status = ? WHERE id = ?");
             $stmt->bind_param("si", $status, $submission_id);
         }
         
         $success = $stmt->execute();
         $stmt->close();
 
-        // --- 3. SEND EMAIL NOTIFICATIONS ---
+        // --- 3. SEND EMAIL NOTIFICATIONS (From old access_file_ethics) ---
         if ($success) {
             $_SESSION['flash_success'] = "Submission $status successfully!";
 
@@ -76,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Fetch Student/Submission Info
             $stmtDetails = $conn->prepare("
                 SELECT g.round, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
-                FROM statistician g 
+                FROM ethics g 
                 JOIN students s ON g.student_id = s.id 
                 JOIN users u ON s.user_id = u.id 
                 LEFT JOIN departments d ON s.department_id = d.id
@@ -101,16 +98,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $themeColor = ($status === 'Approved') ? '#059669' : '#dc2626';
                     $header = "<div style='background-color:#f8fafc;padding:20px;font-family:sans-serif;'><div style='max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 6px rgba(0,0,0,0.05);'>";
-                    $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p style='margin:0;'>Automated Statistician Service Log.</p></div></div></div>";
+                    $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p style='margin:0;'>Automated Ethics Service Log.</p></div></div></div>";
 
                     // Email 1: To Student
                     $mail->addAddress($info['student_email'], $info['research_leader']);
-                    $mail->Subject = "Statistician Review Result: $status";
+                    $mail->Subject = "Ethics Clearance Result: $status";
                     $mail->Body = $header . "
                         <div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Review $status</h1></div>
                         <div style='padding:30px;line-height:1.6;color:#334155;'>
                             <p>Hello <strong>{$info['research_leader']}</strong>,</p>
-                            <p>Your document for <strong>Statistician Review</strong> has been officially <strong style='color:$themeColor;'>$status</strong>.</p>
+                            <p>Your document for <strong>Ethics Clearance</strong> has been officially <strong style='color:$themeColor;'>$status</strong>.</p>
                             <div style='background:#f8fafc; border-left: 4px solid $themeColor; padding: 15px; margin: 20px 0;'>
                                 <p style='margin:0;'><strong>Control No:</strong> {$info['control_number']}</p>
                                 <p style='margin:0;'><strong>Round:</strong> {$info['round']}</p>
@@ -121,12 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Email 2: To Personnel (Log)
                     $mail->clearAddresses();
                     $mail->addAddress($personnel_email, $personnel_name);
-                    $mail->Subject = "Action Logged: Statistician Review - $status";
+                    $mail->Subject = "Action Logged: Ethics Review - $status";
                     $mail->Body = $header . "
                         <div style='background:#334155;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Review Action Confirmed</h1></div>
                         <div style='padding:30px;line-height:1.6;color:#334155;'>
                             <p>Hello <strong>$personnel_name</strong>,</p>
-                            <p>This email confirms that you have processed a <strong>Statistician</strong> submission review:</p>
+                            <p>This email confirms that you have processed an <strong>Ethics Clearance</strong> submission review:</p>
                             <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px; margin:20px 0;'>
                                 <h3 style='margin-top:0; color:#334155; border-bottom:1px solid #e2e8f0; padding-bottom:10px;'>Submission Details</h3>
                                 <table style='width:100%; font-size:14px; border-collapse:collapse;'>
@@ -148,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_statistician");
+    header("Location: ../../frontend/dashboards/personnel_dashboard.php?page=submissions_ethics");
     exit();
 }
 ?>

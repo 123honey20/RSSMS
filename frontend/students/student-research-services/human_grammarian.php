@@ -103,18 +103,28 @@ if (!is_array($human_grammarian_requirements)) {
         <?php endif; ?>
 
         <?php if (!empty($human_grammarian_requirements) && $appStatus === 'Approved'): ?>
-            <div class="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full mb-6">
-                <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div x-data="{ openReqs: false }" class="bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full mb-6 overflow-hidden transition-colors">
+                <button @click="openReqs = !openReqs" class="w-full p-4 sm:p-5 flex items-center justify-between text-left focus:outline-none hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors">
+                    <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2 m-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Required Documents for Human Grammarian
+                    </h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 dark:text-blue-400 transform transition-transform duration-300" :class="{'rotate-180': openReqs}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
-                    Required Documents for Human Grammarian
-                </h3>
-                <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-1.5 pl-2 font-medium">
-                    <?php foreach ($human_grammarian_requirements as $req): ?>
-                        <li><?php echo htmlspecialchars($req); ?></li>
-                    <?php endforeach; ?>
-                </ul>
+                </button>
+                
+                <div x-show="openReqs" x-collapse x-cloak>
+                    <div class="px-5 pb-5 pt-1 border-t border-blue-100 dark:border-blue-900/30 mt-1">
+                        <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-2 pl-2 font-medium mt-3">
+                            <?php foreach ($human_grammarian_requirements as $req): ?>
+                                <li><?php echo htmlspecialchars($req); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
 

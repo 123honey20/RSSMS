@@ -10,11 +10,13 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 $submissionId = intval($_GET['id']);
 $viewOnly = isset($_GET['viewOnly']);
 
-// FIXED QUERY: Added result_file_path so we can display it later
+// FIXED QUERY: Added result_file_path and Assigned Personnel via service_applications
 $stmt = $conn->prepare("
-    SELECT t.id, t.file_path, t.status, s.control_number, t.result_file_path
+    SELECT t.id, t.file_path, t.status, s.control_number, t.result_file_path, p.full_name as assigned_personnel
     FROM statistician t
     JOIN students s ON t.student_id = s.id
+    LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Statistician' AND sa.status = 'Approved'
+    LEFT JOIN personnel p ON sa.assigned_personnel_id = p.id
     WHERE t.id = ?
 ");
 $stmt->bind_param("i", $submissionId);
@@ -63,7 +65,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
             <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                 Submission Review
             </h2>
-            <div class="mt-4 space-y-2 text-sm">
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                 <div>
                     <p class="text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wide">
                         Control Number
@@ -71,6 +73,20 @@ $totalComments = $countResult['total_comments'] ?? 0;
                     <p class="font-semibold text-gray-800 dark:text-gray-200">
                         <?= htmlspecialchars($submission['control_number']) ?>
                     </p>
+                </div>
+                <div>
+                    <p class="text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wide">
+                        Assigned Personnel
+                    </p>
+                    <?php if (!empty($submission['assigned_personnel'])): ?>
+                        <p class="font-semibold text-gray-800 dark:text-gray-200">
+                            <?= htmlspecialchars($submission['assigned_personnel']) ?>
+                        </p>
+                    <?php else: ?>
+                        <span class="inline-block mt-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50 uppercase tracking-wider">
+                            Pending Assignment
+                        </span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -149,6 +165,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
             <?php endif; ?>
         </div>
     <?php endif; ?>
+
     <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
         
         <div x-data="{ requireFile: true }" class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-xl p-6 transition-colors">
@@ -216,17 +233,15 @@ $totalComments = $countResult['total_comments'] ?? 0;
 
 <script>
     let toastTimeout;
-    function showToast(message) {
+    function showToast(message, type = 'success') {
         const toast = document.getElementById('customToast');
         document.getElementById('toastMessage').textContent = message;
         
         clearTimeout(toastTimeout);
         
-        // Show
         toast.classList.remove('translate-y-[150%]', 'opacity-0');
         toast.classList.add('translate-y-0', 'opacity-100');
         
-        // Hide after 3.5 seconds
         toastTimeout = setTimeout(() => {
             toast.classList.remove('translate-y-0', 'opacity-100');
             toast.classList.add('translate-y-[150%]', 'opacity-0');
