@@ -139,7 +139,6 @@ while ($row = $res->fetch_assoc()) {
     $students[] = $row;
 }
 
-// Return the students AND the pagination data
 echo json_encode([
     "students" => $students, 
     "total_pages" => $total_pages, 

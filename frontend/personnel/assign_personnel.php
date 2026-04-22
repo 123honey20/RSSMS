@@ -4,7 +4,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 }
 
 require_once "../../backend/config/database.php";
-// Fetch ALL columns so we have access to the req_ flags
+
 $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
 ?>
 
@@ -83,7 +83,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
             <button onclick="closeAssignModal()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
         </div>
 
-        <form action="../../backend/actions/admin_direct_assign_action.php" method="POST" class="p-6">
+        <form action="../../backend/actions/admin_direct_assign_action.php" method="POST" class="p-6" onsubmit="showAssignmentLoader()">
             <input type="hidden" name="student_id" id="modal_assign_student_id">
             <input type="hidden" name="service_type" id="modal_assign_service_type">
 
@@ -111,11 +111,22 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                 <button type="button" onclick="closeAssignModal()" class="w-1/3 bg-gray-100 dark:bg-warmdark-hover text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-warmdark-border border border-gray-200 dark:border-warmdark-border py-2.5 rounded-lg font-bold text-sm transition-colors">
                     Cancel
                 </button>
-                <button type="submit" class="w-2/3 bg-blue-900 text-white hover:bg-blue-800 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors">
+                <button type="submit" id="confirmAssignBtn" class="w-2/3 bg-blue-900 text-white hover:bg-blue-800 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors flex justify-center items-center gap-2">
                     Confirm Assignment
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="assignmentLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
+        <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Processing Assignment...</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sending email notifications to student and personnel.</p>
     </div>
 </div>
 
@@ -137,7 +148,6 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
         var currentSelectedIsDisabled = false;
 
         options.forEach(opt => {
-            // Check if department requires this service (defaults to 1 if attribute is missing)
             var reqValue = opt.getAttribute(dataAttr);
             if (reqValue === '0') {
                 opt.disabled = true;
@@ -279,6 +289,20 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
         document.getElementById('directAssignModal').classList.add('hidden');
         document.getElementById('directAssignModal').classList.remove('flex');
     };
+
+    // --- NEW: Loading Overlay Script ---
+    window.showAssignmentLoader = function() {
+        // Hide the standard modal to show just the loader clearly
+        document.getElementById('directAssignModal').classList.add('hidden');
+        
+        // Show the loading overlay
+        document.getElementById('assignmentLoadingOverlay').classList.remove('hidden');
+        document.getElementById('assignmentLoadingOverlay').classList.add('flex');
+        
+        // Prevent double clicks
+        const btn = document.getElementById('confirmAssignBtn');
+        btn.disabled = true;
+    }
 
     // Event Listeners
     setTimeout(() => {

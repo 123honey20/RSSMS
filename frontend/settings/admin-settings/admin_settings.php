@@ -130,7 +130,7 @@ if (file_exists($cert_dir . "Proposal_Certificate.pdf")) {
                     <h2 class="text-sm font-bold text-emerald-900 dark:text-emerald-500 uppercase tracking-wider">Service Upload Requirements</h2>
                 </div>
                 <div class="p-6">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-5">Create a dynamic list of documents the students need to upload for each service.</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-5">Create a dynamic list of documents the students need to upload for each research services.</p>
                     
                     <form @submit.prevent="updateRequirements" class="space-y-6">
                         

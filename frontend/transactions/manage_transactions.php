@@ -6,7 +6,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 $sy_query = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'active_school_year'");
 $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
-// UNIVERSITY STANDARD SCHOOL YEAR GENERATION
 $start_year = 2024;
 $current_calendar_year = (int)date("Y");
 $max_year = $current_calendar_year + 2;
