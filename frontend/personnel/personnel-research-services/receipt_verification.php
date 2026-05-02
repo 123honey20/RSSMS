@@ -27,7 +27,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             <option value="All">All Statuses</option>
             <option value="Receipt Uploaded">Receipt Uploaded (Pending)</option>
             <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Needs Revision">Revision</option>
         </select>
     </div>
 
@@ -83,7 +83,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
                 res.data.forEach(row => {
                     let actionButton = '';
-                    if (row.status === 'Approved' || row.status === 'Rejected') {
+                    if (row.status === 'Approved' || row.status === 'Needs Revision') {
                         actionButton = `<button onclick="loadReceiptProcess(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm whitespace-nowrap">Receipt Review</button>`;
                     } else {
                         actionButton = `<button onclick="loadReceiptProcess(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm whitespace-nowrap">Process</button>`;
@@ -141,8 +141,8 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         if (status === 'Approved') {
             return `<span class="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/20 border border-green-100 dark:border-green-500/30 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Approved</span>`;
         }
-        if (status === 'Rejected') {
-            return `<span class="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Rejected</span>`;
+        if (status === 'Needs Revision') {
+            return `<span class="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Needs Revision</span>`;
         }
         if (status === 'Receipt Uploaded') {
             return `<span class="text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-100 dark:border-yellow-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Pending Review</span>`;

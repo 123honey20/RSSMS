@@ -37,7 +37,7 @@ $stmt->bind_param("ii", $student_id, $round);
 $stmt->execute();
 $transaction = $stmt->get_result()->fetch_assoc();
 
-if (!$transaction || !in_array($transaction['status'], ['No Receipt', 'Rejected'])) {
+if (!$transaction || !in_array($transaction['status'], ['No Receipt', 'Needs Revision'])) {
     die("Invalid transaction status.");
 }
 
@@ -140,7 +140,7 @@ try {
                     <p style='margin: 5px 0;'><strong>Control No:</strong> {$controlNo}</p>
                     <p style='margin: 5px 0 0 0;'><strong>Service:</strong> Grammarly & AI Checking (Round {$round})</p>
                 </div>
-                <p>Please log in to the system to approve or reject this transaction.</p>
+                <p>Please log in to the system to approve or revision this transaction.</p>
                 <a href='' style='display: inline-block; background: #ea580c; color: #ffffff; padding: 12px 25px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px;'>Review Receipt Now</a>
             </div>" . $emailFooter;
         $mail->send();

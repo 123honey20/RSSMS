@@ -179,8 +179,12 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 </label>
             </div>
 
-            <form action="../../backend/actions/personnel_process_ethics.php" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <!-- ADDED: onsubmit="window.showProcessLoader()" -->
+            <form action="../../backend/actions/personnel_process_ethics.php" method="POST" enctype="multipart/form-data" class="space-y-4" onsubmit="window.showProcessLoader()">
                 <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
+                
+                <!-- NEW HIDDEN INPUT FOR THE ACTION BUTTON FIX -->
+                <input type="hidden" name="action" id="hidden_action_input" value="">
                 
                 <div x-show="requireFile" x-collapse x-cloak>
                     <div class="bg-white dark:bg-warmdark-bg p-4 rounded-lg border border-gray-200 dark:border-warmdark-border">
@@ -193,12 +197,17 @@ $totalComments = $countResult['total_comments'] ?? 0;
                 <div class="pt-2">
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3" x-text="requireFile ? 'Finalize Decision' : 'Finalize Decision (No File Attached)'"></label>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" name="action" value="Approve" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Approve.', 'error'); }" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors w-full sm:w-auto">
+                        
+                        <!-- REMOVED name="action" and updated @click to set the hidden input -->
+                        <button type="submit" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Approve.', 'error'); } else { document.getElementById('hidden_action_input').value = 'Approve'; }" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors w-full sm:w-auto">
                             Approve Submission
                         </button>
-                        <button type="submit" name="action" value="Needs Revision" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Revisions Required.', 'error'); }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto">
+                        
+                        <!-- REMOVED name="action" and updated @click to set the hidden input -->
+                        <button type="submit" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result/feedback file before clicking Revisions Required.', 'error'); } else { document.getElementById('hidden_action_input').value = 'Needs Revision'; }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto">
                             Revisions Required
                         </button>
+                        
                     </div>
                 </div>
             </form>

@@ -26,7 +26,7 @@ $stmt->close();
 $_SESSION['service_role'] = $profile['service_role'] ?? '';
 $serviceRole = $profile['service_role'] ?? 'Personnel';
 
-// 2. NEW: Fetch ALL assigned departments from the Junction Table
+// 2. Fetch ALL assigned departments from the Junction Table
 $assigned_departments = [];
 $deptStmt = $conn->prepare("
     SELECT d.id, d.name 
@@ -227,7 +227,7 @@ $deptStmt->close();
             </div>
         </aside>
 
-        <main class="flex-1 ml-64 p-6 lg:p-8 min-h-[calc(100vh-72px)]">
+        <main class="flex-1 ml-64 p-6 lg:p-8 min-h-[calc(100vh-72px)] relative">
             <div id="main-content" class="max-w-7xl mx-auto">
 
                 <?php
@@ -280,6 +280,19 @@ $deptStmt->close();
                 ?>
 
             </div>
+            
+            <!-- GLOBAL LOADING OVERLAYS (Accessible to AJAX loaded pages) -->
+            <div id="processLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+                <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
+                    <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <h3 id="loaderTitle" class="text-lg font-bold text-gray-800 dark:text-gray-100">Processing Request...</h3>
+                    <p id="loaderDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we update the system.</p>
+                </div>
+            </div>
+            
         </main>
     </div>
 
@@ -395,6 +408,31 @@ $deptStmt->close();
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <script>
+        // --- GLOBAL LOADER FUNCTIONS ---
+        window.showVerificationLoader = function() {
+            document.getElementById('loaderTitle').innerText = 'Verifying Receipt...';
+            document.getElementById('loaderDesc').innerText = 'Please wait while we update the system.';
+            const overlay = document.getElementById('processLoadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+        };
+
+        window.showProcessLoader = function() {
+            document.getElementById('loaderTitle').innerText = 'Processing Submission...';
+            document.getElementById('loaderDesc').innerText = 'Please wait while we update the system and notify the student.';
+            const overlay = document.getElementById('processLoadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+            
+            // Disable the submit buttons to prevent double-clicks
+            const btns = document.querySelectorAll('button[type="submit"]');
+            btns.forEach(btn => btn.disabled = true);
+        };
+
         const serviceMap = {
             "Librarian": "librarian",
             "Human Grammarian": "human_grammarian",
@@ -665,9 +703,16 @@ $deptStmt->close();
                         setTimeout(() => { location.reload(); }, 1500);
                     } else {
                         showToast("Failed to update receipt status.", "error");
+                        // Hide loader if it fails
+                        document.getElementById('processLoadingOverlay').classList.add('hidden');
+                        document.getElementById('processLoadingOverlay').classList.remove('flex');
                     }
                 })
-                .catch(err => console.error(err));
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('processLoadingOverlay').classList.add('hidden');
+                    document.getElementById('processLoadingOverlay').classList.remove('flex');
+                });
         };
     </script>
 </body>

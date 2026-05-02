@@ -45,7 +45,7 @@ if ($student_id) {
 
 // 3. Fetch Available Personnel for this Student's Department
 $personnelList = [];
-if (!$application || $appStatus === 'Needs Revision') {
+if (!$application || $appStatus === 'Rejected') {
     $pStmt = $conn->prepare("
         SELECT p.id, p.full_name 
         FROM personnel p 
@@ -77,7 +77,8 @@ if ($appStatus === 'Approved') {
 
 // 5. Fetch the specific requirements for Statistician
 $req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_statistician'");
-$statistician_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
+$req_row = $req_stmt ? $req_stmt->fetch_assoc() : null;
+$statistician_requirements_json = $req_row ? $req_row['setting_value'] : '[]';
 $statistician_requirements = json_decode($statistician_requirements_json, true);
 
 // Fallback just in case it's still old plain text
@@ -88,29 +89,29 @@ if (!is_array($statistician_requirements)) {
 
 <div class="space-y-6 transition-colors duration-200">
 
-    <?php if (!$application || $appStatus === 'Needs Revision'): ?>
+    <?php if (!$application || $appStatus === 'Rejected'): ?>
         <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border max-w-2xl transition-colors">
             <div class="mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Request Statistician Services</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select your preferred personnel and upload your signed contract to begin.</p>
 
-                <?php if ($appStatus === 'Needs Revision' && !$hasAnySubmission): ?>
+                <?php if ($appStatus === 'Rejected' && !$hasAnySubmission): ?>
                     <div x-data="{ show: true }"
                         x-show="show"
                         x-init="setTimeout(() => show = false, 5000)"
                         x-transition.opacity.duration.500ms
                         class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-100 dark:border-red-900/30">
-                        <span class="font-bold">Notice:</span> Your previous request was Needs Revision. Please submit a new request.
+                        <span class="font-bold">Notice:</span> Your previous request was Rejected. Please submit a new request.
                     </div>
                 <?php endif; ?>
             </div>
 
-            <form action="../../backend/actions/apply_service_action.php" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <form action="../../backend/actions/apply_service_action.php" method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="showApplicationLoader()">
                 <input type="hidden" name="service_type" value="Statistician">
 
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Select Personnel</label>
-                    <select name="requested_personnel_id" required class="w-full border border-gray-300 dark:border-warmdark-border bg-gray-50 dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-3 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors appearance-none">
+                    <select name="requested_personnel_id" required class="w-full border border-gray-300 dark:border-warmdark-border bg-gray-50 dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-3 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors appearance-none cursor-pointer">
                         <option value="">-- Choose an available Statistician --</option>
                         <?php foreach ($personnelList as $p): ?>
                             <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['full_name']) ?></option>
@@ -120,12 +121,12 @@ if (!is_array($statistician_requirements)) {
 
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Upload Contract (Optional)</label>
-                    <input type="file" name="contract_file" accept=".pdf,.jpg,.jpeg,.png" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400">
+                    <input type="file" name="contract_file" accept=".pdf,.jpg,.jpeg,.png" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">
                     <p class="text-[11px] text-gray-400 mt-2 italic">Accepted formats: PDF, JPG, PNG. Max size: 5MB.</p>
                 </div>
 
                 <div class="pt-4 border-t border-gray-100 dark:border-warmdark-border">
-                    <button type="submit" class="w-full bg-blue-700 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
+                    <button type="submit" id="submitApplicationBtn" class="w-full bg-blue-700 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors flex justify-center items-center gap-2">
                         Submit Application Request
                     </button>
                 </div>
@@ -158,7 +159,7 @@ if (!is_array($statistician_requirements)) {
                 x-show="show"
                 x-init="setTimeout(() => show = false, 5000)"
                 x-transition.opacity.duration.500ms
-                class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
+                class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 w-full max-w-4xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -167,7 +168,7 @@ if (!is_array($statistician_requirements)) {
         <?php endif; ?>
 
         <?php if (!empty($statistician_requirements) && $appStatus === 'Approved'): ?>
-            <div x-data="{ openReqs: false }" class="bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full mb-6 overflow-hidden transition-colors">
+            <div x-data="{ openReqs: false }" class="bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full overflow-hidden transition-colors">
                 <button @click="openReqs = !openReqs" class="w-full p-4 sm:p-5 flex items-center justify-between text-left focus:outline-none hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors">
                     <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2 m-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,7 +193,7 @@ if (!is_array($statistician_requirements)) {
             </div>
         <?php endif; ?>
 
-        <div class="flex flex-wrap gap-6">
+        <div class="flex flex-wrap gap-5">
             <?php
             $canUploadNewRound = false;
             if (!$latest) {
@@ -203,12 +204,12 @@ if (!is_array($statistician_requirements)) {
             ?>
 
             <?php if ($currentStatus === 'Approved'): ?>
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-full sm:w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
                         <p class="font-semibold text-green-700 dark:text-green-500">Upload Disabled</p>
                     </div>
-                    <div class="text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/20 p-2 rounded-xl transition-colors">
+                    <div class="text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/20 p-2 rounded-xl transition-colors shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -217,12 +218,12 @@ if (!is_array($statistician_requirements)) {
 
             <?php elseif ($canUploadNewRound): ?>
                 <a href="student_dashboard.php?page=student_upload_statistician"
-                    class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
+                    class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-full sm:w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Upload Submission</p>
                     </div>
-                    <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all">
+                    <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
@@ -230,12 +231,12 @@ if (!is_array($statistician_requirements)) {
                 </a>
 
             <?php else: ?>
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-full sm:w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
                         <p class="font-semibold text-gray-600 dark:text-gray-300">Pending Submission</p>
                     </div>
-                    <div class="text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-xl transition-colors">
+                    <div class="text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-xl transition-colors shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -246,24 +247,24 @@ if (!is_array($statistician_requirements)) {
 
             <?php if ($currentStatus === 'Approved'): ?>
                 <a href="student_dashboard.php?page=student_statistician_approved_result&id=<?php echo $latest['id']; ?>"
-                    class="bg-white dark:bg-warmdark-panel shadow-sm border border-green-200 dark:border-green-900/50 border-l-4 border-l-green-500 dark:border-l-green-500 rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition group cursor-pointer">
+                    class="bg-white dark:bg-warmdark-panel shadow-sm border border-green-200 dark:border-green-900/50 border-l-4 border-l-green-500 dark:border-l-green-500 rounded-lg p-5 w-full sm:w-64 flex items-center justify-between hover:shadow-md transition group cursor-pointer">
                     <div>
                         <p class="text-xs text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-0.5">Available</p>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">View Approved Result</p>
                     </div>
-                    <div class="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 p-2 rounded-full group-hover:bg-green-100 dark:group-hover:bg-green-500/20 transition-colors">
+                    <div class="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 p-2 rounded-full group-hover:bg-green-100 dark:group-hover:bg-green-500/20 transition-colors shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </a>
             <?php else: ?>
-                <div class="bg-gray-100 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-70 transition-colors">
+                <div class="bg-gray-100 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-full sm:w-64 flex items-center justify-between opacity-70 transition-colors">
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Locked</p>
                         <p class="font-semibold text-gray-500 dark:text-gray-400">Result Not Available</p>
                     </div>
-                    <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
+                    <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
@@ -272,8 +273,8 @@ if (!is_array($statistician_requirements)) {
             <?php endif; ?>
 
             <?php if ($application && $application['assigned_name']): ?>
-                <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-64 flex items-center justify-between transition-colors">
-                    <div class="overflow-hidden pr-2">
+                <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-full sm:w-64 flex items-center justify-between transition-colors">
+                    <div class="overflow-hidden pr-3 flex-1 min-w-0">
                         <p class="text-xs text-indigo-600 dark:text-indigo-500 font-bold uppercase tracking-wider mb-0.5">Assigned To</p>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm" title="<?= htmlspecialchars($application['assigned_name']) ?>">
                             <?= htmlspecialchars($application['assigned_name']) ?>
@@ -295,28 +296,28 @@ if (!is_array($statistician_requirements)) {
 
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
-                    <thead class="text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
+                    <thead class="text-xs uppercase bg-gray-50 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                         <tr>
-                            <th class="py-2">Submission</th>
-                            <th class="py-2">File</th>
-                            <th class="py-2">Status</th>
-                            <th class="py-2">Date</th>
-                            <th class="py-2">Reports</th>
-                            <th class="py-2 text-center">Action</th>
+                            <th class="px-4 py-3 font-semibold">Submission</th>
+                            <th class="px-4 py-3 font-semibold">File</th>
+                            <th class="px-4 py-3 font-semibold">Status</th>
+                            <th class="px-4 py-3 font-semibold">Date</th>
+                            <th class="px-4 py-3 font-semibold">Reports</th>
+                            <th class="px-4 py-3 font-semibold text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
                         <?php if ($subs && $subs->num_rows > 0): ?>
                             <?php while ($row = $subs->fetch_assoc()): ?>
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
-                                    <td class="py-3 text-xs font-semibold dark:text-gray-200">Round <?php echo (int)$row['round']; ?></td>
-                                    <td class="py-3 max-w-xs">
+                                    <td class="px-4 py-3 text-xs font-semibold dark:text-gray-200">Round <?php echo (int)$row['round']; ?></td>
+                                    <td class="px-4 py-3 max-w-xs">
                                         <?php $fullName = basename($row['file_path']); ?>
                                         <span class="block truncate text-gray-700 dark:text-gray-300" title="<?php echo htmlspecialchars($fullName); ?>">
                                             <?php echo htmlspecialchars($fullName); ?>
                                         </span>
                                     </td>
-                                    <td class="py-3">
+                                    <td class="px-4 py-3">
                                         <?php
                                         $status = $row['status'];
                                         $color = "text-gray-600 dark:text-gray-400";
@@ -328,22 +329,22 @@ if (!is_array($statistician_requirements)) {
                                             <?php echo ucfirst($status); ?>
                                         </span>
                                     </td>
-                                    <td class="py-3 text-gray-500 dark:text-gray-400 text-xs">
+                                    <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
                                         <?php echo date('M d, Y', strtotime($row['uploaded_at'])); ?>
                                     </td>
-                                    <td class="py-3">
+                                    <td class="px-4 py-3">
                                         <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                             <a href="student_dashboard.php?page=student_view_statistician_report&id=<?php echo $row['id']; ?>"
-                                                class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm">
+                                                class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm inline-block">
                                                 View
                                             </a>
                                         <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
+                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed inline-block">
                                                 View
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="py-3 text-center">
+                                    <td class="px-4 py-3 text-center">
                                         <?php
                                         $canReuploadSameRound = ($status === 'Pending');
                                         ?>
@@ -362,7 +363,7 @@ if (!is_array($statistician_requirements)) {
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="6" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="6" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
                                     No submissions found.
                                 </td>
                             </tr>
@@ -374,3 +375,30 @@ if (!is_array($statistician_requirements)) {
 
     <?php endif; ?>
 </div>
+
+<!-- FULL SCREEN LOADING OVERLAY MOVED OUTSIDE SPACE-Y-6 -->
+<div id="applicationLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
+        <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Submitting Application...</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we notify your personnel.</p>
+    </div>
+</div>
+
+<script>
+    // Show loading spinner when form is submitted
+    window.showApplicationLoader = function() {
+        document.getElementById('applicationLoadingOverlay').classList.remove('hidden');
+        document.getElementById('applicationLoadingOverlay').classList.add('flex');
+        
+        // Prevent double clicking
+        const btn = document.getElementById('submitApplicationBtn');
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Processing...';
+        }
+    }
+</script>

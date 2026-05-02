@@ -30,7 +30,7 @@ if (!$transaction) {
 }
 
 $status = ucfirst($transaction['status']);
-$canUpload = in_array($status, ['No Receipt', 'Rejected']);
+$canUpload = in_array($status, ['No Receipt', 'Needs Revision']);
 ?>
 
 <div class="max-w-4xl mx-auto py-8 px-4 w-full transition-colors duration-200">
@@ -69,7 +69,7 @@ $canUpload = in_array($status, ['No Receipt', 'Rejected']);
                 if ($status === 'No Receipt') $badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-400";
                 if ($status === 'Receipt Uploaded') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
                 if ($status === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
-                if ($status === 'Rejected') $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+                if ($status === 'Needs Revision') $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
             ?>
             <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm transition-colors <?php echo $badgeColor; ?>">
                 Status: <?php echo $status; ?>
@@ -117,7 +117,8 @@ $canUpload = in_array($status, ['No Receipt', 'Rejected']);
                 </div>
 
                 <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-warmdark-border transition-colors">
-                    <button type="submit" class="bg-blue-600 dark:bg-blue-700 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
+                    <!-- ADDED id="submitUploadBtn" HERE -->
+                    <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
@@ -149,6 +150,18 @@ $canUpload = in_array($status, ['No Receipt', 'Rejected']);
                 </p>
             </div>
         <?php endif; ?>
+    </div>
+</div>
+
+<!-- FULL SCREEN LOADING OVERLAY -->
+<div id="uploadLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
+        <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Uploading Receipt...</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we process your transaction.</p>
     </div>
 </div>
 
@@ -184,7 +197,7 @@ $canUpload = in_array($status, ['No Receipt', 'Rejected']);
         container.classList.remove('flex');
     }
 
-    // Custom Form Validation
+    // Custom Form Validation & Loader Activation
     function validateForm(event) {
         const input = document.getElementById('dropzone-file');
         const errorMsg = document.getElementById('file-error');
@@ -199,6 +212,17 @@ $canUpload = in_array($status, ['No Receipt', 'Rejected']);
             dropzoneLabel.classList.add('border-red-400', 'bg-red-50', 'dark:border-red-500/50', 'dark:bg-red-900/10');
             
             return false;
+        }
+
+        // If a file IS selected, show the loading overlay
+        document.getElementById('uploadLoadingOverlay').classList.remove('hidden');
+        document.getElementById('uploadLoadingOverlay').classList.add('flex');
+        
+        // Disable the submit button to prevent double-uploads
+        const btn = document.getElementById('submitUploadBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Uploading...';
         }
         
         return true;

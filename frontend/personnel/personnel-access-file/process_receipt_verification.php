@@ -73,7 +73,7 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
             <div class="text-xs font-bold px-4 py-1.5 rounded-full border transition-colors
                     <?php
                     if ($currentStatus == 'Approved') echo 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/20 border-green-200 dark:border-green-500/30';
-                    elseif ($currentStatus == 'Rejected') echo 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-900/50';
+                    elseif ($currentStatus == '	Needs Revision') echo 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-900/50';
                     else echo 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-900/50'; ?>">
                 <?php echo $currentStatus; ?>
             </div>
@@ -81,14 +81,14 @@ $currentStatus = $data['status'] ?? 'Receipt Uploaded';
             <?php if ($currentStatus === 'Receipt Uploaded'): ?>
                 <div class="flex gap-3">
                     <button
-                        onclick="updateReceiptStatus(<?php echo $data['id']; ?>,'Approved')"
+                        onclick="window.showVerificationLoader(); updateReceiptStatus(<?php echo $data['id']; ?>,'Approved')"
                         class="px-5 py-2 text-xs font-bold bg-gray-100 dark:bg-warmdark-bg rounded-lg transition-colors text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-warmdark-border">
                         Approve
                     </button>
                     <button
-                        onclick="updateReceiptStatus(<?php echo $data['id']; ?>,'Rejected')"
+                        onclick="window.showVerificationLoader(); updateReceiptStatus(<?php echo $data['id']; ?>,'Needs Revision')"
                         class="px-5 py-2 text-xs font-bold bg-gray-100 dark:bg-warmdark-bg rounded-lg transition-colors text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-warmdark-border">
-                        Reject
+                        Revision
                     </button>
                 </div>
             <?php endif; ?>

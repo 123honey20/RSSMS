@@ -73,8 +73,10 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             <button onclick="closeReqModal()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
         </div>
 
-        <form action="../../backend/actions/process_application_action.php" method="POST" class="p-6">
+        <form action="../../backend/actions/process_application_action.php" method="POST" class="p-6" onsubmit="showProcessLoader()">
+
             <input type="hidden" name="application_id" id="modal_req_app_id">
+            <input type="hidden" name="action" id="hidden_action_input" value="">
 
             <div class="mb-5 bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border">
                 <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student Control No.</p>
@@ -106,10 +108,10 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             </div>
 
             <div id="modal_action_buttons" class="flex items-center gap-3 border-t border-gray-100 dark:border-warmdark-border pt-4">
-                <button type="submit" name="action" value="Reject" class="w-1/3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/50 py-2.5 rounded-lg font-bold text-sm transition-colors">
+                <button type="submit" onclick="document.getElementById('hidden_action_input').value = 'Reject';" class="w-1/3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/50 py-2.5 rounded-lg font-bold text-sm transition-colors">
                     Reject
                 </button>
-                <button type="submit" name="action" value="Approve" class="w-2/3 bg-green-600 text-white hover:bg-green-700 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors">
+                <button type="submit" onclick="document.getElementById('hidden_action_input').value = 'Approve';" class="w-2/3 bg-green-600 text-white hover:bg-green-700 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors">
                     Approve & Assign
                 </button>
             </div>
@@ -120,6 +122,18 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- FULL SCREEN LOADING OVERLAY -->
+<div id="processLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
+        <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Processing Request...</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we notify the student and personnel.</p>
     </div>
 </div>
 
@@ -185,7 +199,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     window.setReqStatusFilter = function(status) {
         reqStatusFilter = status;
-        // Added 'All' to array
         ['All', 'Pending', 'Approved', 'Rejected'].forEach(btn => {
             var el = document.getElementById('btn-status-' + btn);
             if (el) {
@@ -238,12 +251,10 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         if (status === 'Pending') {
                             isSelected = (p.id == reqPersonnelId) ? 'selected' : '';
                         } else {
-                            // If reviewing an approved request, select the officially assigned person
                             if (status === 'Approved' && p.id == assignedPersonnelId) {
                                 isSelected = 'selected';
                                 labelSuffix += ' - ASSIGNED';
                             }
-                            // If reviewing a rejected request, just select the requested person
                             else if (status === 'Rejected' && p.id == reqPersonnelId) {
                                 isSelected = 'selected';
                             }
@@ -255,7 +266,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             })
             .catch(err => console.error("Error fetching personnel:", err));
 
-        // Toggle Buttons for Process vs Review
         var actionBtns = document.getElementById('modal_action_buttons');
         var closeBtn = document.getElementById('modal_close_only_button');
 
@@ -278,8 +288,21 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         document.getElementById('processRequestModal').classList.remove('flex');
     };
 
+    // --- NEW: Loading Overlay Script ---
+    window.showProcessLoader = function() {
+        // Hide modal
+        document.getElementById('processRequestModal').classList.add('hidden');
+        
+        // Show loader
+        document.getElementById('processLoadingOverlay').classList.remove('hidden');
+        document.getElementById('processLoadingOverlay').classList.add('flex');
+        
+        // Disable buttons so admin doesn't double click
+        const btns = document.querySelectorAll('#modal_action_buttons button');
+        btns.forEach(btn => btn.disabled = true);
+    }
+
     setTimeout(() => {
-        // Listen to new Dept Filter
         var deptEl = document.getElementById('reqDeptFilter');
         if (deptEl) {
             deptEl.addEventListener('change', () => {

@@ -304,9 +304,9 @@ $recent_query = $conn->query("
         new Chart(document.getElementById('recStatusChart').getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Approved', 'Uploaded', 'Rejected', 'No Receipt'],
+                labels: ['Approved', 'Uploaded', 'Needs Revision', 'No Receipt'],
                 datasets: [{
-                    data: [<?= $rec_status['Approved'] ?>, <?= $rec_status['Receipt Uploaded'] ?>, <?= $rec_status['Rejected'] ?>, <?= $rec_status['No Receipt'] ?>],
+                    data: [<?= $rec_status['Approved'] ?>, <?= $rec_status['Receipt Uploaded'] ?>, <?= $rec_status['Needs Revision'] ?>, <?= $rec_status['No Receipt'] ?>],
                     backgroundColor: ['#22c55e', '#a855f7', '#ef4444', '#9ca3af'],
                     borderWidth: 0,
                     hoverOffset: 4

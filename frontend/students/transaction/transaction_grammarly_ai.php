@@ -63,9 +63,9 @@ if (!$latestTransaction) {
             LIMIT 1
         ");
         $latestSubmission = $subCheck->fetch_assoc();
-        // If a submission exists for this round AND it was Rejected,
+        // If a submission exists for this round AND it was Needs Revision,
         // ONLY THEN can they request a new receipt transaction for Round 2.
-        if ($latestSubmission && $latestSubmission['status'] === 'Rejected') {
+        if ($latestSubmission && $latestSubmission['status'] === 'Needs Revision') {
             $canCreateNewRound = true;
         }
     }
@@ -156,7 +156,7 @@ if (!$latestTransaction) {
                                         $status = $row['status'];
                                         $badgeColor = "text-gray-700 dark:text-gray-400";
                                         if ($status === "Approved") $badgeColor = "text-green-700 dark:text-green-400";
-                                        if ($status === "Rejected") $badgeColor = "text-red-700 dark:text-red-400";
+                                        if ($status === "Needs Revision") $badgeColor = "text-red-700 dark:text-red-400";
                                         if ($status === "Receipt Uploaded") $badgeColor = "text-yellow-700 dark:text-yellow-400";
                                         ?>
                                         <span class="py-1.5 text-xs font-bold <?php echo $badgeColor; ?>">
@@ -169,13 +169,13 @@ if (!$latestTransaction) {
                                     </td>
 
                                     <td class="px-6 py-5 text-center">
-                                        <?php if ($status === 'No Receipt' || $status === 'Rejected'): ?>
+                                        <?php if ($status === 'No Receipt' || $status === 'Needs Revision'): ?>
                                             <a href="student_dashboard.php?page=student_transaction_receipt_grammarly_ai&round=<?php echo $row['round']; ?>"
                                                 class="inline-flex items-center justify-center bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors gap-2">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                                 </svg>
-                                                <?php echo $status === 'Rejected' ? 'Re-upload Receipt' : 'Upload Receipt'; ?>
+                                                <?php echo $status === 'Needs Revision' ? 'Re-upload Receipt' : 'Upload Receipt'; ?>
                                             </a>
                                         
                                         <?php elseif ($status === 'Approved'): ?>

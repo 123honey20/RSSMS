@@ -17,7 +17,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 $id = intval($data['id'] ?? 0);
 $status = $data['status'] ?? '';
 
-if (!in_array($status, ['Approved', 'Rejected'])) {
+if (!in_array($status, ['Approved', 'Needs Revision'])) {
     echo json_encode(["success" => false, "message" => "Invalid Status"]);
     exit;
 }

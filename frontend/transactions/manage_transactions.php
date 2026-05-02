@@ -50,7 +50,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
             <option value="No Receipt">No Receipt</option>
             <option value="Receipt Uploaded">Receipt Uploaded</option>
             <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Needs Revision">Needs Revision</option>
         </select>
     </div>
 
@@ -127,7 +127,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                     let badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-transparent dark:border-warmdark-border"; 
                     if (row.status === 'Receipt Uploaded') badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-transparent dark:border-yellow-900/50";
                     if (row.status === 'Approved') badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-transparent dark:border-green-500/30";
-                    if (row.status === 'Rejected') badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
+                    if (row.status === 'Needs Revision') badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
 
                     let statusBadge = `<span class="px-3 py-1 rounded-md text-[10px] font-bold uppercase ${badgeColor}">${row.status}</span>`;
 
