@@ -22,7 +22,7 @@ function redirectWithError($message, $url, $fileToTrash = null) {
 }
 
 // Fetch student data
-$stmt = $conn->prepare("SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, u.email, u.school_id FROM students s JOIN users u ON s.user_id = u.id WHERE u.id = ?");
+$stmt = $conn->prepare("SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, u.email, u.school_id, d.name as dept_name FROM students s JOIN users u ON s.user_id = u.id JOIN departments d ON s.department_id = d.id WHERE u.id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $studentData = $stmt->get_result()->fetch_assoc();
@@ -33,7 +33,17 @@ $studentName = $studentData['research_leader'];
 $controlNo = $studentData['control_number'];
 $thesisTitle = $studentData['thesis_title'];
 $studentDeptId = $studentData['department_id'];
+$studentDeptName = $studentData['dept_name'];
 $stmt->close();
+
+// --- NEW: FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Librarian'");
+$reqStmt->bind_param("i", $studentDeptId);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; // Default 1
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; // Default 7
+$reqStmt->close();
 
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
     redirectWithError("Please select a valid file.", $redirect_url);
@@ -49,35 +59,53 @@ $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 if (!in_array($ext, ['pdf','docx','doc','odt','rtf','txt','pptx'])) redirectWithError("Invalid file type.", $redirect_url);
 
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-    $checkStmt = $conn->prepare("SELECT * FROM librarian WHERE student_id = ? ORDER BY round DESC LIMIT 1");
+    
+    // Get the latest submission (ordering by phase first, then round)
+    $checkStmt = $conn->prepare("SELECT * FROM librarian WHERE student_id = ? ORDER BY phase DESC, round DESC LIMIT 1");
     $checkStmt->bind_param("i", $student_id);
     $checkStmt->execute();
     $latest = $checkStmt->get_result()->fetch_assoc();
     $checkStmt->close();
 
-    $round = 1;
     $assigned_personnel_id = null; 
+    $phase = 1;
+    $round = 1;
 
     if ($latest) {
         $assigned_personnel_id = $latest['personnel_id'];
+        $phase = (int)($latest['phase'] ?? 1);
+        $round = (int)$latest['round'];
+
         if ($latest['status'] === 'Pending') {
             if (file_exists($targetDir . $latest['file_path'])) unlink($targetDir . $latest['file_path']);
             $stmt = $conn->prepare("UPDATE librarian SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
-            $round = $latest['round'];
+            
         } elseif ($latest['status'] === 'Needs Revision') {
-            if ($latest['round'] >= 7) redirectWithError("Maximum rounds reached.", $redirect_url, $targetFile);
-            $round = $latest['round'] + 1;
-            $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");
-            $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $assigned_personnel_id);
+            // Check Round Limit
+            if ($round >= $max_rounds) {
+                redirectWithError("You have reached the maximum round limit ($max_rounds) for Phase $phase.", $redirect_url, $targetFile);
+            }
+            $round++; // Advance Round
+            $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
             $stmt->execute();
-        } else {
-            redirectWithError("Already approved.", $redirect_url, $targetFile);
+
+        } elseif ($latest['status'] === 'Approved') {
+            // Check Phase Limit
+            if ($phase >= $max_phases) {
+                redirectWithError("You have already completed all required phases for Librarian.", $redirect_url, $targetFile);
+            }
+            $phase++; // Advance Phase
+            $round = 1; // Reset Round
+            $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
+            $stmt->execute();
         }
     } else {
-        $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', ?)");
-        $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
+        $stmt = $conn->prepare("INSERT INTO librarian (student_id, school_id, file_path, status, round, phase) VALUES (?, ?, ?, 'Pending', ?, ?)");
+        $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $phase);
         $stmt->execute();
     }
 
@@ -99,8 +127,9 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
 
         // 1. Email to Student
         $mail->addAddress($studentEmail, $studentName);
-        $mail->Subject = "Librarian Review Document Submitted - Round $round";
-        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for <strong>Librarian review</strong> has been uploaded for Round $round.</p><p><strong>Control No:</strong> $controlNo</p></div>" . $footer;
+        $phaseText = $max_phases > 1 ? "Phase $phase, " : "";
+        $mail->Subject = "Librarian Review Document Submitted - {$phaseText}Round $round";
+        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for <strong>Librarian review</strong> has been uploaded for {$phaseText}Round $round.</p><p><strong>Control No:</strong> $controlNo</p></div>" . $footer;
         $mail->send();
 
         // 2. Email to Personnel (UPDATED TO USE JUNCTION TABLE)
@@ -135,14 +164,14 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         }
         
         if ($personnelEmailsFound) {
-            $mail->Subject = "ACTION REQUIRED: Librarian Submission Round $round - $controlNo";
+            $mail->Subject = "ACTION REQUIRED: Librarian Submission {$phaseText}Round $round - $controlNo";
             $mail->Body = $header . "
                 <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Submission Task</h1></div>
                 <div style='padding:30px;line-height:1.6;color:#334155;'>
                     <p>A new research document is ready for librarian review from your department.</p>
                     <div style='background:#eff6ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;'>
                         <p style='margin:0;'><strong>Student:</strong> $studentName</p>
-                        <p style='margin:0;'><strong>Round:</strong> $round</p>
+                        <p style='margin:0;'><strong>Phase & Round:</strong> <span style='background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:bold;'>{$phaseText}Round $round</span></p>
                         <p style='margin:5px 0 0 0;'><strong>Title:</strong> $thesisTitle</p>
                     </div>
                     <p>Please log in to the dashboard to review.</p>

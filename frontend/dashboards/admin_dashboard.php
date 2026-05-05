@@ -160,6 +160,12 @@ $stmt->close();
                             </svg>
                             View Courses
                         </a>
+                        <a href="admin_dashboard.php?page=service_requirements" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            Service Requirements
+                        </a>
                     </div>
                 </div>
 
@@ -348,6 +354,9 @@ $stmt->close();
                         break;
                     case 'edit_course':
                         include '../department-courses/edit_course.php';
+                        break;
+                    case 'service_requirements':
+                        include '../department-courses/service_requirements.php';
                         break;
                     case 'feedback_admin':
                         include '../feedback/feedback-admin/admin_feedback.php';

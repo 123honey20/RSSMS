@@ -17,6 +17,15 @@ $student = $res->fetch_assoc();
 $student_id = $student['id'];
 $student_dept_id = $student['department_id'];
 
+// --- NEW: GET ADMIN RULES FOR PHASES/ROUNDS ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Human Grammarian'");
+$reqStmt->bind_param("i", $student_dept_id);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7;
+$reqStmt->close();
+
 // 2. Check the Service Application Status
 $appStmt = $conn->prepare("
     SELECT sa.*, 
@@ -48,13 +57,16 @@ if ($student_id) {
 $subs = null;
 $latest = null;
 $currentRound = 0;
+$currentPhase = 1;
 $currentStatus = null;
 
 if ($appStatus === 'Approved') {
-    $subs = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY round DESC, uploaded_at DESC");
-    $latestRes = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY round DESC LIMIT 1");
+    // Included phase in the ORDER BY
+    $subs = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC, uploaded_at DESC");
+    $latestRes = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
     $latest = $latestRes->fetch_assoc();
     $currentRound = $latest ? (int)$latest['round'] : 0;
+    $currentPhase = $latest ? (int)($latest['phase'] ?? 1) : 1;
     $currentStatus = $latest ? $latest['status'] : null;
 }
 
@@ -131,21 +143,26 @@ if (!is_array($human_grammarian_requirements)) {
         <div class="flex flex-wrap gap-6">
 
             <?php
+            // --- NEW PHASE LOGIC ALGORITHM ---
+            $isFullyCompleted = ($currentStatus === 'Approved' && $currentPhase >= $max_phases);
             $canUploadNewRound = false;
 
             if (!$latest) {
                 $canUploadNewRound = true; // no submission yet
-            } elseif ($currentStatus === 'Needs Revision' && $currentRound < 7) {
+            } elseif ($currentStatus === 'Needs Revision' && $currentRound < $max_rounds) {
                 $canUploadNewRound = true; // can go to next round
+            } elseif ($currentStatus === 'Approved' && $currentPhase < $max_phases) {
+                $canUploadNewRound = true; // can go to next phase
             }
             ?>
 
-            <?php if ($currentStatus === 'Approved'): ?>
+            <!-- UPLOAD CARD -->
+            <?php if ($isFullyCompleted): ?>
 
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-green-200 dark:border-green-900/50 rounded-lg p-5 w-64 flex items-center justify-between opacity-90 transition-colors">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-green-700 dark:text-green-500">Upload Disabled</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                        <p class="font-semibold text-green-700 dark:text-green-500">Fully Completed</p>
                     </div>
                     <div class="text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/20 p-2 rounded-xl transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -159,7 +176,11 @@ if (!is_array($human_grammarian_requirements)) {
                 <a href="student_dashboard.php?page=student_upload_human_grammarian"
                     class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
+                        <?php if ($max_phases > 1): ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Phase <?= $currentStatus === 'Approved' ? $currentPhase + 1 : $currentPhase ?></p>
+                        <?php else: ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Upload</p>
+                        <?php endif; ?>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Upload Submission</p>
                     </div>
                     <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all">
@@ -173,8 +194,12 @@ if (!is_array($human_grammarian_requirements)) {
 
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-gray-600 dark:text-gray-300">Pending Submission</p>
+                        <?php if ($max_phases > 1): ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Phase <?= $currentPhase ?></p>
+                        <?php else: ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Upload</p>
+                        <?php endif; ?>
+                        <p class="font-semibold text-gray-600 dark:text-gray-300">Pending Review</p>
                     </div>
                     <div class="text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-xl transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -185,12 +210,13 @@ if (!is_array($human_grammarian_requirements)) {
 
             <?php endif; ?>
 
-            <?php if ($currentStatus === 'Approved'): ?>
+            <!-- RESULT CARD (UPDATED LOGIC) -->
+            <?php if ($isFullyCompleted): ?>
                 <a href="student_dashboard.php?page=student_human_grammarian_approved_result&id=<?php echo $latest['id']; ?>"
                     class="bg-white dark:bg-warmdark-panel shadow-sm border border-green-200 dark:border-green-900/50 border-l-4 border-l-green-500 dark:border-l-green-500 rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition group cursor-pointer">
                     <div>
-                        <p class="text-xs text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-0.5">Available</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">View Approved Result</p>
+                        <p class="text-xs text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-0.5">Final Result</p>
+                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">View Approved File</p>
                     </div>
                     <div class="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 p-2 rounded-full group-hover:bg-green-100 dark:group-hover:bg-green-500/20 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -202,7 +228,11 @@ if (!is_array($human_grammarian_requirements)) {
                 <div class="bg-gray-100 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-70 transition-colors">
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Locked</p>
-                        <p class="font-semibold text-gray-500 dark:text-gray-400">Result Not Available</p>
+                        <?php if ($max_phases > 1 && $currentPhase > 1): ?>
+                            <p class="font-semibold text-gray-500 dark:text-gray-400 text-[13px]">Must complete Phase <?php echo $max_phases; ?></p>
+                        <?php else: ?>
+                            <p class="font-semibold text-gray-500 dark:text-gray-400">Result Not Available</p>
+                        <?php endif; ?>
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -212,6 +242,7 @@ if (!is_array($human_grammarian_requirements)) {
                 </div>
             <?php endif; ?>
 
+            <!-- PERSONNEL CARD -->
             <?php if ($application && $application['assigned_name']): ?>
                 <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-64 flex items-center justify-between transition-colors">
                     <div class="overflow-hidden pr-2">
@@ -251,7 +282,12 @@ if (!is_array($human_grammarian_requirements)) {
                             <?php $i = 1; ?>
                             <?php while ($row = $subs->fetch_assoc()): ?>
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
-                                    <td class="py-3 text-xs font-semibold dark:text-gray-200">Round <?php echo (int)$row['round']; ?></td>
+                                    <td class="py-3 text-xs font-semibold dark:text-gray-200">
+                                        <?php if ($max_phases > 1): ?>
+                                            Phase <?php echo (int)($row['phase'] ?? 1); ?>, 
+                                        <?php endif; ?>
+                                        Round <?php echo (int)$row['round']; ?>
+                                    </td>
 
                                     <td class="py-3 max-w-xs">
                                         <?php
@@ -293,11 +329,7 @@ if (!is_array($human_grammarian_requirements)) {
                                     </td>
                                     <td class="py-3 text-center">
                                         <?php
-                                        $round = (int)$row['round'];
-                                        $status = $row['status'];
-
-                                        $canReuploadSameRound = ($status === 'Pending');
-                                        $disabled = ($status === 'Needs Revision' || $status === 'Approved');
+                                        $canReuploadSameRound = ($status === 'Pending' && $row['id'] == $latest['id']);
                                         ?>
 
                                         <?php if ($canReuploadSameRound): ?>

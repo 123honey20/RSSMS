@@ -34,6 +34,15 @@ $studentDeptId = $studentData['department_id'];
 $school_id = $studentData['school_id'];
 $stmt->close();
 
+// --- NEW: FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Statistician'");
+$reqStmt->bind_param("i", $studentDeptId);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; // Default 1
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; // Default 7
+$reqStmt->close();
+
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
     redirectWithError("Please select a valid file.", $redirect_url);
 }
@@ -44,39 +53,56 @@ $targetDir = "../../../uploads/statistician/";
 $targetFile = $targetDir . $filename;
 
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-    $checkStmt = $conn->prepare("SELECT * FROM statistician WHERE student_id = ? ORDER BY round DESC LIMIT 1");
+    // Get the latest submission (ordering by phase first, then round)
+    $checkStmt = $conn->prepare("SELECT * FROM statistician WHERE student_id = ? ORDER BY phase DESC, round DESC LIMIT 1");
     $checkStmt->bind_param("i", $student_id);
     $checkStmt->execute();
     $latest = $checkStmt->get_result()->fetch_assoc();
     $checkStmt->close();
 
     $assigned_personnel_id = null;
+    $phase = 1;
     $round = 1;
 
     if ($latest) {
         $assigned_personnel_id = $latest['personnel_id'];
+        $phase = (int)($latest['phase'] ?? 1);
+        $round = (int)$latest['round'];
+
         if ($latest['status'] === 'Pending') {
             if (file_exists($targetDir . $latest['file_path'])) unlink($targetDir . $latest['file_path']);
             $stmt = $conn->prepare("UPDATE statistician SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
-            $round = $latest['round'];
+            
         } elseif ($latest['status'] === 'Needs Revision') {
-            $round = $latest['round'] + 1;
-            // FIXED: Ensured parameter count matches question marks
-            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?)");
-            $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $assigned_personnel_id);
+            // Check Round Limit
+            if ($round >= $max_rounds) {
+                redirectWithError("You have reached the maximum round limit ($max_rounds) for Phase $phase.", $redirect_url, $targetFile);
+            }
+            $round++; // Advance Round
+            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
             $stmt->execute();
-        } else {
-            redirectWithError("Already approved.", $redirect_url, $targetFile);
+
+        } elseif ($latest['status'] === 'Approved') {
+            // Check Phase Limit
+            if ($phase >= $max_phases) {
+                redirectWithError("You have already completed all required phases for Statistician.", $redirect_url, $targetFile);
+            }
+            $phase++; // Advance Phase
+            $round = 1; // Reset Round
+            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
+            $stmt->execute();
         }
     } else {
-        // FIXED: The SQL Query error is solved here
-        $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round) VALUES (?, ?, ?, 'Pending', ?)");
-        $stmt->bind_param("issi", $student_id, $school_id, $filename, $round);
+        $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase) VALUES (?, ?, ?, 'Pending', ?, ?)");
+        $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $phase);
         $stmt->execute();
     }
 
+    // --- EMAIL LOGIC ---
     try {
         $mail = new PHPMailer(true);
         $mail->isSMTP();
@@ -94,8 +120,9 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
 
         // Student Email
         $mail->addAddress($studentEmail, $studentName);
-        $mail->Subject = "Statistician Review Submitted - Round $round";
-        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for Statistical Review has been uploaded for Round $round.</p></div>" . $footer;
+        $phaseText = $max_phases > 1 ? "Phase $phase, " : "";
+        $mail->Subject = "Statistician Review Submitted - {$phaseText}Round $round";
+        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for Statistical Review has been uploaded for {$phaseText}Round $round.</p></div>" . $footer;
         $mail->send();
 
         // Personnel Email Logic
@@ -103,7 +130,6 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $personnelEmailsFound = false;
 
         if ($assigned_personnel_id) {
-            // If they are on round 2+, notify the specific personnel assigned to them
             $stmtP = $conn->prepare("SELECT u.email, p.full_name FROM users u JOIN personnel p ON u.id = p.user_id WHERE p.id = ?");
             $stmtP->bind_param("i", $assigned_personnel_id);
             $stmtP->execute();
@@ -113,7 +139,6 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                 $personnelEmailsFound = true;
             }
         } else {
-            // FIXED: Using the new Junction Table to find all Statisticians handling this student's department
             $stmtP = $conn->prepare("
                 SELECT u.email, p.full_name 
                 FROM personnel_departments pd
@@ -132,8 +157,17 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         }
         
         if ($personnelEmailsFound) {
-            $mail->Subject = "ACTION REQUIRED: Statistical Submission Round $round - $controlNo";
-            $mail->Body = $header . "<div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Statistician Task</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>A document is ready for statistical review.</p><div style='background:#eff6ff; padding: 15px; margin: 20px 0;'><strong>Student:</strong> $studentName<br><strong>Title:</strong> $thesisTitle</div></div>" . $footer;
+            $mail->Subject = "ACTION REQUIRED: Statistical Submission {$phaseText}Round $round - $controlNo";
+            $mail->Body = $header . "
+                <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Statistician Task</h1></div>
+                <div style='padding:30px;line-height:1.6;color:#334155;'>
+                    <p>A document is ready for statistical review.</p>
+                    <div style='background:#eff6ff; padding: 15px; margin: 20px 0;'>
+                        <strong>Student:</strong> $studentName<br>
+                        <strong>Phase & Round:</strong> <span style='background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:bold;'>{$phaseText}Round $round</span><br>
+                        <strong>Title:</strong> $thesisTitle
+                    </div>
+                </div>" . $footer;
             $mail->send();
         }
     } catch (Exception $e) { 

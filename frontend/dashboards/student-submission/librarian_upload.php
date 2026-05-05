@@ -10,15 +10,25 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// Get student id
+// Get student id and department
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, department_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
+$student_dept_id = $student['department_id'];
+
+// --- GET ADMIN RULES TO KNOW MAX PHASES ---
+$reqStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = ? AND service_type = 'Librarian'");
+$reqStmt->bind_param("i", $student_dept_id);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
+$reqStmt->close();
 
 // Check if already has submission (getting the latest round)
-$sub = $conn->query("SELECT * FROM librarian WHERE student_id = $student_id ORDER BY round DESC LIMIT 1");
+$sub = $conn->query("SELECT * FROM librarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
 $existing = $sub->fetch_assoc();
+$currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
 ?>
 
 <div class="max-w-4xl mx-auto py-8 px-4 w-full transition-colors duration-200">
@@ -32,16 +42,7 @@ $existing = $sub->fetch_assoc();
             </div>
             <span class="font-medium text-sm"><?php echo $_SESSION['flash_success']; ?></span>
         </div>
-
-        <script>
-            setTimeout(() => {
-                const toast = document.getElementById('toast-success');
-                if (toast) {
-                    toast.classList.add('opacity-0', 'translate-x-full');
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 3000);
-        </script>
+        <script>setTimeout(() => { document.getElementById('toast-success')?.classList.add('opacity-0', 'translate-x-full'); }, 3000);</script>
         <?php unset($_SESSION['flash_success']); ?>
     <?php endif; ?>
 
@@ -54,23 +55,18 @@ $existing = $sub->fetch_assoc();
             </div>
             <span class="font-medium text-sm"><?php echo $_SESSION['flash_error']; ?></span>
         </div>
-
-        <script>
-            setTimeout(() => {
-                const toast = document.getElementById('toast-error');
-                if (toast) {
-                    toast.classList.add('opacity-0', 'translate-x-full');
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 4000);
-        </script>
+        <script>setTimeout(() => { document.getElementById('toast-error')?.classList.add('opacity-0', 'translate-x-full'); }, 4000);</script>
         <?php unset($_SESSION['flash_error']); ?>
     <?php endif; ?>
 
     <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Librarian Upload</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document to review by the Librarian Personnel.</p>
+            <?php if ($max_phases > 1): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document for Phase <?= $existing && $existing['status'] === 'Approved' ? $currentPhase + 1 : $currentPhase ?>.</p>
+            <?php else: ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document to review by the Librarian Personnel.</p>
+            <?php endif; ?>
         </div>
         <a href="student_dashboard.php?page=students_rs_librarian" 
            class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
@@ -92,8 +88,18 @@ $existing = $sub->fetch_assoc();
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Existing Submission Found (Round <?php echo $existing['round']; ?>)</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Uploading a new file will replace your current submission round.</p>
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                            <?php if ($max_phases > 1): ?>
+                                Current Progress: Phase <?= $currentPhase ?> (Round <?php echo $existing['round']; ?>)
+                            <?php else: ?>
+                                Existing Submission Found (Round <?php echo $existing['round']; ?>)
+                            <?php endif; ?>
+                        </h3>
+                        <?php if ($existing['status'] === 'Approved'): ?>
+                            <p class="text-xs text-green-600 dark:text-green-400 mt-0.5 font-semibold">Ready for Phase <?= $currentPhase + 1 ?> Upload.</p>
+                        <?php else: ?>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Uploading a new file will replace your current submission.</p>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
@@ -102,7 +108,10 @@ $existing = $sub->fetch_assoc();
                     $badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-400";
                     if ($status === 'Pending') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
                     if ($status === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
-                    if ($status === 'Needs Revision') $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+                    if ($status === 'Needs Revision' || $status === 'Rejected') {
+                        $status = 'Needs Revision';
+                        $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+                    }
                 ?>
                 <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm transition-colors <?php echo $badgeColor; ?>">
                     Status: <?php echo $status; ?>
@@ -132,7 +141,7 @@ $existing = $sub->fetch_assoc();
                     Please select a document before submitting.
                 </p>
                 
-                <div id="file-display-container" class="hidden mt-4 items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-900/50 rounded-lg transition-colors">
+                <div id="file-display-container" class="hidden mt-4 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-900/50 rounded-lg transition-colors">
                     <div class="flex items-center gap-3 overflow-hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 dark:text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -148,12 +157,11 @@ $existing = $sub->fetch_assoc();
             </div>
 
             <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-warmdark-border transition-colors">
-                <!-- ADDED id="submitUploadBtn" -->
                 <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
-                    <?php echo $existing ? "Confirm Re-upload" : "Submit Document"; ?>
+                    <?php echo ($existing && $existing['status'] !== 'Approved') ? "Confirm Re-upload" : "Submit Document"; ?>
                 </button>
             </div>
 
@@ -185,7 +193,6 @@ $existing = $sub->fetch_assoc();
             container.classList.remove('hidden');
             container.classList.add('flex');
             
-            // Hide error state if they select a file
             errorMsg.classList.add('hidden');
             dropzoneLabel.classList.remove('border-red-400', 'bg-red-50', 'dark:border-red-500/50', 'dark:bg-red-900/10');
         } else {
@@ -194,38 +201,30 @@ $existing = $sub->fetch_assoc();
         }
     }
 
-    // Allows the user to clear their file selection
     function clearFileSelection() {
         const input = document.getElementById('dropzone-file');
         const container = document.getElementById('file-display-container');
         
-        input.value = ""; // Clear the file input
-        container.classList.add('hidden'); // Hide the display container
+        input.value = ""; 
+        container.classList.add('hidden');
         container.classList.remove('flex');
     }
 
-    // Custom Form Validation
     function validateForm(event) {
         const input = document.getElementById('dropzone-file');
         const errorMsg = document.getElementById('file-error');
         const dropzoneLabel = document.getElementById('dropzone-label');
         
-        // If no file is selected
         if (!input.files || input.files.length === 0) {
-            event.preventDefault(); // Stop form from submitting
-            
-            // Show custom error text and turn the dropzone red
+            event.preventDefault(); 
             errorMsg.classList.remove('hidden');
             dropzoneLabel.classList.add('border-red-400', 'bg-red-50', 'dark:border-red-500/50', 'dark:bg-red-900/10');
-            
             return false;
         }
         
-        // If a file IS selected, show the loading overlay
         document.getElementById('uploadLoadingOverlay').classList.remove('hidden');
         document.getElementById('uploadLoadingOverlay').classList.add('flex');
         
-        // Disable the submit button to prevent double-uploads
         const btn = document.getElementById('submitUploadBtn');
         if (btn) {
             btn.disabled = true;
