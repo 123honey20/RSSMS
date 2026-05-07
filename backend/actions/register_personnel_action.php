@@ -10,7 +10,7 @@ $role       = trim($_POST['role']);
 $departments = isset($_POST['personnel_departments']) ? $_POST['personnel_departments'] : [];
 $primary_dept = (!empty($departments)) ? intval($departments[0]) : NULL;
 
-// 1. PRE-CHECK: Ensure School ID and Email are unique before doing anything else
+// 1. PRE-CHECK: Ensure ID Number and Email are unique before doing anything else
 $check_stmt = $conn->prepare("SELECT school_id, email FROM users WHERE school_id = ? OR email = ? LIMIT 1");
 $check_stmt->bind_param("ss", $school_id, $email);
 $check_stmt->execute();

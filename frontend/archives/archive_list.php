@@ -37,7 +37,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <input type="text" id="archiveSearch" placeholder="Search by School ID..." class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
+        <input type="text" id="archiveSearch" placeholder="Search by ID Number..." class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
         <select id="syFilter" class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium transition-colors shadow-sm">
             <option value="All">All School Years</option>
@@ -67,7 +67,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
         <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                 <tr>
-                    <th class="px-6 py-4 font-semibold text-center">School ID</th>
+                    <th class="px-6 py-4 font-semibold text-center">ID Number</th>
                     <th class="px-6 py-4 font-semibold">Thesis Title</th>
                     <th class="px-6 py-4 font-semibold text-center">Round</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
@@ -93,7 +93,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
                 <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student School ID</p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student ID Number</p>
                     <p class="font-bold text-gray-900 dark:text-gray-100" id="m_school_id"></p>
                 </div>
                 <div>

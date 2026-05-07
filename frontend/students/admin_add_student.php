@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $check->store_result();
 
         if ($check->num_rows > 0) {
-            $error = "Email or School ID already exists.";
+            $error = "Email or ID Number already exists.";
         } else {
             $hashedPassword = password_hash($password_raw, PASSWORD_DEFAULT);
 
@@ -90,8 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">School ID</label>
-                <input type="text" name="school_id" placeholder="Enter Student School ID" required 
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">ID Number</label>
+                <input type="text" name="school_id" placeholder="Enter Student ID Number" required 
                     class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
             </div>
             <div>

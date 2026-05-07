@@ -85,7 +85,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
 
                 <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">ID Number</p>
                     <p class="font-bold text-gray-900 dark:text-gray-100" id="p_school_id"></p>
                 </div>
                 <div>

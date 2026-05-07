@@ -451,7 +451,7 @@ $stmt->close();
             <div class="p-6 overflow-y-auto max-h-[80vh]">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
                     <div>
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">ID Number</p>
                         <p class="font-bold text-gray-900 dark:text-gray-100" id="p_school_id"></p>
                     </div>
                     <div>
@@ -514,7 +514,7 @@ $stmt->close();
                     <div class="border-t border-gray-100 dark:border-warmdark-border my-1"></div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">ID Number</p>
                             <p class="font-bold text-gray-900 dark:text-gray-100" id="master_p_school_id"></p>
                         </div>
                         <div>
@@ -561,7 +561,7 @@ $stmt->close();
                             </svg>
                         </div>
                         <div>
-                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Admin School ID</p>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Admin ID Number</p>
                             <p class="font-bold text-xl text-gray-900 dark:text-gray-100 leading-none"><?php echo htmlspecialchars($admin_profile['school_id'] ?? 'N/A'); ?></p>
                         </div>
                     </div>

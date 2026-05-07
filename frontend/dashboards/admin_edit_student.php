@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $checkDup->execute();
     
     if ($checkDup->get_result()->num_rows > 0) {
-        $error = "This School ID or Email is already in use by another account.";
+        $error = "This ID Number or Email is already in use by another account.";
     } else {
         // Update users table
         $stmt1 = $conn->prepare("UPDATE users SET school_id = ?, email = ? WHERE id = ?");
@@ -100,7 +100,7 @@ if (!$data) {
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">School ID</label>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">ID Number</label>
                 <input type="text" name="school_id" required 
                     value="<?php echo htmlspecialchars($_POST['school_id'] ?? $data['school_id']); ?>" 
                     class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:outline-none transition-all shadow-sm">

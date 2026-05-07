@@ -38,7 +38,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         <input
             type="text"
             id="studentSearch"
-            placeholder="Search by School ID..."
+            placeholder="Search by ID Number..."
             class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
         <select id="deptFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
@@ -78,7 +78,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b dark:border-warmdark-border">
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">#</th>
-                    <th class="px-6 py-4 font-semibold">School ID</th>
+                    <th class="px-6 py-4 font-semibold">ID Number</th>
                     <th class="px-6 py-4 font-semibold max-w-xs">Department</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Profile</th>
@@ -150,7 +150,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                         </td>
                     `;
 
-                    // 1. Inject School ID
+                    // 1. Inject ID Number
                     row.children[1].textContent = student.school_id;
 
                     // 2. Inject Simple Department Text

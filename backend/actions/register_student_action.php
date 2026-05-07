@@ -21,7 +21,7 @@ if ($course_id <= 0) {
     die("Error: Please select a valid Course.");
 }
 
-// 1. PRE-CHECK: Ensure School ID and Email are unique
+// 1. PRE-CHECK: Ensure ID Number and Email are unique
 $check_stmt = $conn->prepare("SELECT school_id, email FROM users WHERE school_id = ? OR email = ? LIMIT 1");
 $check_stmt->bind_param("ss", $school_id, $email);
 $check_stmt->execute();

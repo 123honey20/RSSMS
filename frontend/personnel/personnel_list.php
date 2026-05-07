@@ -20,7 +20,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     <div class="flex flex-col md:flex-row gap-4 mb-4 items-center">
 
-        <input type="text" id="personnelSearch" placeholder="Search by School ID..."
+        <input type="text" id="personnelSearch" placeholder="Search by ID Number..."
             class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
         <select id="deptFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
@@ -60,7 +60,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">#</th>
-                    <th class="px-6 py-4 font-semibold">School ID</th>
+                    <th class="px-6 py-4 font-semibold">ID Number</th>
                     <th class="px-6 py-4 font-semibold max-w-xs">Department</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Profile</th>
@@ -132,7 +132,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         </td>
                     `;
 
-                    // Inject School ID
+                    // Inject ID Number
                     row.children[1].textContent = person.school_id;
                     
                     // Inject Department Name(s) logically (REMOVED GLOBAL GRAMMARLY OVERRIDE)

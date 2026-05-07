@@ -464,7 +464,7 @@ if ($student_id > 0 && !empty($servicesToCheck)) {
                             </svg>
                         </div>
                         <div>
-                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">School ID</p>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">ID Number</p>
                             <p class="font-bold text-xl text-gray-900 dark:text-gray-100 leading-none"><?php echo htmlspecialchars($profile['school_id'] ?? 'N/A'); ?></p>
                             <p class="text-blue-600 dark:text-blue-400 text-xs font-medium mt-1"><?php echo htmlspecialchars($profile['email'] ?? 'N/A'); ?></p>
                         </div>

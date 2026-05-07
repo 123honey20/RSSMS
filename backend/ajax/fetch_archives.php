@@ -43,7 +43,7 @@ $where = "WHERE 1=1";
 $params = [];
 $types = "";
 
-// Search by School ID
+// Search by ID Number (searches users.school_id)
 if (!empty($search)) {
     $where .= " AND u.school_id LIKE ?";
     $params[] = "%" . $search . "%";
