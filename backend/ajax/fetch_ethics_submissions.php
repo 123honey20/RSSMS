@@ -103,7 +103,7 @@ $countStmt->close();
 
 // Update Main Query
 $sql = "
-    SELECT e.id, e.status, e.round, s.control_number, s.research_leader, u.email, d.name AS department_name, c.name AS course_name
+    SELECT e.id, e.status, e.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
     FROM ethics e
     JOIN students s ON e.student_id = s.id
     JOIN users u ON s.user_id = u.id

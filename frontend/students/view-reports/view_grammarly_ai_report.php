@@ -184,8 +184,6 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
                                 <button
                                     onclick="openCommentModalDetails(this)"
                                     data-num="<?php echo $commentNum; ?>"
-                                    data-page="<?php echo htmlspecialchars($comment['page_number']); ?>"
-                                    data-paragraph="<?php echo htmlspecialchars($comment['paragraph_number']); ?>"
                                     data-date="<?php echo date('M d, Y h:i A', strtotime($comment['created_at'])); ?>"
                                     data-text="<?php echo htmlspecialchars($comment['comment_text']); ?>"
                                     class="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-800/50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
@@ -197,15 +195,6 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
 
                                 <span class="text-xs font-medium text-gray-400 dark:text-gray-500">
                                     <?php echo date('M d, Y', strtotime($comment['created_at'])); ?>
-                                </span>
-                            </div>
-
-                            <div class="mb-3 flex gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                <span class="bg-white dark:bg-warmdark-panel px-2.5 py-1 rounded-md border border-gray-200 dark:border-warmdark-border shadow-sm transition-colors">
-                                    Page <strong class="text-gray-700 dark:text-gray-200"><?php echo htmlspecialchars($comment['page_number']); ?></strong>
-                                </span>
-                                <span class="bg-white dark:bg-warmdark-panel px-2.5 py-1 rounded-md border border-gray-200 dark:border-warmdark-border shadow-sm transition-colors">
-                                    Par. <strong class="text-gray-700 dark:text-gray-200"><?php echo htmlspecialchars($comment['paragraph_number']); ?></strong>
                                 </span>
                             </div>
 
@@ -244,24 +233,13 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
         <div class="p-6 overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center mb-6 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-warmdark-border pb-4 transition-colors">
                 <div class="flex gap-5">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold mb-1">Page</span>
-                        <span class="font-bold text-gray-800 dark:text-gray-200 text-base" id="modalCommentPage">-</span>
-                    </div>
-                    <div class="w-px bg-gray-200 dark:bg-warmdark-border transition-colors"></div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold mb-1">Paragraph</span>
-                        <span class="font-bold text-gray-800 dark:text-gray-200 text-base" id="modalCommentParagraph">-</span>
-                    </div>
-                </div>
-                <div class="text-right flex flex-col items-end">
                     <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold mb-1">Date Posted</span>
                     <span class="font-semibold text-gray-700 dark:text-gray-300" id="modalCommentDate">-</span>
                 </div>
             </div>
 
             <div>
-                <h4 class="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold mb-3">Personnel Feedback</h4>
+                <h4 class="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold mb-3">Personnel Comment</h4>
                 <div class="bg-blue-50/30 dark:bg-warmdark-bg p-4 rounded-xl border border-blue-50 dark:border-warmdark-border transition-colors">
                     <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-sm" id="modalCommentText"></p>
                 </div>
@@ -334,8 +312,6 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
     // === COMMENT MODAL SCRIPTS ===
     function openCommentModalDetails(btn) {
         document.getElementById('modalCommentTitle').innerText = 'Comment #' + btn.getAttribute('data-num');
-        document.getElementById('modalCommentPage').innerText = btn.getAttribute('data-page');
-        document.getElementById('modalCommentParagraph').innerText = btn.getAttribute('data-paragraph');
         document.getElementById('modalCommentDate').innerText = btn.getAttribute('data-date');
         document.getElementById('modalCommentText').innerText = btn.getAttribute('data-text');
 
@@ -403,7 +379,6 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
 </script>
 
 <style>
-    /* Custom Scrollbar specifically scoped for this page to override tailwind if necessary */
     .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
     }

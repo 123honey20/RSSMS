@@ -16,9 +16,10 @@ $res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 
-// Check if student has an assigned Grammarly & AI Checking personnel AND fetch their name
 $appStmt = $conn->prepare("
-    SELECT sa.*, p_assign.full_name as assigned_name
+    SELECT sa.*, 
+           p_assign.full_name as assigned_name,
+           p_assign.service_role as assigned_role
     FROM service_applications sa 
     LEFT JOIN personnel p_assign ON sa.assigned_personnel_id = p_assign.id
     WHERE sa.student_id = ? AND sa.service_type = 'Grammarly & AI Checking' 
@@ -259,12 +260,16 @@ if (!is_array($grammarly_requirements)) {
                 </div>
             <?php endif; ?>
 
+            <!-- PERSONNEL CARD -->
             <?php if ($application && $application['assigned_name']): ?>
                 <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-64 flex items-center justify-between transition-colors">
                     <div class="overflow-hidden pr-2">
                         <p class="text-xs text-indigo-600 dark:text-indigo-500 font-bold uppercase tracking-wider mb-0.5">Assigned To</p>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm" title="<?= htmlspecialchars($application['assigned_name']) ?>">
                             <?= htmlspecialchars($application['assigned_name']) ?>
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate" title="<?= htmlspecialchars($application['assigned_role'] ?? 'Grammarly & AI Checking') ?>">
+                            <?= htmlspecialchars($application['assigned_role'] ?? 'Grammarly & AI Checking') ?>
                         </p>
                     </div>
                     <div class="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-full shrink-0 transition-colors">

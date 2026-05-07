@@ -17,124 +17,244 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $student = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+
+// Extract initials for the modern avatar
+$nameParts = explode(' ', trim($student['research_leader'] ?? 'S N'));
+$initials = strtoupper(substr($nameParts[0], 0, 1) . (isset($nameParts[1]) ? substr($nameParts[1], 0, 1) : ''));
 ?>
 
-<div class="max-w-5xl mx-auto transition-colors duration-200" x-data="studentSettingsApp()">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Account Settings</h1>
+<div class="max-w-5xl mx-auto py-6 px-4 transition-colors duration-200" x-data="studentSettingsApp()">
+    
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Account Settings</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your student profile and security credentials.</p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <div class="bg-white dark:bg-warmdark-panel rounded-xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden h-fit transition-colors lg:col-span-2">
-            <div class="p-5 border-b border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Appearance</h2>
-            </div>
-            <div class="p-6">
-                <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Theme Preference</label>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Choose how the dashboard looks. This setting is saved in your browser.</p>
+        <!-- MAIN PROFILE SECTION (Left Side, Takes 2 columns) -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden transition-colors">
                 
-                <select x-model="theme" @change="updateTheme" class="w-full md:w-1/2 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors bg-white dark:bg-warmdark-bg font-medium text-gray-700 dark:text-gray-200">
-                    <option value="light">Light Mode</option>
-                    <option value="dark">Dark Mode (Warm)</option>
-                </select>
+                <!-- Card Header with Avatar -->
+                <div class="p-8 border-b border-gray-100 dark:border-warmdark-border flex flex-col sm:flex-row items-center sm:items-start gap-6 relative">
+                    <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-800 dark:to-warmdark-bg opacity-10"></div>
+                    
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-white dark:ring-warmdark-panel z-10">
+                        <?= htmlspecialchars($initials) ?>
+                    </div>
+                    
+                    <div class="text-center sm:text-left z-10 pt-2">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($student['research_leader'] ?? 'Research Leader') ?></h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($student['email'] ?? 'No Email') ?></p>
+                        <div class="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start">
+                            <span class="inline-block px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-wider rounded-full border border-blue-100 dark:border-blue-800/50">
+                                Student Account
+                            </span>
+                            <span class="inline-block px-3 py-1 bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 text-xs font-bold uppercase tracking-wider rounded-full border border-gray-200 dark:border-warmdark-border">
+                                <?= htmlspecialchars($student['control_number'] ?? 'N/A') ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Body -->
+                <div class="p-8">
+                    <form @submit.prevent="updateProfile">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <!-- Research Leader -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Research Leader</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                    </div>
+                                    <input type="text" x-model="profile.research_leader" required
+                                        class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                </div>
+                            </div>
+
+                            <!-- Control Number -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Control Number</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
+                                    </div>
+                                    <input type="text" x-model="profile.control_number" required
+                                        class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Email Address</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                    </div>
+                                    <input type="email" x-model="profile.email" required
+                                        class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                </div>
+                            </div>
+
+                            <!-- Thesis Title -->
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Thesis Title</label>
+                                <textarea x-model="profile.thesis_title" required rows="3"
+                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Profile Alert Message -->
+                        <div x-show="profileMsg" x-collapse x-cloak>
+                            <div class="mt-5 p-4 rounded-xl text-sm font-medium border flex items-center gap-3" 
+                                 :class="isProfileError ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/30' : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/30'">
+                                <svg x-show="!isProfileError" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg x-show="isProfileError" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                <span x-text="profileMsg"></span>
+                            </div>
+                        </div>
+
+                        <!-- Save Profile Button -->
+                        <div class="mt-8 flex justify-end">
+                            <button type="submit" :disabled="isProfileLoading" 
+                                    class="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center gap-2">
+                                <svg x-show="!isProfileLoading" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                                <span x-show="!isProfileLoading">Save Changes</span>
+                                
+                                <!-- Spinner -->
+                                <svg x-show="isProfileLoading" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-show="isProfileLoading" x-cloak>Saving...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Password & Authentication Trigger Section -->
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 dark:bg-warmdark-bg dark:border-warmdark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Password & Authentication</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Want to update your security credentials? Change your password here.</p>
+                    </div>
+                    <button type="button" @click="openPassModal" class="shrink-0 bg-white dark:bg-warmdark-panel border border-gray-300 dark:border-warmdark-border text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-warmdark-hover font-semibold py-2 px-5 rounded-lg text-sm shadow-sm transition-all flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Update Password
+                    </button>
+                </div>
             </div>
         </div>
-        
-        <div class="bg-white dark:bg-warmdark-panel rounded-xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden h-fit transition-colors">
-            <div class="p-5 border-b border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg">
-                <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Profile Information</h2>
-            </div>
-            <div class="p-6">
-                <form @submit.prevent="updateProfile">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Email Address</label>
-                            <input type="email" x-model="profile.email" required
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Research Leader</label>
-                            <input type="text" x-model="profile.research_leader" required
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Control Number</label>
-                            <input type="text" x-model="profile.control_number" required
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Thesis Title</label>
-                            <textarea x-model="profile.thesis_title" required rows="3"
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"></textarea>
-                        </div>
-                    </div>
 
-                    <div x-show="profileMsg" class="mt-4 p-3 rounded-lg text-sm font-medium border" 
-                         :class="isProfileError ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/30' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30'" x-cloak>
-                        <span x-text="profileMsg"></span>
+        <!-- SIDEBAR SECTION (Right Side, Takes 1 column) -->
+        <div class="lg:col-span-1 space-y-6">
+            
+            <!-- Appearance Card -->
+            <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden h-fit transition-colors">
+                <div class="p-5 border-b border-gray-100 dark:border-warmdark-border flex items-center gap-3">
+                    <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
                     </div>
-
-                    <div class="mt-6">
-                        <button type="submit" :disabled="isProfileLoading" 
-                                class="w-full bg-gray-900 dark:bg-gray-700 text-white font-semibold py-2.5 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors disabled:opacity-50">
-                            <span x-show="!isProfileLoading">Save Profile Changes</span>
-                            <span x-show="isProfileLoading" x-cloak>Saving...</span>
-                        </button>
+                    <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100 tracking-wide">Appearance</h2>
+                </div>
+                <div class="p-6">
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Theme Preference</label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Choose how the dashboard looks. This setting is saved locally in your current browser.</p>
+                    
+                    <div class="relative">
+                        <select x-model="theme" @change="updateTheme" class="w-full border border-gray-300 dark:border-warmdark-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors bg-gray-50 dark:bg-warmdark-bg font-semibold text-gray-800 dark:text-gray-200 appearance-none cursor-pointer">
+                            <option value="light">☀️ Light Mode</option>
+                            <option value="dark">🌙 Dark Mode (Warm)</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
+
         </div>
+    </div>
 
-        <div class="bg-white dark:bg-warmdark-panel rounded-xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden h-fit transition-colors">
-            <div class="p-5 border-b border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg">
-                <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Change Password</h2>
-            </div>
-            <div class="p-6">
+    <!-- PASSWORD CHANGE MODAL -->
+    <div x-show="isPassModalOpen" 
+         style="display: none;" 
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
+         
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <!-- Backdrop -->
+            <div x-show="isPassModalOpen" 
+                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" 
+                 x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" 
+                 class="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" aria-hidden="true" @click="closePassModal"></div>
+
+            <!-- Modal Panel -->
+            <div x-show="isPassModalOpen" 
+                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" 
+                 x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
+                 class="relative inline-block w-full max-w-md p-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-warmdark-panel rounded-2xl shadow-2xl border border-transparent dark:border-warmdark-border sm:my-8 sm:align-middle">
+                
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100" id="modal-title">Update Password</h3>
+                    <button @click="closePassModal" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
                 <form @submit.prevent="updatePassword">
-                    <div class="space-y-4">
+                    <div class="space-y-5">
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Current Password</label>
-                            <input type="password" x-model="passwords.current" required
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                            <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Current Password</label>
+                            <input type="password" x-model="passwords.current" required placeholder="Enter current password"
+                                class="w-full px-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">New Password</label>
-                            <input type="password" x-model="passwords.new" required minlength="6"
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                            <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">New Password</label>
+                            <input type="password" x-model="passwords.new" required minlength="6" placeholder="Minimum 6 characters"
+                                class="w-full px-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Confirm New Password</label>
-                            <input type="password" x-model="passwords.confirm" required minlength="6"
-                                class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                            <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Confirm New Password</label>
+                            <input type="password" x-model="passwords.confirm" required minlength="6" placeholder="Re-type new password"
+                                class="w-full px-4 py-3 bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
                         </div>
                     </div>
 
-                    <div x-show="passMsg" class="mt-4 p-3 rounded-lg text-sm font-medium border" 
-                         :class="isPassError ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/30' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30'" x-cloak>
-                        <span x-text="passMsg"></span>
+                    <!-- Password Modal Alert -->
+                    <div x-show="passMsg" x-collapse x-cloak class="mt-4">
+                        <div class="p-3 rounded-lg text-sm font-medium border flex items-start gap-2" 
+                             :class="isPassError ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/30' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30'">
+                            <span x-text="passMsg"></span>
+                        </div>
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mt-8 flex justify-end gap-3">
+                        <button type="button" @click="closePassModal" class="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+                            Cancel
+                        </button>
                         <button type="submit" :disabled="isPassLoading" 
-                                class="w-full bg-blue-600 dark:bg-blue-700 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50">
+                                class="bg-gray-900 dark:bg-blue-600 hover:bg-gray-800 dark:hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center gap-2">
                             <span x-show="!isPassLoading">Update Password</span>
-                            <span x-show="isPassLoading" x-cloak>Updating...</span>
+                            <svg x-show="isPassLoading" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" x-cloak>
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-
     </div>
 </div>
 
 <script>
 function studentSettingsApp() {
     return {
-        // Theme config (Tied to specific User ID to fix the bug!)
+        // Theme config
         userId: <?php echo json_encode($user_id); ?>,
         get themeKey() { return 'theme_user_' + this.userId; },
         theme: 'light',
@@ -150,7 +270,8 @@ function studentSettingsApp() {
         profileMsg: '',
         isProfileError: false,
 
-        // Password Data
+        // Password Data & Modal State
+        isPassModalOpen: false,
         passwords: { current: '', new: '', confirm: '' },
         isPassLoading: false,
         passMsg: '',
@@ -202,6 +323,16 @@ function studentSettingsApp() {
             });
         },
 
+        openPassModal() {
+            this.isPassModalOpen = true;
+            this.passMsg = '';
+            this.passwords = { current: '', new: '', confirm: '' };
+        },
+
+        closePassModal() {
+            this.isPassModalOpen = false;
+        },
+
         updatePassword() {
             this.passMsg = '';
             if (this.passwords.new !== this.passwords.confirm) {
@@ -225,8 +356,8 @@ function studentSettingsApp() {
                 this.isPassError = !data.success;
                 this.passMsg = data.message;
                 if (data.success) {
-                    this.passwords.current = ''; this.passwords.new = ''; this.passwords.confirm = '';
-                    setTimeout(() => { window.location.reload(); }, 1500);
+                    this.passwords = { current: '', new: '', confirm: '' };
+                    setTimeout(() => { this.closePassModal(); }, 1500);
                 }
             })
             .catch(() => {

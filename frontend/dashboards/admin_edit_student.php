@@ -115,7 +115,7 @@ if (!$data) {
         </div>
 
         <div class="border-t border-gray-100 dark:border-warmdark-border pt-6 mt-2 transition-colors">
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Thesis Title</label>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Title</label>
             <input type="text" name="thesis_title" required
                 value="<?php echo htmlspecialchars($_POST['thesis_title'] ?? $data['thesis_title'] ?? ''); ?>" 
                 class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:outline-none transition-all shadow-sm">

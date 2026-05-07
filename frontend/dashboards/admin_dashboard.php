@@ -480,7 +480,7 @@ $stmt->close();
                         <span id="p_status" class="inline-block px-3 py-1 mt-1 text-[11px] rounded-full font-bold uppercase tracking-wide bg-gray-100 dark:bg-warmdark-bg text-gray-800 dark:text-gray-300"></span>
                     </div>
                     <div class="md:col-span-2 bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2">
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thesis Title</p>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Title</p>
                         <p class="font-semibold text-gray-900 dark:text-gray-100 leading-snug" id="p_thesis_title"></p>
                     </div>
                 </div>

@@ -114,7 +114,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                 </div>
 
                 <div class="md:col-span-2 bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thesis Title</p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Title</p>
                     <p class="font-semibold text-gray-900 dark:text-gray-100 leading-snug" id="p_thesis_title"></p>
                 </div>
 

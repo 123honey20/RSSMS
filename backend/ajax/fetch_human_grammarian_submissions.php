@@ -103,7 +103,7 @@ $countStmt->close();
 
 // Update Main Query
 $sql = "
-    SELECT h.id, h.status, h.round, s.control_number, s.research_leader, u.email, d.name AS department_name, c.name AS course_name
+    SELECT h.id, h.status, h.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
     FROM human_grammarian h
     JOIN students s ON h.student_id = s.id
     JOIN users u ON s.user_id = u.id

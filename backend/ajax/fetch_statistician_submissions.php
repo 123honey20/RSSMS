@@ -103,7 +103,7 @@ $countStmt->close();
 
 // Update Main Query to JOIN the service_applications table
 $sql = "
-    SELECT t.id, t.status, t.round, s.control_number, s.research_leader, u.email, d.name AS department_name, c.name AS course_name
+    SELECT t.id, t.status, t.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
     FROM statistician t
     JOIN students s ON t.student_id = s.id
     JOIN users u ON s.user_id = u.id

@@ -51,7 +51,7 @@ $deptStmt->close();
     <meta charset="UTF-8">
     <title>Personnel Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -73,7 +73,7 @@ $deptStmt->close();
     <script>
         const userId = <?php echo json_encode($user_id); ?>;
         const themeKey = 'theme_user_' + userId;
-        
+
         if (localStorage.getItem(themeKey) === 'dark') {
             document.documentElement.classList.add('dark');
         } else {
@@ -107,10 +107,9 @@ $deptStmt->close();
 
         <div class="flex items-center gap-4">
             <div class="text-right hidden sm:block">
-                <p class="text-[11px] text-blue-200 dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Welcome, Personnel</p>
-                <p class="text-sm font-bold dark:text-gray-100"><?php echo htmlspecialchars($profile['school_id'] ?? 'Unknown'); ?></p>
+                <p class="text-[11px] text-blue-200 dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Welcome, <?php echo htmlspecialchars($profile['full_name'] ?? 'Unknown'); ?></p>
             </div>
-            
+
             <button onclick="openMyProfile()" class="w-10 h-10 rounded-full bg-blue-800 dark:bg-warmdark-hover border border-blue-400/50 dark:border-warmdark-border flex items-center justify-center shadow-inner hover:bg-blue-700 dark:hover:bg-warmdark-border hover:ring-2 hover:ring-blue-300 dark:hover:ring-yellow-500/50 transition-all focus:outline-none group">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-200 dark:text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
@@ -126,7 +125,7 @@ $deptStmt->close();
             <nav class="flex-1 py-5 flex flex-col gap-4">
 
                 <div class="px-5 mb-2">
-                    <span class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-1">Personnel Role</span>
+                    <span class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-1">Role</span>
                     <span class="inline-flex items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-2.5 py-1 rounded-md text-[11px] tracking-wide border border-blue-100 dark:border-blue-900/50">
                         <?php echo htmlspecialchars($serviceRole); ?>
                     </span>
@@ -280,7 +279,7 @@ $deptStmt->close();
                 ?>
 
             </div>
-            
+
             <!-- GLOBAL LOADING OVERLAYS (Accessible to AJAX loaded pages) -->
             <div id="processLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
                 <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
@@ -292,7 +291,7 @@ $deptStmt->close();
                     <p id="loaderDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we update the system.</p>
                 </div>
             </div>
-            
+
         </main>
     </div>
 
@@ -300,15 +299,17 @@ $deptStmt->close();
         <div class="bg-white dark:bg-warmdark-panel w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform border border-transparent dark:border-warmdark-border">
             <div class="bg-gradient-to-r from-blue-700 to-blue-900 dark:from-warmdark-bg dark:to-warmdark-bg text-white px-6 py-4 flex items-center justify-between dark:border-b dark:border-warmdark-border">
                 <h3 class="text-lg font-semibold tracking-wide flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                    </svg>
                     My Profile
                 </h3>
                 <button onclick="closeMyProfile()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
             </div>
-            
+
             <div class="p-6 overflow-y-auto max-h-[80vh]">
                 <div class="grid grid-cols-1 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
-                    
+
                     <div class="bg-blue-50/50 dark:bg-warmdark-bg p-4 rounded-xl border border-blue-100 dark:border-warmdark-border flex items-center gap-4 transition-colors">
                         <div class="w-14 h-14 bg-blue-200 dark:bg-warmdark-hover text-blue-800 dark:text-blue-400 rounded-full flex items-center justify-center shadow-inner">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600 dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
@@ -321,16 +322,14 @@ $deptStmt->close();
                             <p class="text-blue-600 dark:text-blue-400 text-xs font-medium mt-1"><?php echo htmlspecialchars($profile['email'] ?? 'N/A'); ?></p>
                         </div>
                     </div>
-
                     <div class="border-t border-gray-100 dark:border-warmdark-border my-1"></div>
-
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School ID</p>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">ID Number</p>
                             <p class="font-bold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($profile['school_id'] ?? 'N/A'); ?></p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Role</p>
+                            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Role</p>
                             <span class="font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/50 inline-block break-words">
                                 <?php echo htmlspecialchars($profile['service_role'] ?? 'N/A'); ?>
                             </span>
@@ -339,14 +338,16 @@ $deptStmt->close();
 
                     <div class="bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border mt-2 transition-colors">
                         <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Assigned Departments</p>
-                        
+
                         <?php if (empty($assigned_departments)): ?>
                             <span class="text-gray-500 dark:text-gray-400 text-sm italic">No departments currently assigned.</span>
                         <?php else: ?>
                             <div class="flex flex-wrap gap-2">
                                 <?php foreach ($assigned_departments as $dept): ?>
                                     <span class="inline-flex items-center gap-1.5 bg-white dark:bg-warmdark-panel text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
                                         <?php echo htmlspecialchars($dept['name']); ?>
                                     </span>
                                 <?php endforeach; ?>
@@ -354,7 +355,7 @@ $deptStmt->close();
                         <?php endif; ?>
                     </div>
                 </div>
-                
+
                 <div class="mt-8 flex justify-end">
                     <button onclick="closeMyProfile()" class="bg-white dark:bg-warmdark-hover border border-gray-300 dark:border-warmdark-border px-6 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-warmdark-border text-gray-700 dark:text-gray-200 text-sm font-bold transition shadow-sm">
                         Close
@@ -373,16 +374,22 @@ $deptStmt->close();
             <div class="p-6 overflow-y-auto max-h-[80vh]">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
                     <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Control Number</p>
+                        <span class="font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/50 inline-block" id="sp_control_number"></span>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Research Leader</p>
+                        <p class="font-medium text-gray-800 dark:text-gray-300" id="sp_research_leader"></p>
+                    </div>
+                    <div>
                         <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
                         <p class="font-medium text-gray-800 dark:text-gray-300" id="sp_email"></p>
                     </div>
                     <div>
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Control Number</p>
-                        <span class="font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/50 inline-block" id="sp_control_number"></span>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Title</p>
+                        <p class="font-medium text-gray-800 dark:text-gray-300" id="sp_thesis_title"></p>
                     </div>
-
                     <div class="md:col-span-2 border-t border-gray-100 dark:border-warmdark-border my-1"></div>
-
                     <div>
                         <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Department</p>
                         <p class="font-medium text-gray-800 dark:text-gray-300" id="sp_department"></p>
@@ -390,10 +397,6 @@ $deptStmt->close();
                     <div>
                         <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Course</p>
                         <p class="font-medium text-gray-800 dark:text-gray-300" id="sp_course"></p>
-                    </div>
-                    <div class="md:col-span-2">
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Research Leader</p>
-                        <p class="font-medium text-gray-800 dark:text-gray-300" id="sp_research_leader"></p>
                     </div>
                 </div>
                 <div class="mt-8 flex justify-end">
@@ -408,7 +411,6 @@ $deptStmt->close();
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <script>
-        // --- GLOBAL LOADER FUNCTIONS ---
         window.showVerificationLoader = function() {
             document.getElementById('loaderTitle').innerText = 'Verifying Receipt...';
             document.getElementById('loaderDesc').innerText = 'Please wait while we update the system.';
@@ -427,7 +429,7 @@ $deptStmt->close();
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
             }
-            
+
             // Disable the submit buttons to prevent double-clicks
             const btns = document.querySelectorAll('button[type="submit"]');
             btns.forEach(btn => btn.disabled = true);
@@ -479,6 +481,8 @@ $deptStmt->close();
             document.getElementById("sp_email").textContent = data.email || "-";
             document.getElementById("sp_department").textContent = data.department_name || "-";
             document.getElementById("sp_course").textContent = data.course_name || "-";
+            
+            document.getElementById("sp_thesis_title").textContent = data.thesis_title || "-";
 
             const modal = document.getElementById("profileModalStudent");
             modal.classList.remove("hidden");
@@ -527,14 +531,21 @@ $deptStmt->close();
         function updateSubmissionStatus(submissionId, status) {
             fetch(`../../backend/ajax/access_file_${serviceType}.php`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: submissionId, status: status })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: submissionId,
+                        status: status
+                    })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         showToast(`Submission ${status}!`, "success");
-                        setTimeout(() => { location.reload(); }, 1500);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
                     } else {
                         showToast("Failed to update status.", "error");
                     }
@@ -585,12 +596,16 @@ $deptStmt->close();
 
                 if (!page || !paragraph || !text) {
                     errorDiv.classList.remove('hidden');
-                    setTimeout(() => { errorDiv.classList.add('hidden'); }, 1500);
+                    setTimeout(() => {
+                        errorDiv.classList.add('hidden');
+                    }, 1500);
                     return;
                 }
                 fetch(`../../backend/ajax/save_${serviceType}_comment.php`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify({
                             [`${serviceType}_id`]: currentSubmissionId,
                             page_number: page,
@@ -604,12 +619,12 @@ $deptStmt->close();
                             commentCount++;
                             const hiddenCount = document.getElementById('initialCommentCount');
                             if (hiddenCount) hiddenCount.value = commentCount;
-                            
+
                             const header = document.getElementById('commentHeaderCount');
                             if (header) {
                                 header.innerText = "You Currently Added " + commentCount + (commentCount === 1 ? " Comment" : " Comments");
                             }
-                            
+
                             const viewBtn = document.getElementById('viewCommentBtn');
                             if (viewBtn) {
                                 viewBtn.disabled = false;
@@ -683,7 +698,9 @@ $deptStmt->close();
             `;
             container.appendChild(toast);
 
-            setTimeout(() => { toast.classList.remove("translate-x-full", "opacity-0"); }, 50);
+            setTimeout(() => {
+                toast.classList.remove("translate-x-full", "opacity-0");
+            }, 50);
             setTimeout(() => {
                 toast.classList.add("translate-x-full", "opacity-0");
                 setTimeout(() => toast.remove(), 300);
@@ -693,14 +710,21 @@ $deptStmt->close();
         window.updateReceiptStatus = function(id, status) {
             fetch(`../../backend/ajax/update_receipt_verification.php`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id, status: status })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: id,
+                        status: status
+                    })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         showToast(`Receipt ${status}!`, "success");
-                        setTimeout(() => { location.reload(); }, 1500);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
                     } else {
                         showToast("Failed to update receipt status.", "error");
                         // Hide loader if it fails

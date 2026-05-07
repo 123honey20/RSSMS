@@ -10,7 +10,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'personnel') {
 $submissionId = intval($_GET['id']);
 $viewOnly = isset($_GET['viewOnly']);
 
-// FIXED QUERY: Added result_file_path and Assigned Personnel via service_applications
+// Added result_file_path and Assigned Personnel via service_applications
 $stmt = $conn->prepare("
     SELECT l.id, l.file_path, l.status, s.control_number, l.result_file_path, p.full_name as assigned_personnel
     FROM librarian l
@@ -81,20 +81,6 @@ $totalComments = $countResult['total_comments'] ?? 0;
                     <p class="font-semibold text-gray-800 dark:text-gray-200">
                         <?= htmlspecialchars($submission['control_number']) ?>
                     </p>
-                </div>
-                <div>
-                    <p class="text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wide">
-                        Assigned Personnel
-                    </p>
-                    <?php if (!empty($submission['assigned_personnel'])): ?>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200">
-                            <?= htmlspecialchars($submission['assigned_personnel']) ?>
-                        </p>
-                    <?php else: ?>
-                        <span class="inline-block mt-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50 uppercase tracking-wider">
-                            Pending Assignment
-                        </span>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -180,11 +166,6 @@ $totalComments = $countResult['total_comments'] ?? 0;
             
             <div class="flex items-center justify-between mb-4 border-b border-blue-200/50 dark:border-blue-900/30 pb-4">
                 <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400">Process Student Submission</h3>
-                
-                <label class="relative inline-flex items-center cursor-pointer" title="Toggle File Upload Requirement">
-                    <input type="checkbox" x-model="requireFile" @change="if(!requireFile) document.getElementById('resultFileInput').value = '';" class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                </label>
             </div>
 
             <!-- ADDED: onsubmit="window.showProcessLoader()" -->

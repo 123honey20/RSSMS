@@ -59,9 +59,9 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                 <tr>
                     <th class="px-6 py-4 font-semibold text-center">No.</th>
                     <th class="px-6 py-4 font-semibold">Control No.</th>
+                    <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Round</th>
-                    <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
             </thead>
@@ -130,14 +130,14 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                     tr.innerHTML = `
                         <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">${counter++}.</td>
                         <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">${row.control_number}</td>
-                        <td class="px-6 py-4 text-center">${statusBadge}</td>
-                        <td class="px-6 py-4 text-center font-medium text-gray-600 dark:text-gray-300">${row.round}</td>
                         <td class="px-6 py-4 text-center">
                             <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-lg hover:underline text-xs"
                                 onclick='openProfileStudent(${JSON.stringify(row).replace(/'/g, "&#39;")})'>
                                 View Profile
                             </button>
                         </td>
+                        <td class="px-6 py-4 text-center">${statusBadge}</td>
+                        <td class="px-6 py-4 text-center font-medium text-gray-600 dark:text-gray-300">${row.round}</td>
                         <td class="px-6 py-4 flex justify-center gap-2">
                             ${actionButton}
                         </td>

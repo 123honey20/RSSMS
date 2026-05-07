@@ -109,13 +109,13 @@
                 <form action="../../backend/actions/login_action.php" method="POST" class="space-y-6">
                     
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">School ID</label>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">ID Number</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-blue-600">
                                 <svg class="w-5 h-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                             </div>
                             <input type="text" name="school_id" required 
-                                placeholder="Enter your School ID" 
+                                placeholder="Enter your ID Number" 
                                 class="w-full pl-12 pr-4 py-4 bg-white dark:bg-warmdark-panel border border-slate-200 dark:border-warmdark-border rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 dark:text-white transition-all shadow-sm">
                         </div>
                     </div>

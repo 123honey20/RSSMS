@@ -66,7 +66,7 @@ $totalPages = ceil($totalRows / $limit);
 
 // NEW: Join service_applications and personnel tables to verify assignment for the main query
 $sql = "
-    SELECT g.id, g.status, g.round, s.control_number, s.research_leader, u.email, d.name AS department_name, c.name AS course_name
+    SELECT g.id, g.status, g.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
     FROM grammarly_ai g
     JOIN students s ON g.student_id = s.id
     JOIN users u ON s.user_id = u.id

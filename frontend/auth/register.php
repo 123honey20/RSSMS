@@ -134,8 +134,8 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">School ID</label>
-                        <input type="text" name="school_id" required class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Enter School ID">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">ID Number</label>
+                        <input type="text" name="school_id" required class="w-full bg-gray-50 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 dark:text-white transition-colors" placeholder="Enter ID Number">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Email Address</label>
@@ -248,7 +248,7 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
             
             let defaultErrorMsg = '';
             if (errorType === 'duplicate_id') {
-                defaultErrorMsg = 'This School ID is already registered.';
+                defaultErrorMsg = 'This ID Number is already registered.';
             } else if (errorType === 'duplicate_email') {
                 defaultErrorMsg = 'This Email Address is already registered.';
             } else if (errorType === 'duplicate_control_number') {

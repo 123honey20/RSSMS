@@ -30,7 +30,8 @@ $reqStmt->close();
 $appStmt = $conn->prepare("
     SELECT sa.*, 
            p_req.full_name as requested_name,
-           p_assign.full_name as assigned_name
+           p_assign.full_name as assigned_name,
+           p_assign.service_role as assigned_role
     FROM service_applications sa 
     LEFT JOIN personnel p_req ON sa.requested_personnel_id = p_req.id 
     LEFT JOIN personnel p_assign ON sa.assigned_personnel_id = p_assign.id
@@ -248,6 +249,9 @@ if (!is_array($librarian_requirements)) {
                         <p class="text-xs text-indigo-600 dark:text-indigo-500 font-bold uppercase tracking-wider mb-0.5">Assigned To</p>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm" title="<?= htmlspecialchars($application['assigned_name']) ?>">
                             <?= htmlspecialchars($application['assigned_name']) ?>
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate" title="<?= htmlspecialchars($application['assigned_role'] ?? 'Librarian') ?>">
+                            <?= htmlspecialchars($application['assigned_role'] ?? 'Librarian') ?>
                         </p>
                     </div>
                     <div class="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-full shrink-0 transition-colors">

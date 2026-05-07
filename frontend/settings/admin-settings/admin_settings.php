@@ -326,7 +326,7 @@ if (file_exists($cert_dir . "Proposal_Certificate.pdf")) {
 
             <div class="bg-white dark:bg-warmdark-panel rounded-xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden h-fit transition-colors">
                 <div class="p-5 border-b border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg">
-                    <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Change Password</h2>
+                    <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Update Password</h2>
                 </div>
                 <div class="p-6">
                     <form @submit.prevent="updatePassword">
