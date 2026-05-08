@@ -34,13 +34,13 @@ $studentDeptId = $studentData['department_id'];
 $school_id = $studentData['school_id'];
 $stmt->close();
 
-// --- NEW: FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
+// --- FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
 $reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Statistician'");
 $reqStmt->bind_param("i", $studentDeptId);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
-$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; // Default 1
-$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; // Default 7
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; 
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; 
 $reqStmt->close();
 
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
@@ -53,7 +53,7 @@ $targetDir = "../../../uploads/statistician/";
 $targetFile = $targetDir . $filename;
 
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-    // Get the latest submission (ordering by phase first, then round)
+    // Get the latest submission
     $checkStmt = $conn->prepare("SELECT * FROM statistician WHERE student_id = ? ORDER BY phase DESC, round DESC LIMIT 1");
     $checkStmt->bind_param("i", $student_id);
     $checkStmt->execute();
@@ -69,35 +69,40 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $phase = (int)($latest['phase'] ?? 1);
         $round = (int)$latest['round'];
 
+        // ENFORCE SECURITY LOCK
+        if ($latest['status'] === 'Pending' && (int)$latest['is_locked'] === 1) {
+            redirectWithError("Your document is currently being reviewed by the personnel and cannot be changed.", $redirect_url, $targetFile);
+        }
+
         if ($latest['status'] === 'Pending') {
             if (file_exists($targetDir . $latest['file_path'])) unlink($targetDir . $latest['file_path']);
-            $stmt = $conn->prepare("UPDATE statistician SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
+            
+            // Set is_locked = 0 so personnel knows it is updated
+            $stmt = $conn->prepare("UPDATE statistician SET file_path = ?, status = 'Pending', is_locked = 0, uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
             
         } elseif ($latest['status'] === 'Needs Revision') {
-            // Check Round Limit
             if ($round >= $max_rounds) {
                 redirectWithError("You have reached the maximum round limit ($max_rounds) for Phase $phase.", $redirect_url, $targetFile);
             }
-            $round++; // Advance Round
-            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $round++; 
+            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, personnel_id, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, ?, 0)");
             $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
             $stmt->execute();
 
         } elseif ($latest['status'] === 'Approved') {
-            // Check Phase Limit
             if ($phase >= $max_phases) {
                 redirectWithError("You have already completed all required phases for Statistician.", $redirect_url, $targetFile);
             }
-            $phase++; // Advance Phase
-            $round = 1; // Reset Round
-            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $phase++; 
+            $round = 1; 
+            $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, personnel_id, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, ?, 0)");
             $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
             $stmt->execute();
         }
     } else {
-        $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase) VALUES (?, ?, ?, 'Pending', ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO statistician (student_id, school_id, file_path, status, round, phase, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, 0)");
         $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $phase);
         $stmt->execute();
     }
@@ -122,7 +127,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $mail->addAddress($studentEmail, $studentName);
         $phaseText = $max_phases > 1 ? "Phase $phase, " : "";
         $mail->Subject = "Statistician Review Submitted - {$phaseText}Round $round";
-        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for Statistical Review has been uploaded for {$phaseText}Round $round.</p></div>" . $footer;
+        $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your document for Statistical Review has been uploaded/updated for {$phaseText}Round $round.</p></div>" . $footer;
         $mail->send();
 
         // Personnel Email Logic
@@ -162,7 +167,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                 <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Statistician Task</h1></div>
                 <div style='padding:30px;line-height:1.6;color:#334155;'>
                     <p>A document is ready for statistical review.</p>
-                    <div style='background:#eff6ff; padding: 15px; margin: 20px 0;'>
+                    <div style='background:#eff6ff; padding: 15px; margin: 20px 0; border-left:4px solid #2563eb;'>
                         <strong>Student:</strong> $studentName<br>
                         <strong>Phase & Round:</strong> <span style='background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:bold;'>{$phaseText}Round $round</span><br>
                         <strong>Title:</strong> $thesisTitle

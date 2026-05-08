@@ -45,19 +45,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // --- 2. UPDATE DATABASE ---
+        // --- 2. UPDATE DATABASE (WITH TIMESTAMP) ---
         if ($filename) {
-            $stmt = $conn->prepare("UPDATE ethics SET status = ?, result_file_path = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE ethics SET status = ?, result_file_path = ?, updated_at = NOW() WHERE id = ?");
             $stmt->bind_param("ssi", $status, $filename, $submission_id);
         } else {
-            $stmt = $conn->prepare("UPDATE ethics SET status = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE ethics SET status = ?, updated_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $status, $submission_id);
         }
         
         $success = $stmt->execute();
         $stmt->close();
 
-        // --- 3. SEND EMAIL NOTIFICATIONS (From old access_file_ethics) ---
+        // --- 3. SEND EMAIL NOTIFICATIONS ---
         if ($success) {
             $_SESSION['flash_success'] = "Submission $status successfully!";
 
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Fetch Student/Submission Info
             $stmtDetails = $conn->prepare("
-                SELECT g.round, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
+                SELECT g.round, g.phase, g.student_id, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
                 FROM ethics g 
                 JOIN students s ON g.student_id = s.id 
                 JOIN users u ON s.user_id = u.id 
@@ -84,6 +84,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $info = $stmtDetails->get_result()->fetch_assoc();
 
             if ($personnel && $info) {
+                
+                // FETCH MAX PHASES FOR THIS SPECIFIC DEPARTMENT
+                $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = (SELECT department_id FROM students WHERE id = ?) AND service_type = 'Ethics'");
+                $maxPhaseStmt->bind_param("i", $info['student_id']);
+                $maxPhaseStmt->execute();
+                $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
+                $max_phases = $maxPhaseRes ? (int)$maxPhaseRes['required_phases'] : 1;
+                $maxPhaseStmt->close();
+
                 try {
                     $mail = new PHPMailer(true);
                     $mail->isSMTP();
@@ -99,6 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $themeColor = ($status === 'Approved') ? '#059669' : '#dc2626';
                     $header = "<div style='background-color:#f8fafc;padding:20px;font-family:sans-serif;'><div style='max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 6px rgba(0,0,0,0.05);'>";
                     $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p style='margin:0;'>Automated Ethics Service Log.</p></div></div></div>";
+                    
+                    // FIX: Only show phase text if the system supports more than 1 phase
+                    $currentPhase = isset($info['phase']) ? (int)$info['phase'] : 1;
+                    $phaseStr = ($max_phases > 1) ? "Phase {$currentPhase}, " : "";
 
                     // Email 1: To Student
                     $mail->addAddress($info['student_email'], $info['research_leader']);
@@ -110,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <p>Your document for <strong>Ethics Clearance</strong> has been officially <strong style='color:$themeColor;'>$status</strong>.</p>
                             <div style='background:#f8fafc; border-left: 4px solid $themeColor; padding: 15px; margin: 20px 0;'>
                                 <p style='margin:0;'><strong>Control No:</strong> {$info['control_number']}</p>
-                                <p style='margin:0;'><strong>Round:</strong> {$info['round']}</p>
+                                <p style='margin:0;'><strong>Round:</strong> {$phaseStr}Round {$info['round']}</p>
                             </div>
                         </div>" . $footer;
                     $mail->send();
@@ -129,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <table style='width:100%; font-size:14px; border-collapse:collapse;'>
                                     <tr><td style='padding:8px 0; color:#64748b;'>Student:</td><td style='font-weight:bold;'>{$info['research_leader']}</td></tr>
                                     <tr><td style='padding:8px 0; color:#64748b;'>Department:</td><td>{$info['dept_name']}</td></tr>
-                                    <tr><td style='padding:8px 0; color:#64748b;'>Round:</td><td>Round {$info['round']}</td></tr>
+                                    <tr><td style='padding:8px 0; color:#64748b;'>Round:</td><td>{$phaseStr}Round {$info['round']}</td></tr>
                                     <tr><td style='padding:8px 0; color:#64748b;'>Thesis Title:</td><td style='font-style:italic;'>\"{$info['thesis_title']}\"</td></tr>
                                     <tr><td style='padding:15px 0 8px 0; color:#64748b;'>Final Result:</td><td><span style='background:$themeColor; color:#fff; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:12px; text-transform:uppercase;'>$status</span></td></tr>
                                 </table>

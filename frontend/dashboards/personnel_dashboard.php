@@ -170,15 +170,6 @@ $deptStmt->close();
                             </svg>
                             Student Submissions
                         </a>
-
-                        <?php if ($serviceRole === 'Grammarly & AI Checking'): ?>
-                            <a href="personnel_dashboard.php?page=receipt_verification" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6M9 16h6M7 3h10a2 2 0 012 2v16l-7-3-7 3V5a2 2 0 012-2z" />
-                                </svg>
-                                Receipt Verification
-                            </a>
-                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -248,9 +239,6 @@ $deptStmt->close();
                         break;
                     case 'submissions_human_grammarian':
                         include "../personnel/personnel-research-services/submissions_human_grammarian.php";
-                        break;
-                    case 'receipt_verification':
-                        include "../personnel/personnel-research-services/receipt_verification.php";
                         break;
                     case 'personnel_feedback':
                         include "../feedback/feedback-personnel/view_feedback.php";
@@ -582,36 +570,52 @@ $deptStmt->close();
             const modal = document.getElementById('commentModal');
             modal.classList.remove('flex');
             modal.classList.add('hidden');
+            
             document.getElementById('commentText').value = '';
-            document.getElementById('commentPage').value = '';
-            document.getElementById('commentParagraph').value = '';
+            // ONLY reset page/paragraph if they actually exist on the page
+            if(document.getElementById('commentPage')) document.getElementById('commentPage').value = '';
+            if(document.getElementById('commentParagraph')) document.getElementById('commentParagraph').value = '';
         };
 
         document.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'saveCommentBtn') {
-                const page = document.getElementById('commentPage').value;
-                const paragraph = document.getElementById('commentParagraph').value;
+                
+                // Get elements (some may be null depending on the service!)
+                const pageEl = document.getElementById('commentPage');
+                const paragraphEl = document.getElementById('commentParagraph');
+                
+                const page = pageEl ? pageEl.value : null;
+                const paragraph = paragraphEl ? paragraphEl.value : null;
                 const text = document.getElementById('commentText').value;
                 const errorDiv = document.getElementById('commentError');
 
-                if (!page || !paragraph || !text) {
+                // Validation: Only require page/paragraph IF the inputs actually exist in the HTML
+                if (!text || (pageEl && !page) || (paragraphEl && !paragraph)) {
                     errorDiv.classList.remove('hidden');
                     setTimeout(() => {
                         errorDiv.classList.add('hidden');
                     }, 1500);
                     return;
                 }
+
+                // Build JSON payload dynamically
+                let payload = {
+                    [`${serviceType}_id`]: currentSubmissionId,
+                    comment_text: text
+                };
+                
+                // Add page/paragraph to payload ONLY if they exist
+                if(pageEl && paragraphEl) {
+                    payload.page_number = page;
+                    payload.paragraph_number = paragraph;
+                }
+
                 fetch(`../../backend/ajax/save_${serviceType}_comment.php`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            [`${serviceType}_id`]: currentSubmissionId,
-                            page_number: page,
-                            paragraph_number: paragraph,
-                            comment_text: text
-                        })
+                        body: JSON.stringify(payload)
                     })
                     .then(res => res.json())
                     .then(data => {
@@ -654,10 +658,16 @@ $deptStmt->close();
                     } else {
                         container.innerHTML = "";
                         data.forEach((comment, index) => {
+                            // Only format page/paragraph string if the data exists in DB
+                            let locationText = '';
+                            if(comment.page_number && comment.paragraph_number) {
+                                locationText = `&nbsp;&nbsp;&nbsp;Page ${comment.page_number} &nbsp;-&nbsp; Paragraph ${comment.paragraph_number}`;
+                            }
+                            
                             container.innerHTML += `
                         <div class="border border-gray-200 dark:border-warmdark-border p-3 rounded-lg bg-gray-50 dark:bg-warmdark-bg transition-colors">
                             <div class="font-semibold text-gray-700 dark:text-gray-200">
-                                Comment ${index + 1}:   Page ${comment.page_number}  -  Paragraph ${comment.paragraph_number}
+                                Comment ${index + 1}: ${locationText}
                             </div>
                             <div class="text-gray-600 dark:text-gray-300 mt-1">
                                 ${comment.comment_text}

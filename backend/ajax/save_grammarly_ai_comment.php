@@ -11,21 +11,19 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'personnel') {
 $data = json_decode(file_get_contents('php://input'), true);
 
 $grammarlyAiId = intval($data['grammarly_ai_id'] ?? 0);
-$pageNumber = intval($data['page_number'] ?? 0);
-$paragraphNumber = intval($data['paragraph_number'] ?? 0);
 $commentText = trim($data['comment_text'] ?? '');
 
-if (!$grammarlyAiId || !$pageNumber || !$paragraphNumber || empty($commentText)) {
+if (!$grammarlyAiId || empty($commentText)) {
     echo json_encode(['success' => false]);
     exit;
 }
 
 $stmt = $conn->prepare("
-    INSERT INTO grammarly_ai_comments (grammarly_ai_id, page_number, paragraph_number, comment_text)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO grammarly_ai_comments (grammarly_ai_id, comment_text)
+    VALUES (?, ?)
 ");
 
-$stmt->bind_param("iiis", $grammarlyAiId, $pageNumber, $paragraphNumber, $commentText);
+$stmt->bind_param("is", $grammarlyAiId, $commentText);
 $success = $stmt->execute();
 
 echo json_encode(['success' => $success]);

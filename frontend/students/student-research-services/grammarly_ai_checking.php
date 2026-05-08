@@ -33,7 +33,6 @@ $appStmt->close();
 
 $isAssigned = $application ? true : false;
 
-// NEW: Check if student has ANY actual submissions so we can hide the fading alerts later
 $hasAnySubmission = false;
 if ($student_id) {
     $subCheck = $conn->query("SELECT id FROM grammarly_ai WHERE student_id = $student_id LIMIT 1");
@@ -43,30 +42,56 @@ if ($student_id) {
 }
 
 $subs = $conn->query("
-    SELECT * FROM grammarly_ai 
+    SELECT *, COALESCE(is_locked, 0) as is_locked FROM grammarly_ai 
     WHERE student_id = $student_id 
     ORDER BY round DESC, uploaded_at DESC
 ");
 
+// Fetch Latest Document Status
 $latestRes = $conn->query("
-    SELECT * FROM grammarly_ai 
+    SELECT *, COALESCE(is_locked, 0) as is_locked FROM grammarly_ai 
     WHERE student_id = $student_id 
     ORDER BY round DESC 
     LIMIT 1
 ");
 $latest = $latestRes->fetch_assoc();
-
 $currentRound = $latest ? (int)$latest['round'] : 0;
 $currentStatus = $latest ? $latest['status'] : null;
+$is_locked = $latest ? (int)$latest['is_locked'] : 0;
 
-// Fetch the specific requirements for Grammarly & AI
+// Fetch Latest Transaction (Receipt) Status
+$latestTransRes = $conn->query("
+    SELECT status FROM grammarly_ai_transactions 
+    WHERE student_id = $student_id 
+    ORDER BY round DESC 
+    LIMIT 1
+");
+$latestTrans = $latestTransRes->fetch_assoc();
+$transStatus = $latestTrans ? $latestTrans['status'] : null;
+
+
+// Fetch Requirements
 $req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_grammarly_ai'");
 $grammarly_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
 $grammarly_requirements = json_decode($grammarly_requirements_json, true);
 
-// Fallback just in case it's still old plain text
 if (!is_array($grammarly_requirements)) {
     $grammarly_requirements = array_filter(explode("\n", $grammarly_requirements_json));
+}
+
+// --- DYNAMIC RE-UPLOAD LOGIC (Smart Control) ---
+$canUpdateReceipt = ($latestTrans && $transStatus !== 'Approved');
+$canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
+
+$canUploadSubmission = false;
+$receiptOnlyMode = false;
+
+if (!$latest) {
+    $canUploadSubmission = true; 
+} elseif ($currentStatus === 'Needs Revision') {
+    $canUploadSubmission = true; 
+} elseif ($transStatus === 'Needs Revision' && $currentStatus === 'Pending') {
+    $receiptOnlyMode = true; 
 }
 ?>
 
@@ -130,54 +155,11 @@ if (!is_array($grammarly_requirements)) {
 
         <div class="flex flex-wrap gap-6">
 
-            <?php
-            // Check if student has pending submission
-            $hasPendingSubmission = $conn->query("
-                SELECT id FROM grammarly_ai 
-                WHERE student_id = $student_id 
-                AND status = 'Pending'
-            ")->num_rows > 0;
-
-            // Get latest approved transaction
-            $approvedTransactionRes = $conn->query("
-                SELECT * FROM grammarly_ai_transactions
-                WHERE student_id = $student_id
-                AND status = 'Approved'
-                ORDER BY round DESC
-                LIMIT 1
-            ");
-
-            $approvedTransaction = $approvedTransactionRes->fetch_assoc();
-
-            // Check if that approved transaction already has a submission
-            $hasSubmissionForApprovedRound = false;
-
-            if ($approvedTransaction) {
-                $approvedRound = (int)$approvedTransaction['round'];
-
-                $checkSubmission = $conn->query("
-                SELECT id FROM grammarly_ai
-                WHERE student_id = $student_id
-                AND round = $approvedRound
-            ");
-
-                $hasSubmissionForApprovedRound = $checkSubmission->num_rows > 0;
-            }
-
-            // Determine if upload is allowed
-            $canUploadSubmission = false;
-
-            if ($approvedTransaction && !$hasSubmissionForApprovedRound) {
-                $canUploadSubmission = true;
-            }
-            ?>
-
             <?php if ($currentStatus === 'Approved'): ?>
-
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-90 transition-colors">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-green-700 dark:text-green-500">Upload Disabled</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                        <p class="font-semibold text-green-700 dark:text-green-500">Fully Completed</p>
                     </div>
                     <div class="text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/20 p-2 rounded-xl transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -185,9 +167,36 @@ if (!is_array($grammarly_requirements)) {
                         </svg>
                     </div>
                 </div>
+                
+            <?php elseif ($receiptOnlyMode): ?>
+                <a href="student_dashboard.php?page=student_upload_grammarly_ai&mode=receipt"
+                    class="bg-red-50 dark:bg-red-900/10 shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-red-200 dark:border-red-900/30">
+                    <div>
+                        <p class="text-sm text-red-500 dark:text-red-400">Action Required</p>
+                        <p class="font-semibold text-red-700 dark:text-red-300 group-hover:text-red-800 transition-colors">Re-upload Receipt</p>
+                    </div>
+                    <div class="text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40 p-2 rounded-xl group-hover:scale-105 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </a>
 
-            <?php elseif ($hasPendingSubmission): ?>
+            <?php elseif ($canUploadSubmission): ?>
+                <a href="student_dashboard.php?page=student_upload_grammarly_ai&mode=both"
+                    class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
+                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Submit Files</p>
+                    </div>
+                    <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                    </div>
+                </a>
 
+            <?php elseif ($currentStatus === 'Pending'): ?>
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
@@ -200,38 +209,7 @@ if (!is_array($grammarly_requirements)) {
                     </div>
                 </div>
 
-            <?php elseif (!$canUploadSubmission): ?>
-
-                <a href="student_dashboard.php?page=student_transaction_grammarly_ai"
-                    class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Process Receipt</p>
-                    </div>
-                    <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                        </svg>
-                    </div>
-                </a>
-
-            <?php else: ?>
-
-                <a href="student_dashboard.php?page=student_upload_grammarly_ai"
-                    class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Upload Submission</p>
-                    </div>
-                    <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                    </div>
-                </a>
-
             <?php endif; ?>
-
 
             <?php if ($currentStatus === 'Approved'): ?>
                 <a href="student_dashboard.php?page=student_grammarly_ai_approved_result&id=<?php echo $latest['id']; ?>"
@@ -293,28 +271,21 @@ if (!is_array($grammarly_requirements)) {
                             <th class="py-2">Submission</th>
                             <th class="py-2">File</th>
                             <th class="py-2">Status</th>
-                            <th class="py-2">Date</th>
-                            <th class="py-2">Reports</th>
-                            <th class="py-2 text-center">Action</th>
+                            <th class="py-2">Date & Time</th>
+                            <th class="py-2 text-center">Report</th> 
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
                         <?php if ($subs->num_rows > 0): ?>
-                            <?php $i = 1; ?>
                             <?php while ($row = $subs->fetch_assoc()): ?>
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
                                     <td class="py-3 text-xs font-semibold dark:text-gray-200">Round <?php echo (int)$row['round']; ?></td>
                                     <td class="py-3 max-w-xs">
-                                        <?php
-                                        $fullName = basename($row['file_path']);
-                                        ?>
-                                        <span
-                                            class="block truncate text-gray-700 dark:text-gray-300"
-                                            title="<?php echo htmlspecialchars($fullName); ?>">
+                                        <?php $fullName = basename($row['file_path']); ?>
+                                        <span class="block truncate text-gray-700 dark:text-gray-300" title="<?php echo htmlspecialchars($fullName); ?>">
                                             <?php echo htmlspecialchars($fullName); ?>
                                         </span>
                                     </td>
-
                                     <td class="py-3">
                                         <?php
                                         $status = $row['status'];
@@ -327,48 +298,84 @@ if (!is_array($grammarly_requirements)) {
                                             <?php echo ucfirst($status); ?>
                                         </span>
                                     </td>
-                                    <td class="py-3 text-gray-500 dark:text-gray-400 text-xs">
-                                        <?php echo date('M d, Y', strtotime($row['uploaded_at'])); ?>
+                                    
+                                    <!-- TIMELINE / DATE & TIME COLUMN -->
+                                    <td class="py-3 text-xs whitespace-nowrap">
+                                        <div class="flex flex-col gap-1.5">
+                                            <div>
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Uploaded</span>
+                                                <span class="text-gray-700 dark:text-gray-300 font-medium"><?php echo date('M d, Y \a\t h:i A', strtotime($row['uploaded_at'])); ?></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
+                                                <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
+                                                    <span class="text-gray-700 dark:text-gray-300 font-medium">
+                                                        <?php 
+                                                        $finalizedDate = $row['updated_at'] ?? null;
+                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--'; 
+                                                        ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-yellow-600 dark:text-yellow-500 italic font-medium">Waiting...</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="py-3">
-                                        <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
-                                            <a href="student_dashboard.php?page=student_view_grammarly_ai_report&id=<?php echo $row['id']; ?>"
-                                                class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm">
-                                                View
-                                            </a>
-                                        <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
-                                                View
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
+                                    
+                                    <!-- REPORT ACTIONS -->
                                     <td class="py-3 text-center">
-                                        <?php
-                                        $round = (int)$row['round'];
-                                        $status = $row['status'];
+                                        <div class="flex items-center justify-center gap-2">
+                                            
+                                            <!-- View Button -->
+                                            <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
+                                                <a href="student_dashboard.php?page=student_view_grammarly_ai_report&id=<?php echo $row['id']; ?>"
+                                                    class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm font-bold inline-block">
+                                                    View
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-600 border border-transparent px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed inline-block">
+                                                    View
+                                                </span>
+                                            <?php endif; ?>
 
-                                        $canReuploadSameRound = ($status === 'Pending');
-                                        $disabled = ($status === 'Needs Revision' || $status === 'Approved');
-                                        ?>
+                                            <!-- Re-upload / Locked Logic -->
+                                            <?php 
+                                            $isRowLatest = ($row['id'] === $latest['id']);
+                                            $rowLocked = (int)$row['is_locked'] === 1;
+                                            ?>
+                                            
+                                            <?php if ($isRowLatest && $status === 'Pending'): ?>
+                                                <?php if ($rowLocked): ?>
+                                                    <!-- LOCKED STATE UI -->
+                                                    <span title="Personnel is currently reviewing this file" class="flex items-center gap-1.5 bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed transition-colors shadow-sm">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                                        </svg>
+                                                        Locked
+                                                    </span>
+                                                <?php elseif ($canUpdateDoc || $canUpdateReceipt): ?>
+                                                    <!-- ACTIVE REUPLOAD BUTTON -->
+                                                    <button onclick="openReuploadChoiceModal()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                        Update
+                                                    </button>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <!-- Old rounds or Approved rounds -->
+                                                <span class="bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-600 px-4 py-1.5 rounded-lg text-xs font-bold border border-transparent">
+                                                    Reviewed
+                                                </span>
+                                            <?php endif; ?>
 
-                                        <?php if ($canReuploadSameRound): ?>
-                                            <a href="student_dashboard.php?page=student_upload_grammarly_ai"
-                                                class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm inline-block">
-                                                Re-upload
-                                            </a>
-
-                                        <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block cursor-not-allowed">
-                                                Re-upload
-                                            </span>
-                                        <?php endif; ?>
+                                        </div>
                                     </td>
-
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="6" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="5" class="py-12 text-center text-gray-400 dark:text-gray-500">
                                     No submissions found.
                                 </td>
                             </tr>
@@ -377,6 +384,48 @@ if (!is_array($grammarly_requirements)) {
                 </table>
             </div>
         </div>
-
     <?php endif; ?>
 </div>
+
+<div id="reuploadChoiceModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel w-[400px] max-w-[95%] rounded-2xl shadow-2xl p-6 space-y-4 border border-transparent dark:border-warmdark-border transition-colors">
+        <div class="flex justify-between items-center border-b border-gray-100 dark:border-warmdark-border pb-3">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Select Re-upload Type</h3>
+            <button onclick="closeReuploadChoiceModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400">What would you like to update? (This will replace your currently pending file).</p>
+        
+        <div class="flex flex-col gap-3 mt-4">
+            <?php if ($canUpdateDoc): ?>
+            <a href="student_dashboard.php?page=student_upload_grammarly_ai&mode=document" class="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 py-3 rounded-xl text-sm font-bold text-center transition-colors">
+                Update Document Only
+            </a>
+            <?php endif; ?>
+            
+            <?php if ($canUpdateReceipt): ?>
+            <a href="student_dashboard.php?page=student_upload_grammarly_ai&mode=receipt" class="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 py-3 rounded-xl text-sm font-bold text-center transition-colors">
+                Update Receipt Only
+            </a>
+            <?php endif; ?>
+            
+            <?php if ($canUpdateDoc && $canUpdateReceipt): ?>
+            <a href="student_dashboard.php?page=student_upload_grammarly_ai&mode=both" class="w-full bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white shadow-md py-3 rounded-xl text-sm font-bold text-center transition-colors">
+                Update Both Files
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openReuploadChoiceModal() {
+        document.getElementById('reuploadChoiceModal').classList.remove('hidden');
+        document.getElementById('reuploadChoiceModal').classList.add('flex');
+    }
+    function closeReuploadChoiceModal() {
+        document.getElementById('reuploadChoiceModal').classList.remove('flex');
+        document.getElementById('reuploadChoiceModal').classList.add('hidden');
+    }
+</script>

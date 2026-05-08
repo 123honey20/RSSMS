@@ -22,7 +22,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 <div class="bg-white dark:bg-warmdark-panel p-6 rounded-xl shadow-sm min-h-[80vh] border border-transparent dark:border-warmdark-border transition-colors duration-200">
 
     <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-warmdark-border transition-colors">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Student Submissions</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Student Submissions & Receipts</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
@@ -137,7 +137,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                             </button>
                         </td>
                         <td class="px-6 py-4 text-center">${statusBadge}</td>
-                        <td class="px-6 py-4 text-center font-medium text-gray-600 dark:text-gray-300">${row.round}</td>
+                        <td class="px-6 py-4 text-center font-semibold text-xs text-gray-600 dark:text-gray-300">${row.round}</td>
                         <td class="px-6 py-4 flex justify-center gap-2">
                             ${actionButton}
                         </td>

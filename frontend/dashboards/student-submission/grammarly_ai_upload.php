@@ -10,232 +10,270 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// Get student id
 $user_id = $_SESSION['user'];
 $res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 
-// Check if already has submission (getting the latest round)
-$sub = $conn->query("SELECT * FROM grammarly_ai WHERE student_id = $student_id ORDER BY round DESC LIMIT 1");
+// SMART ROUND & RECEIPT LOGIC
+$sub = $conn->query("SELECT round, status, is_locked FROM grammarly_ai WHERE student_id = $student_id ORDER BY round DESC LIMIT 1");
 $existing = $sub->fetch_assoc();
+
+$receiptOnlyMode = false;
+$nextRound = 1;
+$is_locked = 0;
+
+if ($existing) {
+    $is_locked = (int)($existing['is_locked'] ?? 0);
+    $transCheck = $conn->query("SELECT status FROM grammarly_ai_transactions WHERE student_id = $student_id AND round = {$existing['round']}");
+    $trans = $transCheck->fetch_assoc();
+
+    if ($existing['status'] === 'Needs Revision') {
+        $nextRound = $existing['round'] + 1; 
+    } elseif ($existing['status'] === 'Pending' && $trans && $trans['status'] === 'Needs Revision') {
+        $receiptOnlyMode = true; 
+        $nextRound = $existing['round'];
+    } else {
+        $nextRound = $existing['round'];
+    }
+}
+
+// HANDLE MANUAL RE-UPLOAD MODES FROM MODAL
+$urlMode = $_GET['mode'] ?? '';
+$showReceipt = true;
+$showDocument = true;
+
+// Security check: Block manually forced document upload if locked!
+if ($urlMode === 'document' && $is_locked === 1) {
+    $_SESSION['flash_error'] = "The personnel is currently reviewing your document. You cannot re-upload it.";
+    echo "<script>window.location.href='student_dashboard.php?page=students_rs_grammarly_ai';</script>";
+    exit();
+}
+
+if ($urlMode === 'receipt' || $receiptOnlyMode) {
+    $showDocument = false;
+    $submitText = 'Re-upload Receipt';
+} elseif ($urlMode === 'document') {
+    $showReceipt = false;
+    $submitText = 'Re-upload Document';
+} else {
+    $submitText = 'Submit Both Files';
+}
+
+$activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
 ?>
 
-<div class="max-w-4xl mx-auto py-8 px-4 w-full transition-colors duration-200">
-
-    <?php if (isset($_SESSION['flash_success'])): ?>
-        <div id="toast-success" class="fixed top-6 right-6 bg-green-600 dark:bg-green-700 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0">
-            <div class="bg-green-500 dark:bg-green-600 rounded-full p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                </svg>
-            </div>
-            <span class="font-medium text-sm"><?php echo $_SESSION['flash_success']; ?></span>
-        </div>
-
-        <script>
-            setTimeout(() => {
-                const toast = document.getElementById('toast-success');
-                if (toast) {
-                    toast.classList.add('opacity-0', 'translate-x-full');
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 3000);
-        </script>
-        <?php unset($_SESSION['flash_success']); ?>
-    <?php endif; ?>
+<div class="max-w-4xl mx-auto py-10 px-4 w-full transition-colors duration-200">
 
     <?php if (isset($_SESSION['flash_error'])): ?>
-        <div id="toast-error" class="fixed top-6 right-6 bg-red-600 dark:bg-red-700 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0">
-            <div class="bg-red-500 dark:bg-red-600 rounded-full p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </div>
-            <span class="font-medium text-sm"><?php echo $_SESSION['flash_error']; ?></span>
+        <div id="toast-error" class="fixed top-6 right-6 bg-red-600 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0 font-medium text-sm">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span><?php echo $_SESSION['flash_error']; ?></span>
         </div>
-
-        <script>
-            setTimeout(() => {
-                const toast = document.getElementById('toast-error');
-                if (toast) {
-                    toast.classList.add('opacity-0', 'translate-x-full');
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 4000);
-        </script>
+        <script>setTimeout(() => { document.getElementById('toast-error')?.classList.add('opacity-0', 'translate-x-full'); }, 4000);</script>
         <?php unset($_SESSION['flash_error']); ?>
     <?php endif; ?>
 
-    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <!-- HEADER -->
+    <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Grammarly & AI Checking Upload</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document to review by the Grammarly & AI Checking Personnel.</p>
+            <h1 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+                <?= $submitText ?>
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Round <?php echo $nextRound; ?> • Grammarly & AI Checking</p>
         </div>
         <a href="student_dashboard.php?page=students_rs_grammarly_ai"
-            class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
+            class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Dashboard
+            Back
         </a>
     </div>
 
-    <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-transparent dark:border-warmdark-border p-8 transition-colors">
-
-        <?php if ($existing): ?>
-            <div class="mb-8 p-5 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
-                <div class="flex items-center gap-4">
-                    <div class="bg-blue-100 dark:bg-blue-900/50 p-2.5 rounded-lg text-blue-600 dark:text-blue-400 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Existing Submission Found (Round <?php echo $existing['round']; ?>)</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Uploading a new file will replace your current submission round.</p>
-                    </div>
+    <!-- NOTIFICATION BANNER IF RECEIPT WAS REJECTED -->
+    <?php if ($receiptOnlyMode && !$urlMode): ?>
+        <div class="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
                 </div>
-
-                <?php
-                $status = trim($existing['status'] ?? '');
-                $status = ucfirst($status);
-                
-                if ($status === 'Rejected' || $status === '') {
-                    $status = 'Needs Revision';
-                }
-
-                $badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-400";
-                if ($status === 'Pending') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
-                if ($status === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
-                if ($status === 'Needs Revision') $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
-                ?>
-                <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm transition-colors <?php echo $badgeColor; ?>">
-                    Status: <?php echo $status; ?>
-                </span>
+                <div class="ml-3">
+                    <h3 class="text-sm font-bold text-red-800 dark:text-red-300">Action Required: Receipt Rejected</h3>
+                    <p class="text-sm text-red-700 dark:text-red-400 mt-1">Your previous payment receipt was rejected by the checking personnel. Please upload a clear, valid receipt below to proceed with your document review.</p>
+                </div>
             </div>
-        <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
+    <!-- MODERN UPLOAD FORM -->
+    <div class="bg-white dark:bg-warmdark-panel rounded-3xl shadow-sm border border-gray-100 dark:border-warmdark-border p-8 transition-colors">
         <form action="../../backend/actions/upload-submission/upload_grammarly_ai.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm(event)">
+            
+            <input type="hidden" name="update_mode" value="<?= htmlspecialchars($activeMode) ?>">
+            <input type="hidden" name="round" value="<?= $nextRound ?>">
 
-            <div class="mb-8">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select your document</label>
-
-                <div class="flex items-center justify-center w-full">
-                    <label for="dropzone-file" id="dropzone-label" class="flex flex-col items-center justify-center w-full h-56 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-2xl cursor-pointer bg-gray-50 dark:bg-warmdark-bg hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:border-blue-400 dark:hover:border-blue-500 transition-all group">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg class="w-12 h-12 mb-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                            </svg>
-                            <p class="mb-2 text-sm text-gray-600 dark:text-gray-400"><span class="font-semibold text-blue-600 dark:text-blue-400">Click to upload</span> or drag and drop</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-500">Supported formats: PDF, DOCX, DOC, ODT, RTF, TXT, PPTX</p>
-                        </div>
-                        <input id="dropzone-file" type="file" name="submission_file" class="hidden" onchange="updateFileName(this)" />
-                    </label>
-                </div>
-
-                <p id="file-error" class="hidden text-red-500 dark:text-red-400 text-sm font-medium mt-3 text-center">
-                    Please select a document before submitting.
-                </p>
-
-                <div id="file-display-container" class="hidden mt-4 items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-900/50 rounded-lg transition-colors">
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 dark:text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span id="file-name-text" class="text-sm font-medium text-blue-800 dark:text-blue-300 truncate"></span>
+            <div class="grid <?= (!$showReceipt || !$showDocument) ? 'grid-cols-1 max-w-xl mx-auto' : 'grid-cols-1 md:grid-cols-2 gap-8' ?> mb-10">
+                
+                <!-- 1. RECEIPT UPLOAD -->
+                <?php if ($showReceipt): ?>
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-bold text-xs">1</span>
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">Payment Receipt</h3>
                     </div>
-                    <button type="button" onclick="clearFileSelection()" class="text-blue-400 dark:text-blue-500 hover:text-red-500 dark:hover:text-red-400 p-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    
+                    <label for="receipt-file" id="receipt-dropzone" class="flex-1 flex flex-col items-center justify-center w-full min-h-[200px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl cursor-pointer bg-gray-50/50 dark:bg-warmdark-bg hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:border-blue-400 transition-all group relative overflow-hidden">
+                        
+                        <div id="receipt-default" class="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                            <div class="w-12 h-12 bg-white dark:bg-warmdark-panel shadow-sm rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:text-blue-500 transition-transform text-gray-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Click to upload receipt</p>
+                            <p class="text-[11px] text-gray-400 mt-1 uppercase tracking-wide">JPG, PNG, PDF, DOCX</p>
+                        </div>
+
+                        <div id="receipt-selected" class="hidden flex-col items-center justify-center w-full h-full bg-blue-50/80 dark:bg-blue-900/20 absolute inset-0 text-center px-4">
+                            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mb-2 text-blue-600 dark:text-blue-300">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <span id="receipt-name" class="text-sm font-bold text-blue-900 dark:text-blue-200 truncate w-full px-2"></span>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1 hover:underline">Click to change</p>
+                        </div>
+
+                        <input id="receipt-file" type="file" name="receipt_file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="hidden" onchange="handleFileSelect(this, 'receipt-default', 'receipt-selected', 'receipt-name', 'receipt-dropzone', 'receipt-error')" />
+                    </label>
+                    <p id="receipt-error" class="hidden text-red-500 dark:text-red-400 text-xs font-bold mt-2 text-center">Receipt is required.</p>
                 </div>
+                <?php endif; ?>
+
+                <!-- 2. DOCUMENT UPLOAD -->
+                <?php if ($showDocument): ?>
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-bold text-xs"><?= $showReceipt ? '2' : '1' ?></span>
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">Research Document</h3>
+                    </div>
+
+                    <label for="document-file" id="document-dropzone" class="flex-1 flex flex-col items-center justify-center w-full min-h-[200px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl cursor-pointer bg-gray-50/50 dark:bg-warmdark-bg hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:border-blue-400 transition-all group relative overflow-hidden">
+                        
+                        <div id="document-default" class="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                            <div class="w-12 h-12 bg-white dark:bg-warmdark-panel shadow-sm rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:text-blue-500 transition-transform text-gray-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Click to upload document</p>
+                            <p class="text-[11px] text-gray-400 mt-1 uppercase tracking-wide">DOCX, PDF, RTF</p>
+                        </div>
+
+                        <div id="document-selected" class="hidden flex-col items-center justify-center w-full h-full bg-blue-50/80 dark:bg-blue-900/20 absolute inset-0 text-center px-4">
+                            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mb-2 text-blue-600 dark:text-blue-300">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <span id="document-name" class="text-sm font-bold text-blue-900 dark:text-blue-200 truncate w-full px-2"></span>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1 hover:underline">Click to change</p>
+                        </div>
+
+                        <input id="document-file" type="file" name="submission_file" accept=".pdf,.docx,.doc,.odt,.rtf,.txt,.pptx" class="hidden" onchange="handleFileSelect(this, 'document-default', 'document-selected', 'document-name', 'document-dropzone', 'document-error')" />
+                    </label>
+                    <p id="document-error" class="hidden text-red-500 dark:text-red-400 text-xs font-bold mt-2 text-center">Document is required.</p>
+                </div>
+                <?php endif; ?>
             </div>
 
-            <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-warmdark-border transition-colors">
-                <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
+            <!-- SUBMIT BUTTON -->
+            <div class="flex justify-end pt-6 border-t border-gray-100 dark:border-warmdark-border">
+                <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-10 py-3.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
-                    <?php echo $existing ? "Confirm Re-upload" : "Submit Document"; ?>
+                    <?= $submitText ?>
                 </button>
             </div>
-
         </form>
     </div>
 </div>
 
-<!-- FULL SCREEN LOADING OVERLAY -->
+<!-- ORIGINAL LOADING OVERLAY -->
 <div id="uploadLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Uploading Document...</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we process and notify the personnel.</p>
+        <h3 id="loadingTitle" class="text-lg font-bold text-gray-800 dark:text-gray-100">Uploading Files...</h3>
+        <p id="loadingDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we process your submission.</p>
     </div>
 </div>
 
 <script>
-    function updateFileName(input) {
-        const container = document.getElementById('file-display-container');
-        const textDisplay = document.getElementById('file-name-text');
-        const errorMsg = document.getElementById('file-error');
-        const dropzoneLabel = document.getElementById('dropzone-label');
-        
+    const reqReceipt = <?= $showReceipt ? 'true' : 'false' ?>;
+    const reqDocument = <?= $showDocument ? 'true' : 'false' ?>;
+
+    function handleFileSelect(input, defaultId, selectedId, textId, dropzoneId, errorId) {
+        const defaultView = document.getElementById(defaultId);
+        const selectedView = document.getElementById(selectedId);
+        const nameText = document.getElementById(textId);
+        const dropzone = document.getElementById(dropzoneId);
+        const error = document.getElementById(errorId);
+
         if (input.files && input.files.length > 0) {
-            textDisplay.textContent = input.files[0].name;
-            container.classList.remove('hidden');
-            container.classList.add('flex');
-            
-            // Hide error state if they select a file
-            errorMsg.classList.add('hidden');
-            dropzoneLabel.classList.remove('border-red-400', 'bg-red-50', 'dark:border-red-500/50', 'dark:bg-red-900/10');
+            nameText.textContent = input.files[0].name;
+            defaultView.classList.add('hidden');
+            defaultView.classList.remove('flex');
+            selectedView.classList.remove('hidden');
+            selectedView.classList.add('flex');
+            error.classList.add('hidden');
+            dropzone.classList.remove('border-dashed', 'border-gray-300', 'dark:border-gray-600', 'border-red-400', 'dark:border-red-500');
+            dropzone.classList.add('border-solid', 'border-blue-500', 'dark:border-blue-500');
         } else {
-            container.classList.add('hidden');
-            container.classList.remove('flex');
+            defaultView.classList.remove('hidden');
+            defaultView.classList.add('flex');
+            selectedView.classList.add('hidden');
+            selectedView.classList.remove('flex');
+            dropzone.classList.add('border-dashed', 'border-gray-300', 'dark:border-gray-600');
+            dropzone.classList.remove('border-solid', 'border-blue-500', 'dark:border-blue-500', 'border-red-400', 'dark:border-red-500');
         }
     }
 
-    // Allows the user to clear their file selection
-    function clearFileSelection() {
-        const input = document.getElementById('dropzone-file');
-        const container = document.getElementById('file-display-container');
-        
-        input.value = ""; // Clear the file input
-        container.classList.add('hidden'); // Hide the display container
-        container.classList.remove('flex');
-    }
-
-    // Custom Form Validation & Loader Activation
     function validateForm(event) {
-        const input = document.getElementById('dropzone-file');
-        const errorMsg = document.getElementById('file-error');
-        const dropzoneLabel = document.getElementById('dropzone-label');
-        
-        // If no file is selected
-        if (!input.files || input.files.length === 0) {
-            event.preventDefault(); // Stop form from submitting
-            
-            // Show custom error text and turn the dropzone red
-            errorMsg.classList.remove('hidden');
-            dropzoneLabel.classList.add('border-red-400', 'bg-red-50', 'dark:border-red-500/50', 'dark:bg-red-900/10');
-            
+        let isValid = true;
+
+        if (reqReceipt) {
+            const receipt = document.getElementById('receipt-file');
+            if (!receipt.files || receipt.files.length === 0) {
+                document.getElementById('receipt-error').classList.remove('hidden');
+                const rd = document.getElementById('receipt-dropzone');
+                rd.classList.remove('border-gray-300', 'dark:border-gray-600');
+                rd.classList.add('border-red-400', 'dark:border-red-500');
+                isValid = false;
+            }
+        }
+
+        if (reqDocument) {
+            const doc = document.getElementById('document-file');
+            if (!doc.files || doc.files.length === 0) {
+                document.getElementById('document-error').classList.remove('hidden');
+                const dd = document.getElementById('document-dropzone');
+                dd.classList.remove('border-gray-300', 'dark:border-gray-600');
+                dd.classList.add('border-red-400', 'dark:border-red-500');
+                isValid = false;
+            }
+        }
+
+        if(!isValid) {
+            event.preventDefault();
             return false;
         }
 
-        // If a file IS selected, show the loading overlay
+        document.getElementById('loadingTitle').innerText = (reqReceipt && reqDocument) ? 'Uploading Files...' : 'Updating File...';
+        document.getElementById('loadingDesc').innerText  = 'Please wait while we update your submission.';
+
         document.getElementById('uploadLoadingOverlay').classList.remove('hidden');
         document.getElementById('uploadLoadingOverlay').classList.add('flex');
-        
-        // Disable the submit button to prevent double-uploads
-        const btn = document.getElementById('submitUploadBtn');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = 'Uploading...';
-        }
+        document.getElementById('submitUploadBtn').disabled = true;
+        document.getElementById('submitUploadBtn').innerHTML = 'Uploading...';
         
         return true;
     }

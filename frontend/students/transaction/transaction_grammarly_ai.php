@@ -14,123 +14,37 @@ $res = $stmt->get_result();
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 
-// Check if student has an assigned Grammarly & AI Checking personnel
-$checkAssignment = $conn->query("
-    SELECT id, status 
-    FROM service_applications 
-    WHERE student_id = $student_id 
-    AND service_type = 'Grammarly & AI Checking' 
-    AND status = 'Approved' 
-    LIMIT 1
-");
-$isAssigned = $checkAssignment->num_rows > 0;
-
-// Get all transactions
+// Get all transactions purely as a history log
 $transactions = $conn->query("
     SELECT * FROM grammarly_ai_transactions
     WHERE student_id = $student_id
     ORDER BY round DESC
 ");
 
-// NEW: Check if student has ANY actual transactions so we can hide the fading alert later
 $hasAnyTransaction = $transactions->num_rows > 0;
-
-$maxRound = 7;
-
-$latestTransactionRes = $conn->query("
-    SELECT * FROM grammarly_ai_transactions
-    WHERE student_id = $student_id
-    ORDER BY round DESC
-    LIMIT 1
-");
-
-$latestTransaction = $latestTransactionRes->fetch_assoc();
-$canCreateNewRound = false;
-
-if (!$latestTransaction) {
-    // First time student
-    $canCreateNewRound = true;
-} else {
-    $latestRound = (int)$latestTransaction['round'];
-    $latestStatus = $latestTransaction['status'];
-
-    // Only check if we haven't exceeded max rounds
-    if ($latestRound < $maxRound) {
-        // Check if there is already a SUBMISSION for this latest round
-        $subCheck = $conn->query("
-            SELECT status FROM grammarly_ai 
-            WHERE student_id = $student_id AND round = $latestRound 
-            LIMIT 1
-        ");
-        $latestSubmission = $subCheck->fetch_assoc();
-        // If a submission exists for this round AND it was Needs Revision,
-        // ONLY THEN can they request a new receipt transaction for Round 2.
-        if ($latestSubmission && $latestSubmission['status'] === 'Needs Revision') {
-            $canCreateNewRound = true;
-        }
-    }
-}
 ?>
 
 <div class="max-w-6xl mx-auto py-8 px-4 w-full transition-colors duration-200">
 
-    <?php if (isset($_SESSION['flash_success'])): ?>
-        <div id="toast-success" class="fixed top-6 right-6 bg-green-600 dark:bg-green-700 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0">
-            <div class="bg-green-500 dark:bg-green-600 rounded-full p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                </svg>
-            </div>
-            <span class="font-medium text-sm"><?php echo $_SESSION['flash_success']; ?></span>
+    <div class="mb-8 flex justify-between items-end">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Transaction History</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">A history of your payment receipts for Grammarly & AI Checking.</p>
         </div>
-
-        <script>
-            setTimeout(() => {
-                const toast = document.getElementById('toast-success');
-                if (toast) {
-                    toast.classList.add('opacity-0', 'translate-x-full');
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 3000);
-        </script>
-        <?php unset($_SESSION['flash_success']); ?>
-    <?php endif; ?>
-
-
-    <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Transaction History</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your payment receipts for the Grammarly & AI Checking Service.</p>
+        <a href="student_dashboard.php?page=students_rs_grammarly_ai" class="bg-gray-100 dark:bg-warmdark-panel text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 dark:hover:bg-warmdark-hover transition-colors">
+            Back to Dashboard
+        </a>
     </div>
 
-    <?php if (!$isAssigned): ?>
-        <div class="bg-indigo-50 dark:bg-indigo-900/20 p-8 rounded-2xl shadow-sm border border-indigo-200 dark:border-indigo-900/50 max-w-2xl transition-colors">
-            <div class="flex items-start sm:items-center gap-5">
-                <div class="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-inner">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100">Waiting for Personnel Assignment</h2>
-                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mt-2 leading-relaxed">
-                        You cannot process transactions until a Grammarly & AI Checker has been officially assigned to your group. Please wait for the system administrator to assign one.
-                    </p>
-                </div>
-            </div>
+    <?php if (!$hasAnyTransaction): ?>
+        <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border p-12 flex flex-col items-center justify-center text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="text-lg font-bold text-gray-700 dark:text-gray-300">No Transactions Yet</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">When you upload a submission, your receipt history will appear here.</p>
         </div>
-
     <?php else: ?>
-        <?php if (!$hasAnyTransaction): ?>
-            <div x-data="{ show: true }" 
-                 x-show="show" 
-                 x-init="setTimeout(() => show = false, 5000)" 
-                 x-transition.opacity.duration.500ms 
-                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 w-full mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="text-sm text-green-800 dark:text-green-300 font-medium">A Grammarly & AI Checker has been assigned to you! You may now request your first transaction round.</span>
-            </div>
-        <?php endif; ?>
-
         <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-100 dark:border-warmdark-border overflow-hidden transition-colors">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
@@ -138,102 +52,54 @@ if (!$latestTransaction) {
                         <tr>
                             <th class="px-6 py-4 font-semibold">Round</th>
                             <th class="px-6 py-4 font-semibold">Status</th>
-                            <th class="px-6 py-4 font-semibold">Date Created</th>
+                            <th class="px-6 py-4 font-semibold">Date Uploaded</th>
                             <th class="px-6 py-4 font-semibold text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
-                        <?php if ($transactions->num_rows > 0): ?>
-                            <?php while ($row = $transactions->fetch_assoc()): ?>
-                                <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
-                                    
-                                    <td class="px-6 py-5 font-medium text-xs text-gray-800 dark:text-gray-200">
-                                        Round <?php echo (int)$row['round']; ?>
-                                    </td>
-
-                                    <td class="px-5 py-5">
-                                        <?php
-                                        $status = $row['status'];
-                                        $badgeColor = "text-gray-700 dark:text-gray-400";
-                                        if ($status === "Approved") $badgeColor = "text-green-700 dark:text-green-400";
-                                        if ($status === "Needs Revision") $badgeColor = "text-red-700 dark:text-red-400";
-                                        if ($status === "Receipt Uploaded") $badgeColor = "text-yellow-700 dark:text-yellow-400";
-                                        ?>
-                                        <span class="py-1.5 text-xs font-bold <?php echo $badgeColor; ?>">
-                                            <?php echo $status; ?>
-                                        </span>
-                                    </td>
-
-                                    <td class="px-6 py-5 text-gray-500 dark:text-gray-400">
-                                        <?php echo date('M d, Y h:i A', strtotime($row['created_at'])); ?>
-                                    </td>
-
-                                    <td class="px-6 py-5 text-center">
-                                        <?php if ($status === 'No Receipt' || $status === 'Needs Revision'): ?>
-                                            <a href="student_dashboard.php?page=student_transaction_receipt_grammarly_ai&round=<?php echo $row['round']; ?>"
-                                                class="inline-flex items-center justify-center bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                                </svg>
-                                                <?php echo $status === 'Needs Revision' ? 'Re-upload Receipt' : 'Upload Receipt'; ?>
-                                            </a>
-                                        
-                                        <?php elseif ($status === 'Approved'): ?>
-                                            <span class="inline-flex items-center justify-center bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-4 py-2 rounded-lg text-xs font-semibold gap-2 transition-colors">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                Completed
-                                            </span>
-                                        
-                                        <?php else: ?>
-                                            <span class="inline-flex items-center justify-center bg-gray-50 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-warmdark-border px-4 py-2 rounded-lg text-xs font-semibold gap-2 transition-colors">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                Under Review
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-
-                                </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
-                                    <div class="flex flex-col items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <p class="font-medium text-gray-500 dark:text-gray-400">No transaction records found.</p>
-                                    </div>
+                        <?php while ($row = $transactions->fetch_assoc()): ?>
+                            <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
+                                
+                                <td class="px-6 py-5 font-medium text-xs text-gray-800 dark:text-gray-200">
+                                    Round <?php echo (int)$row['round']; ?>
                                 </td>
+
+                                <td class="px-5 py-5">
+                                    <?php
+                                    $status = $row['status'];
+                                    $badgeColor = "text-gray-700 dark:text-gray-400";
+                                    if ($status === "Approved") $badgeColor = "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full border border-green-200 dark:border-green-900/30";
+                                    if ($status === "Needs Revision") $badgeColor = "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full border border-red-200 dark:border-red-900/30";
+                                    if ($status === "Receipt Uploaded" || $status === "Pending") $badgeColor = "text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1 rounded-full border border-yellow-200 dark:border-yellow-900/30";
+                                    ?>
+                                    <span class="text-xs font-bold <?php echo $badgeColor; ?>">
+                                        <?php echo $status; ?>
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-5 text-gray-500 dark:text-gray-400">
+                                    <?php echo date('M d, Y h:i A', strtotime($row['created_at'])); ?>
+                                </td>
+
+                                <td class="px-6 py-5 text-center">
+                                    <?php if (!empty($row['receipt_path'])): ?>
+                                        <a href="../../uploads/grammarly_ai/receipts/<?php echo $row['receipt_path']; ?>" target="_blank"
+                                            class="inline-flex items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-900/50 transition-colors gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            View Receipt
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-xs text-gray-400 italic">No receipt attached</span>
+                                    <?php endif; ?>
+                                </td>
+
                             </tr>
-                        <?php endif; ?>
+                        <?php endwhile; ?>
                     </tbody>
                 </table>
-            </div>
-            
-            <div class="p-6 border-t border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg transition-colors">
-                <?php if ($canCreateNewRound): ?>
-                    <form method="POST" action="../../backend/actions/create-transaction/create_grammarly_ai_transaction.php">
-                        <button type="submit" class="bg-green-600 dark:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:bg-green-700 dark:hover:bg-green-600 hover:shadow-lg transition-all flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Request New Round
-                        </button>
-                    </form>
-                <?php else: ?>
-                    <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                        <div class="bg-gray-200 dark:bg-warmdark-panel p-1.5 rounded-full transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <span>You must complete your current submission and wait.</span>
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>

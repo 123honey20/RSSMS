@@ -41,7 +41,7 @@ $status = isset($_GET['status']) ? $_GET['status'] : 'All';
 $sy = isset($_GET['sy']) ? $_GET['sy'] : 'All';
 $target_dept = isset($_GET['dept']) ? $_GET['dept'] : 'All';
 
-// 3. CRITICAL UPDATE: Lock query to ONLY show assigned students
+// 3. Lock query to ONLY show assigned students
 $where = "WHERE sa.service_type = 'Ethics' AND sa.status = 'Approved' AND sa.assigned_personnel_id = ?";
 $params = [$personnel_id];
 $types = "i";
@@ -101,15 +101,17 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// Update Main Query
+// Update Main Query - ADDED COALESCE for max_phases lookup
 $sql = "
-    SELECT e.id, e.status, e.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
+    SELECT e.id, e.status, e.round, e.phase, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name,
+           COALESCE(dsr.required_phases, 1) AS max_phases
     FROM ethics e
     JOIN students s ON e.student_id = s.id
     JOIN users u ON s.user_id = u.id
     JOIN departments d ON s.department_id = d.id
     JOIN courses c ON s.course_id = c.id
     JOIN service_applications sa ON sa.student_id = s.id
+    LEFT JOIN department_service_requirements dsr ON s.department_id = dsr.department_id AND dsr.service_type = 'Ethics'
     $where
     ORDER BY CASE WHEN e.status = 'Pending' THEN 1 ELSE 2 END, e.id DESC
     LIMIT ? OFFSET ?

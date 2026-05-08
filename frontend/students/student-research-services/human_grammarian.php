@@ -17,7 +17,7 @@ $student = $res->fetch_assoc();
 $student_id = $student['id'];
 $student_dept_id = $student['department_id'];
 
-// --- NEW: GET ADMIN RULES FOR PHASES/ROUNDS ---
+// --- GET ADMIN RULES FOR PHASES/ROUNDS ---
 $reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Human Grammarian'");
 $reqStmt->bind_param("i", $student_dept_id);
 $reqStmt->execute();
@@ -44,8 +44,8 @@ $application = $appStmt->get_result()->fetch_assoc();
 $appStmt->close();
 
 $appStatus = $application ? $application['status'] : null;
+$isAssigned = $application ? true : false;
 
-// Check if student has ANY actual submissions so we can hide the fading alerts later
 $hasAnySubmission = false;
 if ($student_id) {
     $subCheck = $conn->query("SELECT id FROM human_grammarian WHERE student_id = $student_id LIMIT 1");
@@ -60,27 +60,44 @@ $latest = null;
 $currentRound = 0;
 $currentPhase = 1;
 $currentStatus = null;
+$is_locked = 0;
 
 if ($appStatus === 'Approved') {
-    // Included phase in the ORDER BY
-    $subs = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC, uploaded_at DESC");
-    $latestRes = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
+    $subs = $conn->query("SELECT *, COALESCE(is_locked, 0) as is_locked FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC, uploaded_at DESC");
+    
+    $latestRes = $conn->query("SELECT *, COALESCE(is_locked, 0) as is_locked FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
     $latest = $latestRes->fetch_assoc();
     $currentRound = $latest ? (int)$latest['round'] : 0;
     $currentPhase = $latest ? (int)($latest['phase'] ?? 1) : 1;
     $currentStatus = $latest ? $latest['status'] : null;
+    $is_locked = $latest ? (int)$latest['is_locked'] : 0;
 }
 
-// 4. Fetch the specific requirements for Human Grammarian
+// 4. Fetch the specific requirements
 $req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_human_grammarian'");
 $human_grammarian_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
 $human_grammarian_requirements = json_decode($human_grammarian_requirements_json, true);
 
-// Fallback just in case it's still old plain text
 if (!is_array($human_grammarian_requirements)) {
     $human_grammarian_requirements = array_filter(explode("\n", $human_grammarian_requirements_json));
 }
 
+// ==========================================
+// CENTRALIZED LOGIC ALGORITHMS
+// ==========================================
+$isFullyCompleted = ($currentStatus === 'Approved' && $currentPhase >= $max_phases);
+$canUploadNewRound = false;
+
+if (!$latest) {
+    $canUploadNewRound = true; // no submission yet
+} elseif ($currentStatus === 'Needs Revision' && $currentRound < $max_rounds) {
+    $canUploadNewRound = true; // can go to next round
+} elseif ($currentStatus === 'Approved' && $currentPhase < $max_phases) {
+    $canUploadNewRound = true; // can go to next phase
+}
+
+// DYNAMIC RE-UPLOAD LOGIC
+$canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
 ?>
 
 <div class="space-y-6 transition-colors duration-200">
@@ -109,13 +126,14 @@ if (!is_array($human_grammarian_requirements)) {
                  x-show="show" 
                  x-init="setTimeout(() => show = false, 5000)" 
                  x-transition.opacity.duration.500ms 
-                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl">
+                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span class="text-sm text-green-800 dark:text-green-300 font-medium">A Human Grammarian has been assigned to you! You may now submit your documents for review.</span>
             </div>
         <?php endif; ?>
 
-        <?php if (!empty($human_grammarian_requirements) && $appStatus === 'Approved'): ?>
+        <!-- REQUIREMENTS DROPDOWN: Visible until ALL phases are completed -->
+        <?php if (!empty($human_grammarian_requirements) && $appStatus === 'Approved' && !$isFullyCompleted): ?>
             <div x-data="{ openReqs: false }" class="bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-900/30 w-full mb-6 overflow-hidden transition-colors">
                 <button @click="openReqs = !openReqs" class="w-full p-4 sm:p-5 flex items-center justify-between text-left focus:outline-none hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors">
                     <h3 class="text-sm font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2 m-0">
@@ -129,7 +147,7 @@ if (!is_array($human_grammarian_requirements)) {
                     </svg>
                 </button>
                 
-                <div x-show="openReqs" x-collapse x-cloak>
+                <div x-show="openReqs" style="display: none;">
                     <div class="px-5 pb-5 pt-1 border-t border-blue-100 dark:border-blue-900/30 mt-1">
                         <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-2 pl-2 font-medium mt-3">
                             <?php foreach ($human_grammarian_requirements as $req): ?>
@@ -143,23 +161,8 @@ if (!is_array($human_grammarian_requirements)) {
 
         <div class="flex flex-wrap gap-6">
 
-            <?php
-            // --- NEW PHASE LOGIC ALGORITHM ---
-            $isFullyCompleted = ($currentStatus === 'Approved' && $currentPhase >= $max_phases);
-            $canUploadNewRound = false;
-
-            if (!$latest) {
-                $canUploadNewRound = true; // no submission yet
-            } elseif ($currentStatus === 'Needs Revision' && $currentRound < $max_rounds) {
-                $canUploadNewRound = true; // can go to next round
-            } elseif ($currentStatus === 'Approved' && $currentPhase < $max_phases) {
-                $canUploadNewRound = true; // can go to next phase
-            }
-            ?>
-
             <!-- UPLOAD CARD -->
             <?php if ($isFullyCompleted): ?>
-
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-green-200 dark:border-green-900/50 rounded-lg p-5 w-64 flex items-center justify-between opacity-90 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
@@ -173,7 +176,7 @@ if (!is_array($human_grammarian_requirements)) {
                 </div>
 
             <?php elseif ($canUploadNewRound): ?>
-
+                <!-- FIX: Now exclusively handles NEW submissions -->
                 <a href="student_dashboard.php?page=student_upload_human_grammarian"
                     class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
                     <div>
@@ -192,7 +195,7 @@ if (!is_array($human_grammarian_requirements)) {
                 </a>
 
             <?php else: ?>
-
+                <!-- FIX: Automatically defaults to "Pending Review" if they just need to wait (or use the table button to update) -->
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <?php if ($max_phases > 1): ?>
@@ -208,10 +211,9 @@ if (!is_array($human_grammarian_requirements)) {
                         </svg>
                     </div>
                 </div>
-
             <?php endif; ?>
 
-            <!-- RESULT CARD (UPDATED LOGIC) -->
+            <!-- RESULT CARD -->
             <?php if ($isFullyCompleted): ?>
                 <a href="student_dashboard.php?page=student_human_grammarian_approved_result&id=<?php echo $latest['id']; ?>"
                     class="bg-white dark:bg-warmdark-panel shadow-sm border border-green-200 dark:border-green-900/50 border-l-4 border-l-green-500 dark:border-l-green-500 rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition group cursor-pointer">
@@ -276,14 +278,12 @@ if (!is_array($human_grammarian_requirements)) {
                             <th class="py-2">Submission</th>
                             <th class="py-2">File</th>
                             <th class="py-2">Status</th>
-                            <th class="py-2">Date</th>
-                            <th class="py-2">Reports</th>
-                            <th class="py-2 text-center">Action</th>
+                            <th class="py-2">Date & Time</th>
+                            <th class="py-2 text-center">Report</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
                         <?php if ($subs && $subs->num_rows > 0): ?>
-                            <?php $i = 1; ?>
                             <?php while ($row = $subs->fetch_assoc()): ?>
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
                                     <td class="py-3 text-xs font-semibold dark:text-gray-200">
@@ -297,9 +297,7 @@ if (!is_array($human_grammarian_requirements)) {
                                         <?php
                                         $fullName = basename($row['file_path']);
                                         ?>
-                                        <span
-                                            class="block truncate text-gray-700 dark:text-gray-300"
-                                            title="<?php echo htmlspecialchars($fullName); ?>">
+                                        <span class="block truncate text-gray-700 dark:text-gray-300" title="<?php echo htmlspecialchars($fullName); ?>">
                                             <?php echo htmlspecialchars($fullName); ?>
                                         </span>
                                     </td>
@@ -316,37 +314,78 @@ if (!is_array($human_grammarian_requirements)) {
                                             <?php echo ucfirst($status); ?>
                                         </span>
                                     </td>
-                                    <td class="py-3 text-gray-500 dark:text-gray-400 text-xs">
-                                        <?php echo date('M d, Y', strtotime($row['uploaded_at'])); ?>
+                                    
+                                    <!-- TIMELINE / DATE & TIME COLUMN -->
+                                    <td class="py-3 text-xs whitespace-nowrap">
+                                        <div class="flex flex-col gap-1.5">
+                                            <div>
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Uploaded</span>
+                                                <span class="text-gray-700 dark:text-gray-300 font-medium"><?php echo date('M d, Y \a\t h:i A', strtotime($row['uploaded_at'])); ?></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
+                                                <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
+                                                    <span class="text-gray-700 dark:text-gray-300 font-medium">
+                                                        <?php 
+                                                        $finalizedDate = $row['updated_at'] ?? null;
+                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--'; 
+                                                        ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-yellow-600 dark:text-yellow-500 italic font-medium">Waiting...</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="py-3">
-                                        <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
-                                            <a href="student_dashboard.php?page=student_view_human_grammarian_report&id=<?php echo $row['id']; ?>"
-                                                class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm">
-                                                View
-                                            </a>
-                                        <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors cursor-not-allowed">
-                                                View
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
+
+                                    <!-- REPORT ACTIONS -->
                                     <td class="py-3 text-center">
-                                        <?php
-                                        $canReuploadSameRound = ($status === 'Pending' && $row['id'] == $latest['id']);
-                                        ?>
+                                        <div class="flex items-center justify-center gap-2">
+                                            
+                                            <!-- View Button -->
+                                            <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
+                                                <a href="student_dashboard.php?page=student_view_human_grammarian_report&id=<?php echo $row['id']; ?>"
+                                                    class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm font-bold inline-block">
+                                                    View
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-600 border border-transparent px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed inline-block">
+                                                    View
+                                                </span>
+                                            <?php endif; ?>
 
-                                        <?php if ($canReuploadSameRound): ?>
-                                            <a href="student_dashboard.php?page=student_upload_human_grammarian"
-                                                class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm inline-block">
-                                                Re-upload
-                                            </a>
+                                            <!-- Re-upload / Locked Logic -->
+                                            <?php 
+                                            $isRowLatest = ($row['id'] === $latest['id']);
+                                            $rowLocked = (int)$row['is_locked'] === 1;
+                                            ?>
 
-                                        <?php else: ?>
-                                            <span class="bg-gray-200 dark:bg-warmdark-bg text-gray-500 dark:text-gray-500 px-3 py-1.5 rounded text-xs transition-colors inline-block cursor-not-allowed">
-                                                Re-upload
-                                            </span>
-                                        <?php endif; ?>
+                                            <?php if ($isRowLatest && $status === 'Pending'): ?>
+                                                <?php if ($rowLocked): ?>
+                                                    <!-- LOCKED STATE UI -->
+                                                    <span title="Personnel is currently reviewing this file" class="flex items-center gap-1.5 bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed transition-colors shadow-sm">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                                        </svg>
+                                                        Locked
+                                                    </span>
+                                                <?php elseif ($canUpdateDoc): ?>
+                                                    <!-- ACTIVE REUPLOAD BUTTON -->
+                                                    <a href="student_dashboard.php?page=student_upload_human_grammarian" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                        Update
+                                                    </a>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <!-- Old rounds or Approved rounds -->
+                                                <span class="bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-600 px-4 py-1.5 rounded-lg text-xs font-bold border border-transparent cursor-not-allowed inline-block">
+                                                    Reviewed
+                                                </span>
+                                            <?php endif; ?>
+
+                                        </div>
                                     </td>
 
                                 </tr>

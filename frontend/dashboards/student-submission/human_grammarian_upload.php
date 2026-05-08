@@ -29,6 +29,18 @@ $reqStmt->close();
 $sub = $conn->query("SELECT * FROM human_grammarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
 $existing = $sub->fetch_assoc();
 $currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
+$is_locked = $existing ? (int)($existing['is_locked'] ?? 0) : 0;
+$status = $existing ? $existing['status'] : null;
+
+// Security check: Block manually forced upload if locked!
+if ($status === 'Pending' && $is_locked === 1) {
+    $_SESSION['flash_error'] = "The personnel is currently reviewing your document. You cannot re-upload it.";
+    echo "<script>window.location.href='student_dashboard.php?page=students_rs_human_grammarian';</script>";
+    exit();
+}
+
+$isReupload = ($existing && $status === 'Pending');
+$submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
 ?>
 
 <div class="max-w-4xl mx-auto py-8 px-4 w-full transition-colors duration-200">
@@ -61,7 +73,9 @@ $currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
 
     <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Human Grammarian Upload</h1>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
+                <?= $submitText ?>
+            </h1>
             <?php if ($max_phases > 1): ?>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document for Phase <?= $existing && $existing['status'] === 'Approved' ? $currentPhase + 1 : $currentPhase ?>.</p>
             <?php else: ?>
@@ -104,58 +118,51 @@ $currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
                 </div>
                 
                 <?php
-                    $status = ucfirst($existing['status']);
+                    $badgeStatus = ucfirst($status);
                     $badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-400";
-                    if ($status === 'Pending') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
-                    if ($status === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
-                    if ($status === 'Needs Revision' || $status === 'Rejected') {
-                        $status = 'Needs Revision';
+                    if ($badgeStatus === 'Pending') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
+                    if ($badgeStatus === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
+                    if ($badgeStatus === 'Needs Revision' || $badgeStatus === 'Rejected') {
+                        $badgeStatus = 'Needs Revision';
                         $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
                     }
                 ?>
                 <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm transition-colors <?php echo $badgeColor; ?>">
-                    Status: <?php echo $status; ?>
+                    Status: <?php echo $badgeStatus; ?>
                 </span>
             </div>
         <?php endif; ?>
 
         <form action="../../backend/actions/upload-submission/upload_human_grammarian.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm(event)">
             
-            <div class="mb-8">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select your document</label>
-                
-                <div class="flex items-center justify-center w-full">
-                    <label for="dropzone-file" id="dropzone-label" class="flex flex-col items-center justify-center w-full h-56 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-2xl cursor-pointer bg-gray-50 dark:bg-warmdark-bg hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:border-blue-400 dark:hover:border-blue-500 transition-all group">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg class="w-12 h-12 mb-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                            </svg>
-                            <p class="mb-2 text-sm text-gray-600 dark:text-gray-400"><span class="font-semibold text-blue-600 dark:text-blue-400">Click to upload</span> or drag and drop</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-500">Supported formats: PDF, DOCX, DOC, ODT, RTF, TXT, PPTX</p>
+            <div class="grid grid-cols-1 max-w-xl mx-auto mb-10">
+                <div class="flex flex-col">
+                    <label for="document-file" id="document-dropzone" class="flex-1 flex flex-col items-center justify-center w-full min-h-[250px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl cursor-pointer bg-gray-50/50 dark:bg-warmdark-bg hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:border-blue-400 transition-all group relative overflow-hidden">
+                        
+                        <div id="document-default" class="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                            <div class="w-12 h-12 bg-white dark:bg-warmdark-panel shadow-sm rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:text-blue-500 transition-transform text-gray-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Click to upload document</p>
+                            <p class="text-[11px] text-gray-400 mt-1 uppercase tracking-wide">DOCX, PDF, RTF</p>
                         </div>
-                        <input id="dropzone-file" type="file" name="submission_file" class="hidden" onchange="updateFileName(this)" />
-                    </label>
-                </div>
 
-                <p id="file-error" class="hidden text-red-500 dark:text-red-400 text-sm font-medium mt-3 text-center">
-                    Please select a document before submitting.
-                </p>
-                
-                <div id="file-display-container" class="hidden mt-4 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-900/50 rounded-lg transition-colors">
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 dark:text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span id="file-name-text" class="text-sm font-medium text-blue-800 dark:text-blue-300 truncate"></span>
-                    </div>
-                    <button type="button" onclick="clearFileSelection()" class="text-blue-400 dark:text-blue-500 hover:text-red-500 dark:hover:text-red-400 p-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
+                        <div id="document-selected" class="hidden flex-col items-center justify-center w-full h-full bg-blue-50/80 dark:bg-blue-900/20 absolute inset-0 text-center px-4">
+                            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mb-2 text-blue-600 dark:text-blue-300">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <span id="document-name" class="text-sm font-bold text-blue-900 dark:text-blue-200 truncate w-full px-2"></span>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1 hover:underline">Click to change</p>
+                        </div>
+
+                        <input id="document-file" type="file" name="submission_file" accept=".pdf,.docx,.doc,.odt,.rtf,.txt,.pptx" class="hidden" onchange="handleFileSelect(this, 'document-default', 'document-selected', 'document-name', 'document-dropzone', 'document-error')" />
+                    </label>
+                    <p id="document-error" class="hidden text-red-500 dark:text-red-400 text-xs font-bold mt-2 text-center">Document is required.</p>
                 </div>
             </div>
 
-            <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-warmdark-border transition-colors">
-                <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
+            <div class="flex justify-end pt-6 border-t border-gray-100 dark:border-warmdark-border transition-colors">
+                <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-10 py-3.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
@@ -167,7 +174,7 @@ $currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
     </div>
 </div>
 
-<!-- FULL SCREEN LOADING OVERLAY -->
+<!-- ORIGINAL LOADING OVERLAY -->
 <div id="uploadLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -180,37 +187,36 @@ $currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
 </div>
 
 <script>
-    function updateFileName(input) {
-        const container = document.getElementById('file-display-container');
-        const textDisplay = document.getElementById('file-name-text');
-        const errorMsg = document.getElementById('file-error');
-        const dropzoneLabel = document.getElementById('dropzone-label');
-        
+    function handleFileSelect(input, defaultId, selectedId, textId, dropzoneId, errorId) {
+        const defaultView = document.getElementById(defaultId);
+        const selectedView = document.getElementById(selectedId);
+        const nameText = document.getElementById(textId);
+        const dropzone = document.getElementById(dropzoneId);
+        const error = document.getElementById(errorId);
+
         if (input.files && input.files.length > 0) {
-            textDisplay.textContent = input.files[0].name;
-            container.classList.remove('hidden');
-            container.classList.add('flex');
-            
-            errorMsg.classList.add('hidden');
-            dropzoneLabel.classList.remove('border-red-400', 'bg-red-50', 'dark:border-red-500/50', 'dark:bg-red-900/10');
+            nameText.textContent = input.files[0].name;
+            defaultView.classList.add('hidden');
+            defaultView.classList.remove('flex');
+            selectedView.classList.remove('hidden');
+            selectedView.classList.add('flex');
+            error.classList.add('hidden');
+            dropzone.classList.remove('border-dashed', 'border-gray-300', 'dark:border-gray-600', 'border-red-400', 'dark:border-red-500');
+            dropzone.classList.add('border-solid', 'border-blue-500', 'dark:border-blue-500');
         } else {
-            container.classList.add('hidden');
-            container.classList.remove('flex');
+            defaultView.classList.remove('hidden');
+            defaultView.classList.add('flex');
+            selectedView.classList.add('hidden');
+            selectedView.classList.remove('flex');
+            dropzone.classList.add('border-dashed', 'border-gray-300', 'dark:border-gray-600');
+            dropzone.classList.remove('border-solid', 'border-blue-500', 'dark:border-blue-500', 'border-red-400', 'dark:border-red-500');
         }
     }
 
-    function clearFileSelection() {
-        const input = document.getElementById('dropzone-file');
-        const container = document.getElementById('file-display-container');
-        input.value = "";
-        container.classList.add('hidden');
-        container.classList.remove('flex');
-    }
-
     function validateForm(event) {
-        const input = document.getElementById('dropzone-file');
-        const errorMsg = document.getElementById('file-error');
-        const dropzoneLabel = document.getElementById('dropzone-label');
+        const input = document.getElementById('document-file');
+        const errorMsg = document.getElementById('document-error');
+        const dropzoneLabel = document.getElementById('document-dropzone');
         
         if (!input.files || input.files.length === 0) {
             event.preventDefault();

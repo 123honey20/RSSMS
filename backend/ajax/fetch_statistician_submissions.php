@@ -101,15 +101,17 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// Update Main Query to JOIN the service_applications table
+// Update Main Query - ADDED COALESCE for max_phases lookup
 $sql = "
-    SELECT t.id, t.status, t.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
+    SELECT t.id, t.status, t.round, t.phase, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name,
+           COALESCE(dsr.required_phases, 1) AS max_phases
     FROM statistician t
     JOIN students s ON t.student_id = s.id
     JOIN users u ON s.user_id = u.id
     JOIN departments d ON s.department_id = d.id
     JOIN courses c ON s.course_id = c.id
     JOIN service_applications sa ON sa.student_id = s.id
+    LEFT JOIN department_service_requirements dsr ON s.department_id = dsr.department_id AND dsr.service_type = 'Statistician'
     $where
     ORDER BY CASE WHEN t.status = 'Pending' THEN 1 ELSE 2 END, t.id DESC
     LIMIT ? OFFSET ?

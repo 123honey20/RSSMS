@@ -172,7 +172,7 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
         </div>
 
         <div class="bg-white dark:bg-warmdark-panel rounded-lg shadow-sm border border-transparent dark:border-warmdark-border p-6 flex flex-col h-[775px] transition-colors">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6 pb-3 border-b border-gray-100 dark:border-warmdark-border transition-colors">Personnel Comments</h3>
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6 pb-3 border-b border-gray-100 dark:border-warmdark-border transition-colors">Comments</h3>
 
             <div class="flex-1 overflow-y-auto space-y-5 pr-3 custom-scrollbar">
                 <?php if ($comments->num_rows > 0): ?>
@@ -219,7 +219,7 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-200 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        <p class="font-medium text-gray-500 dark:text-gray-400">No Comments Yet</p>
+                        <p class="font-medium text-gray-500 dark:text-gray-400">No Comments</p>
                         <p class="text-sm mt-1">The personnel has not added any comments to this submission.</p>
                     </div>
                 <?php endif; ?>
@@ -261,7 +261,7 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
             </div>
 
             <div>
-                <h4 class="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold mb-3">Personnel Feedback</h4>
+                <h4 class="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold mb-3">Personnel Comment</h4>
                 <div class="bg-blue-50/30 dark:bg-warmdark-bg p-4 rounded-xl border border-blue-50 dark:border-warmdark-border transition-colors">
                     <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-sm" id="modalCommentText"></p>
                 </div>

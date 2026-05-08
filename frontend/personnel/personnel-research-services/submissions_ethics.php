@@ -15,7 +15,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
     $generated_years[] = $y . "-" . ($y + 1);
 }
 
-// NEW: Fetch assigned departments from junction table for this specific personnel
+// Fetch assigned departments from junction table for this specific personnel
 $user_id = $_SESSION['user'];
 $assigned_depts = [];
 
@@ -77,7 +77,7 @@ $deptStmt->close();
                     <th class="px-6 py-4 font-semibold">Control No.</th>
                     <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
-                    <th class="px-6 py-4 font-semibold text-center">Round</th>
+                    <th class="px-6 py-4 font-semibold text-center">Phase & Round</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
             </thead>
@@ -98,7 +98,7 @@ $deptStmt->close();
         const search = document.getElementById('searchInput').value;
         const status = document.getElementById('statusFilter').value; 
         const sy = document.getElementById('syFilter').value; 
-        const pDept = document.getElementById('personnelDeptFilter').value; // NEW
+        const pDept = document.getElementById('personnelDeptFilter').value; 
 
         fetch(`../../backend/ajax/fetch_ethics_submissions.php?p=${page}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&sy=${encodeURIComponent(sy)}&dept=${encodeURIComponent(pDept)}`)
             .then(res => res.json())
@@ -140,7 +140,21 @@ $deptStmt->close();
                     if (row.status === 'Approved' || row.status === 'Needs Revision') {
                         actionButton = `<button onclick="viewSubmissionWithComments(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm">Review Submission</button>`;
                     } else {
-                        actionButton = `<button onclick="loadProcess(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm">Process</button>`;
+                        actionButton = `<button onclick="loadProcess(${row.id})" class="text-white bg-blue-600 dark:bg-blue-700 px-4 py-1.5 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-bold text-xs shadow-sm">Process</button>`;
+                    }
+
+                    // FIX: Check max_phases from the database. Show Phase X if max_phases > 1.
+                    let pVal = row.phase ? parseInt(row.phase) : 1;
+                    let mPhases = row.max_phases ? parseInt(row.max_phases) : 1;
+                    let phaseRoundText = '';
+                    
+                    if (mPhases > 1) {
+                        phaseRoundText = `<div class="flex flex-col items-center">
+                                            <span class="font-bold text-gray-800 dark:text-gray-200">Phase ${pVal}</span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400">Round ${row.round}</span>
+                                          </div>`;
+                    } else {
+                        phaseRoundText = `<span class="font-medium text-gray-600 dark:text-gray-300">Round ${row.round}</span>`;
                     }
 
                     tr.innerHTML = `
@@ -153,7 +167,7 @@ $deptStmt->close();
                             </button>
                         </td>
                         <td class="px-6 py-4 text-center">${statusBadge}</td>
-                        <td class="px-6 py-4 text-center font-medium text-gray-600 dark:text-gray-300">${row.round}</td>
+                        <td class="px-6 py-4 text-center">${phaseRoundText}</td>
                         <td class="px-6 py-4 flex justify-center gap-2">
                             ${actionButton}
                         </td>
@@ -186,7 +200,6 @@ $deptStmt->close();
         }
     }
 
-    // NEW: Added personnelDeptFilter to the listener array
     ['statusFilter', 'syFilter', 'personnelDeptFilter'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => fetchSubmissions(1));
     });

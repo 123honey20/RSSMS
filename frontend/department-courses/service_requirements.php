@@ -63,7 +63,8 @@ while ($row = $rulesQuery->fetch_assoc()) {
             <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-transparent dark:border-warmdark-border p-6 transition-colors">
                 <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 border-b border-gray-100 dark:border-warmdark-border pb-3">Add / Update Rule</h2>
                 
-                <form action="../../backend/actions/department-courses/save_service_requirement.php" method="POST" onsubmit="showConfigLoader()">
+                <!-- FIX: Added the missing "s" to save_service_requirements.php -->
+                <form action="../../backend/actions/department-courses/save_service_requirements.php" method="POST" onsubmit="showConfigLoader()">
                     
                     <div class="space-y-4">
                         <div>

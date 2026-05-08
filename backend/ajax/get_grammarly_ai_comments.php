@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 $grammarlyAiId = intval($_GET['id'] ?? 0);
 
 $stmt = $conn->prepare("
-    SELECT page_number, paragraph_number, comment_text, created_at
+    SELECT comment_text, created_at
     FROM grammarly_ai_comments
     WHERE grammarly_ai_id = ?
     ORDER BY created_at ASC

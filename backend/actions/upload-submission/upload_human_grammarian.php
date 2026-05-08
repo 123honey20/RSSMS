@@ -36,13 +36,13 @@ $studentDeptId = $studentData['department_id'];
 $studentDeptName = $studentData['dept_name'];
 $stmt->close();
 
-// --- NEW: FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
+// --- FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
 $reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Human Grammarian'");
 $reqStmt->bind_param("i", $studentDeptId);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
-$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; // Default 1
-$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; // Default 7
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; 
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; 
 $reqStmt->close();
 
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
@@ -55,6 +55,8 @@ $targetDir = "../../../uploads/human_grammarian/";
 $targetFile = $targetDir . $filename;
 
 if (move_uploaded_file($file['tmp_name'], $targetFile)) {
+    
+    // Get the latest submission
     $checkStmt = $conn->prepare("SELECT * FROM human_grammarian WHERE student_id = ? ORDER BY phase DESC, round DESC LIMIT 1");
     $checkStmt->bind_param("i", $student_id);
     $checkStmt->execute();
@@ -70,35 +72,41 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $phase = (int)($latest['phase'] ?? 1);
         $round = (int)$latest['round'];
 
+        // ENFORCE SECURITY LOCK
+        if ($latest['status'] === 'Pending' && (int)$latest['is_locked'] === 1) {
+            redirectWithError("Your document is currently being reviewed by the personnel and cannot be changed.", $redirect_url, $targetFile);
+        }
+
         if ($latest['status'] === 'Pending') {
+            // Replace existing pending file
             if (file_exists($targetDir . $latest['file_path'])) unlink($targetDir . $latest['file_path']);
-            $stmt = $conn->prepare("UPDATE human_grammarian SET file_path = ?, status = 'Pending', uploaded_at = NOW() WHERE id = ?");
+            
+            // Set is_locked = 0 so personnel knows it is updated
+            $stmt = $conn->prepare("UPDATE human_grammarian SET file_path = ?, status = 'Pending', is_locked = 0, uploaded_at = NOW() WHERE id = ?");
             $stmt->bind_param("si", $filename, $latest['id']);
             $stmt->execute();
             
         } elseif ($latest['status'] === 'Needs Revision') {
-            // Check Round Limit
             if ($round >= $max_rounds) {
                 redirectWithError("You have reached the maximum round limit ($max_rounds) for Phase $phase.", $redirect_url, $targetFile);
             }
-            $round++; // Advance Round
-            $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $round++; 
+            $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, phase, personnel_id, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, ?, 0)");
             $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
             $stmt->execute();
 
         } elseif ($latest['status'] === 'Approved') {
-            // Check Phase Limit
             if ($phase >= $max_phases) {
                 redirectWithError("You have already completed all required phases for Human Grammarian.", $redirect_url, $targetFile);
             }
-            $phase++; // Advance Phase
-            $round = 1; // Reset Round
-            $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, phase, personnel_id) VALUES (?, ?, ?, 'Pending', ?, ?, ?)");
+            $phase++; 
+            $round = 1; 
+            $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, phase, personnel_id, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, ?, 0)");
             $stmt->bind_param("issiii", $student_id, $school_id, $filename, $round, $phase, $assigned_personnel_id);
             $stmt->execute();
         }
     } else {
-        $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, phase) VALUES (?, ?, ?, 'Pending', ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO human_grammarian (student_id, school_id, file_path, status, round, phase, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, 0)");
         $stmt->bind_param("issii", $student_id, $school_id, $filename, $round, $phase);
         $stmt->execute();
     }
