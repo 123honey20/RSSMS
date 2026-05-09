@@ -111,13 +111,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Update Document Table (AND SAVE `updated_at` TIMESTMAP)
+        // --- 2. GET THE ACTUAL PERSONNEL DOING THE PROCESSING ---
+        $user_id = $_SESSION['user']; 
+        $p_stmt = $conn->prepare("SELECT p.id, p.full_name, u.email FROM personnel p JOIN users u ON p.user_id = u.id WHERE p.user_id = ?");
+        $p_stmt->bind_param("i", $user_id);
+        $p_stmt->execute();
+        $personnel = $p_stmt->get_result()->fetch_assoc();
+        $actual_personnel_id = $personnel['id'];
+        $personnel_name = $personnel['full_name'];
+        $personnel_email = $personnel['email'];
+        $p_stmt->close();
+
+        // --- 3. UPDATE DATABASE AND ASSIGN CREDIT ---
         if ($filename) {
-            $stmt = $conn->prepare("UPDATE grammarly_ai SET status = ?, result_file_path = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->bind_param("ssi", $status, $filename, $submission_id);
+            $stmt = $conn->prepare("UPDATE grammarly_ai SET status = ?, result_file_path = ?, personnel_id = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param("ssii", $status, $filename, $actual_personnel_id, $submission_id);
         } else {
-            $stmt = $conn->prepare("UPDATE grammarly_ai SET status = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->bind_param("si", $status, $submission_id);
+            $stmt = $conn->prepare("UPDATE grammarly_ai SET status = ?, personnel_id = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param("sii", $status, $actual_personnel_id, $submission_id);
         }
         $success = $stmt->execute();
         $stmt->close();
@@ -125,14 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Email Notification
         if ($success) {
             $_SESSION['flash_success'] = "Document $status successfully!";
-
-            $user_id = $_SESSION['user']; 
-            $p_stmt = $conn->prepare("SELECT p.full_name, u.email FROM personnel p JOIN users u ON p.user_id = u.id WHERE p.user_id = ?");
-            $p_stmt->bind_param("i", $user_id);
-            $p_stmt->execute();
-            $personnel = $p_stmt->get_result()->fetch_assoc();
-            $personnel_name = $personnel['full_name'];
-            $personnel_email = $personnel['email'];
 
             $stmtDetails = $conn->prepare("
                 SELECT g.round, s.research_leader, s.thesis_title, u.email as student_email, s.control_number

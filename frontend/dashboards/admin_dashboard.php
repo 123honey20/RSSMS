@@ -136,6 +136,13 @@ $stmt->close();
                             </svg>
                             Assign Personnel
                         </a>
+
+                        <a href="admin_dashboard.php?page=reassign_workload" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-amber-700 dark:text-amber-500 bg-amber-50/50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-transparent hover:border-amber-200 dark:hover:border-amber-500/30 transition-colors group mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-600 dark:text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            Reassign Workload
+                        </a>
                     </div>
                 </div>
 
@@ -333,6 +340,9 @@ $stmt->close();
                         break;
                     case 'assign_personnel':
                         include '../personnel/assign_personnel.php';
+                        break;
+                    case 'reassign_workload':
+                        include '../personnel/reassign_workload.php';
                         break;
                     case 'personnel_requests':
                         include '../personnel/personnel_requests.php';

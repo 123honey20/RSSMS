@@ -47,6 +47,27 @@ $appStmt->close();
 $appStatus = $application ? $application['status'] : null;
 $isAssigned = $application ? true : false;
 
+// --- DYNAMIC REASSIGNMENT LOGIC ---
+$origPersonnelName = $application['requested_name'] ?? null;
+$currentPersonnelName = $application['assigned_name'] ?? null;
+
+if ($student_id) {
+    // Check the logs to find the absolute FIRST personnel assigned if reassigned
+    $logQuery = $conn->query("
+        SELECT p1.full_name as original_name 
+        FROM reassignment_logs r
+        JOIN personnel p1 ON r.from_personnel_id = p1.id
+        WHERE r.student_id = $student_id AND r.service_type = 'Ethics'
+        ORDER BY r.reassigned_at ASC LIMIT 1
+    ");
+    if ($logQuery && $logQuery->num_rows > 0) {
+        $logRes = $logQuery->fetch_assoc();
+        $origPersonnelName = $origPersonnelName ?: $logRes['original_name'];
+    }
+}
+$isReassigned = ($origPersonnelName && $origPersonnelName !== $currentPersonnelName);
+
+
 $hasAnySubmission = false;
 if ($student_id) {
     $subCheck = $conn->query("SELECT id FROM ethics WHERE student_id = $student_id LIMIT 1");
@@ -241,19 +262,29 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- PERSONNEL CARD -->
+            <!-- PERSONNEL CARD (UPDATED WITH REASSIGNMENT DISPLAY) -->
             <?php if ($application && $application['assigned_name']): ?>
                 <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-64 flex items-center justify-between transition-colors">
-                    <div class="overflow-hidden pr-2">
-                        <p class="text-xs text-indigo-600 dark:text-indigo-500 font-bold uppercase tracking-wider mb-0.5">Assigned To</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm" title="<?= htmlspecialchars($application['assigned_name']) ?>">
-                            <?= htmlspecialchars($application['assigned_name']) ?>
+                    <div class="overflow-hidden pr-2 flex-1 min-w-0">
+                        
+                        <?php if ($isReassigned): ?>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Original Personnel</p>
+                            <p class="font-medium text-gray-500 dark:text-gray-400 truncate text-xs mb-2" title="<?= htmlspecialchars($origPersonnelName) ?>">
+                                <?= htmlspecialchars($origPersonnelName) ?>
+                            </p>
+                            <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-0.5">Sub Personnel (Active)</p>
+                        <?php else: ?>
+                            <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-0.5">Assigned To</p>
+                        <?php endif; ?>
+
+                        <p class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm" title="<?= htmlspecialchars($currentPersonnelName) ?>">
+                            <?= htmlspecialchars($currentPersonnelName) ?>
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate" title="<?= htmlspecialchars($application['assigned_role'] ?? 'Ethics') ?>">
                             <?= htmlspecialchars($application['assigned_role'] ?? 'Ethics') ?>
@@ -266,6 +297,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                     </div>
                 </div>
             <?php endif; ?>
+
         </div>
 
         <div class="bg-white dark:bg-warmdark-panel rounded-lg shadow border border-transparent dark:border-warmdark-border p-6 transition-colors">

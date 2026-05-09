@@ -206,11 +206,11 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         <div id="commentError" class="hidden text-red-600 dark:text-red-400 text-sm mt-2">Please complete all fields.</div>
         <div id="commentCounter" class="text-sm text-gray-500 dark:text-gray-400">Comment No. <span><?= $totalComments + 1 ?></span></div>
         <div>
-            <label class="text-sm text-gray-600 dark:text-gray-400">Page Number (Optional)</label>
+            <label class="text-sm text-gray-600 dark:text-gray-400">Page Number</label>
             <input type="number" id="commentPage" class="w-full mt-1 border border-gray-300 dark:border-warmdark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
         </div>
         <div>
-            <label class="text-sm text-gray-600 dark:text-gray-400">Paragraph Number (Optional)</label>
+            <label class="text-sm text-gray-600 dark:text-gray-400">Paragraph Number</label>
             <input type="number" id="commentParagraph" class="w-full mt-1 border border-gray-300 dark:border-warmdark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
         </div>
         <div>

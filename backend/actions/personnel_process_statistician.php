@@ -48,32 +48,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // --- 2. UPDATE DATABASE (WITH TIMESTAMP) ---
+        // --- 2. GET THE ACTUAL PERSONNEL DOING THE PROCESSING ---
+        $user_id = $_SESSION['user']; 
+        $p_stmt = $conn->prepare("SELECT p.id, p.full_name, u.email FROM personnel p JOIN users u ON p.user_id = u.id WHERE p.user_id = ?");
+        $p_stmt->bind_param("i", $user_id);
+        $p_stmt->execute();
+        $personnel = $p_stmt->get_result()->fetch_assoc();
+        $actual_personnel_id = $personnel['id'];
+        $personnel_name = $personnel['full_name'];
+        $personnel_email = $personnel['email'];
+        $p_stmt->close();
+
+        // --- 3. UPDATE DATABASE AND ASSIGN CREDIT ---
         if ($filename) {
-            $stmt = $conn->prepare("UPDATE statistician SET status = ?, result_file_path = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->bind_param("ssi", $status, $filename, $submission_id);
+            $stmt = $conn->prepare("UPDATE statistician SET status = ?, result_file_path = ?, personnel_id = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param("ssii", $status, $filename, $actual_personnel_id, $submission_id);
         } else {
-            $stmt = $conn->prepare("UPDATE statistician SET status = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->bind_param("si", $status, $submission_id);
+            $stmt = $conn->prepare("UPDATE statistician SET status = ?, personnel_id = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param("sii", $status, $actual_personnel_id, $submission_id);
         }
         
         $success = $stmt->execute();
         $stmt->close();
 
-        // --- 3. SEND EMAIL NOTIFICATIONS ---
+        // --- 4. SEND EMAIL NOTIFICATIONS ---
         if ($success) {
             $_SESSION['flash_success'] = "Submission $status successfully!";
 
-            // Fetch Personnel Info
-            $user_id = $_SESSION['user']; 
-            $p_stmt = $conn->prepare("SELECT p.id, p.full_name, u.email FROM personnel p JOIN users u ON p.user_id = u.id WHERE p.user_id = ?");
-            $p_stmt->bind_param("i", $user_id);
-            $p_stmt->execute();
-            $personnel = $p_stmt->get_result()->fetch_assoc();
-            $personnel_name = $personnel['full_name'];
-            $personnel_email = $personnel['email'];
-
-            // Fetch Student/Submission Info (Now including student_id!)
+            // Fetch Student/Submission Info
             $stmtDetails = $conn->prepare("
                 SELECT g.round, g.phase, g.student_id, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
                 FROM statistician g 
@@ -86,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtDetails->execute();
             $info = $stmtDetails->get_result()->fetch_assoc();
 
-            if ($personnel && $info) {
+            if ($info) {
 
                 // FETCH MAX PHASES FOR THIS SPECIFIC COURSE
                 $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Statistician'");
