@@ -101,17 +101,17 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// Update Main Query - ADDED COALESCE for max_phases lookup
+// Update Main Query - FIX: Check course_service_requirements
 $sql = "
     SELECT h.id, h.status, h.round, h.phase, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name,
-           COALESCE(dsr.required_phases, 1) AS max_phases
+           COALESCE(csr.required_phases, 1) AS max_phases
     FROM human_grammarian h
     JOIN students s ON h.student_id = s.id
     JOIN users u ON s.user_id = u.id
     JOIN departments d ON s.department_id = d.id
     JOIN courses c ON s.course_id = c.id
     JOIN service_applications sa ON sa.student_id = s.id
-    LEFT JOIN department_service_requirements dsr ON s.department_id = dsr.department_id AND dsr.service_type = 'Human Grammarian'
+    LEFT JOIN course_service_requirements csr ON s.course_id = csr.course_id AND csr.service_type = 'Human Grammarian'
     $where
     ORDER BY CASE WHEN h.status = 'Pending' THEN 1 ELSE 2 END, h.id DESC
     LIMIT ? OFFSET ?

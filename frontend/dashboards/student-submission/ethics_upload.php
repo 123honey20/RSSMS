@@ -10,11 +10,20 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// Get student id
+// Get student id, department AND course
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, department_id, course_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
+$student_course_id = $student['course_id'];
+
+// --- GET ADMIN RULES TO KNOW MAX PHASES (NOW USING COURSE) ---
+$reqStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = ? AND service_type = 'Ethics'");
+$reqStmt->bind_param("i", $student_course_id);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
+$reqStmt->close();
 
 // Get the latest submission to show phase and round context
 $sub = $conn->query("SELECT * FROM ethics WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
@@ -62,7 +71,11 @@ $submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
             <h1 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
                 <?= $submitText ?>
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Phase <?= $status === 'Approved' ? $currentPhase + 1 : $currentPhase ?> • Ethics Clearance</p>
+            <?php if ($max_phases > 1): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Phase <?= $status === 'Approved' ? $currentPhase + 1 : $currentPhase ?> • Ethics Clearance</p>
+            <?php else: ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document to review by the Ethics Personnel.</p>
+            <?php endif; ?>
         </div>
         <a href="student_dashboard.php?page=students_rs_ethics" 
            class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
@@ -82,7 +95,11 @@ $submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
                     </div>
                     <div>
                         <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                            Current Progress: Phase <?= $currentPhase ?> (Round <?php echo $existing['round']; ?>)
+                            <?php if ($max_phases > 1): ?>
+                                Current Progress: Phase <?= $currentPhase ?> (Round <?php echo $existing['round']; ?>)
+                            <?php else: ?>
+                                Existing Submission Found (Round <?php echo $existing['round']; ?>)
+                            <?php endif; ?>
                         </h3>
                         <?php if ($status === 'Approved'): ?>
                             <p class="text-xs text-green-600 dark:text-green-400 mt-0.5 font-semibold">Ready for Phase <?= $currentPhase + 1 ?> Upload.</p>

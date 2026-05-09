@@ -70,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $personnel_name = $personnel['full_name'];
             $personnel_email = $personnel['email'];
 
-            // Fetch Student/Submission Info
+            // Fetch Student/Submission Info (Now including student_id for lookup)
             $stmtDetails = $conn->prepare("
-                SELECT g.round, g.phase, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
+                SELECT g.round, g.phase, g.student_id, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
                 FROM human_grammarian g 
                 JOIN students s ON g.student_id = s.id 
                 JOIN users u ON s.user_id = u.id 
@@ -84,6 +84,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $info = $stmtDetails->get_result()->fetch_assoc();
 
             if ($personnel && $info) {
+
+                // FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+                $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Human Grammarian'");
+                $maxPhaseStmt->bind_param("i", $info['student_id']);
+                $maxPhaseStmt->execute();
+                $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
+                $max_phases = $maxPhaseRes ? (int)$maxPhaseRes['required_phases'] : 1;
+                $maxPhaseStmt->close();
+
                 try {
                     $mail = new PHPMailer(true);
                     $mail->isSMTP();
@@ -102,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // FIX: Only show phase if it's strictly greater than 1
                     $currentPhase = isset($info['phase']) ? (int)$info['phase'] : 1;
-                    $phaseStr = $currentPhase > 1 ? "Phase {$currentPhase}, " : "";
+                    $phaseStr = ($max_phases > 1) ? "Phase {$currentPhase}, " : "";
 
                     // Email 1: To Student
                     $mail->addAddress($info['student_email'], $info['research_leader']);

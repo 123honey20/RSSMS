@@ -10,7 +10,8 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $department_id = intval($_POST['department_id']);
+    // We expect course_ids array now instead of just department_id
+    $course_ids = $_POST['course_ids'] ?? [];
     $service_type = trim($_POST['service_type']);
     $required_phases = intval($_POST['required_phases']);
     $round_limit = intval($_POST['round_limit_per_phase']);
@@ -23,26 +24,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Basic Validation
-    if (empty($department_id) || empty($service_type) || $required_phases < 1 || $round_limit < 1) {
-        $_SESSION['flash_error'] = "Please fill in all fields correctly.";
+    if (empty($course_ids) || !is_array($course_ids) || empty($service_type) || $required_phases < 1 || $round_limit < 1) {
+        $_SESSION['flash_error'] = "Please select at least one course and fill in all fields correctly.";
         header("Location: ../../../frontend/dashboards/admin_dashboard.php?page=service_requirements");
         exit();
     }
 
-    // Insert or Update the rule (Using ON DUPLICATE KEY UPDATE)
+    // Insert or Update the rule per course
     $stmt = $conn->prepare("
-        INSERT INTO department_service_requirements 
-        (department_id, service_type, required_phases, round_limit_per_phase) 
+        INSERT INTO course_service_requirements 
+        (course_id, service_type, required_phases, round_limit_per_phase) 
         VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
         required_phases = VALUES(required_phases), 
         round_limit_per_phase = VALUES(round_limit_per_phase)
     ");
     
-    $stmt->bind_param("isii", $department_id, $service_type, $required_phases, $round_limit);
+    $successCount = 0;
+    foreach ($course_ids as $cid) {
+        $course_id = intval($cid);
+        $stmt->bind_param("isii", $course_id, $service_type, $required_phases, $round_limit);
+        if ($stmt->execute()) {
+            $successCount++;
+        }
+    }
     
-    if ($stmt->execute()) {
-        $_SESSION['flash_success'] = "Service requirements saved successfully!";
+    if ($successCount > 0) {
+        $_SESSION['flash_success'] = "Requirements successfully saved for $successCount course(s)!";
     } else {
         $_SESSION['flash_error'] = "Database error: " . $conn->error;
     }

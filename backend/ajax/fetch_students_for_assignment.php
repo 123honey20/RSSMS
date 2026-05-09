@@ -22,7 +22,8 @@ if (!in_array($service, ['Grammarly & AI Checking', 'Librarian', 'Human Grammari
     $service = 'Grammarly & AI Checking';
 }
 
-$where = "WHERE 1=1";
+// FIX: Added 'u.status = 'Approved'' to ensure unapproved students are not displayed
+$where = "WHERE u.status = 'Approved'";
 $params = [];
 $types = "";
 

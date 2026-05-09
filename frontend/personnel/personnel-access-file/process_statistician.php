@@ -53,8 +53,8 @@ if (ucfirst($currentStatus) === 'Rejected' || $currentStatus === '') {
     $currentStatus = 'Needs Revision';
 }
 
-// FETCH MAX PHASES FOR THIS SPECIFIC DEPARTMENT
-$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = (SELECT department_id FROM students WHERE id = ?) AND service_type = 'Statistician'");
+// FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Statistician'");
 $maxPhaseStmt->bind_param("i", $submission['student_id']);
 $maxPhaseStmt->execute();
 $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
@@ -176,44 +176,54 @@ $totalComments = $countResult['total_comments'] ?? 0;
 
     <!-- DYNAMIC ACTION PANELS -->
     <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
-        <div class="p-8 bg-gray-50/50 dark:bg-warmdark-bg border-t border-gray-200 dark:border-warmdark-border" x-data="{ requireFile: true }">
-            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400 mb-2">Process Submission</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Review the document above and upload your evaluation result.</p>
+        
+        <div x-data="{ requireFile: true }" class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-xl p-6 transition-colors">
             
-            <form action="../../backend/actions/personnel_process_statistician.php" method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="window.showProcessLoader()">
+            <div class="flex items-center justify-between mb-4 border-b border-blue-200/50 dark:border-blue-900/30 pb-4">
+                <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400">Process Student Submission</h3>
+            </div>
+
+            <form action="../../backend/actions/personnel_process_statistician.php" method="POST" enctype="multipart/form-data" class="space-y-4" onsubmit="window.showProcessLoader()">
                 <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
                 <input type="hidden" name="action" id="hidden_action_input" value="">
                 
-                <div class="bg-white dark:bg-warmdark-panel p-5 rounded-xl border border-gray-200 dark:border-warmdark-border shadow-sm">
-                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Attach Result/Feedback File (Required)</label>
-                    <input type="file" id="resultFileInput" name="result_file" accept=".docx,.pdf,.txt,.csv,.xlsx,.sav,.png,.jpg" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-100 dark:file:bg-blue-900/40 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-200 cursor-pointer">
+                <div x-show="requireFile" x-collapse x-cloak>
+                    <div class="bg-white dark:bg-warmdark-bg p-4 rounded-lg border border-gray-200 dark:border-warmdark-border">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Attach Result File</label>
+                        <input type="file" id="resultFileInput" name="result_file" accept=".docx,.pdf,.txt,.csv,.xlsx,.sav,.png,.jpg" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400">
+                        <p class="text-[11px] text-gray-400 mt-2 italic">Allowed: .docx, .pdf, .txt, .csv, .xlsx, .sav, .png, .jpg</p>
+                    </div>
                 </div>
 
-                <div class="flex flex-wrap gap-3">
-                    <button type="submit" @click="if(!document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result file.', 'error'); } else { document.getElementById('hidden_action_input').value = 'Approve'; }" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-md transition-colors flex-1 sm:flex-none">
-                        Approve Document
-                    </button>
-                    
-                    <button type="submit" @click="if(!document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a feedback file.', 'error'); } else { document.getElementById('hidden_action_input').value = 'Needs Revision'; }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-3 rounded-xl text-sm font-bold transition-colors flex-1 sm:flex-none">
-                        Reject / Needs Revision
-                    </button>
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3" x-text="requireFile ? 'Finalize Decision' : 'Finalize Decision (No File Attached)'"></label>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result file', 'error'); } else { document.getElementById('hidden_action_input').value = 'Approve'; }" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-md transition-colors w-full sm:w-auto">
+                            Approve Submission
+                        </button>
+                        
+                        <button type="submit" @click="if(requireFile && !document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result file', 'error'); } else { document.getElementById('hidden_action_input').value = 'Needs Revision'; }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto">
+                            Revisions Required
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     <?php endif; ?>
 
     <!-- FOOTER CONTROLS -->
-    <div class="p-6 border-t border-gray-200 dark:border-warmdark-border flex justify-between items-center bg-white dark:bg-warmdark-panel rounded-b-2xl">
-        <button id="viewCommentBtn" onclick="openViewCommentModal(<?= $submission['id'] ?>)" class="px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 <?= $totalComments == 0 ? 'hidden' : '' ?>">
-            View Comments
-        </button>
-        
-        <div class="flex gap-3 ml-auto">
-            <button onclick="location.reload()" class="bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-200 dark:hover:bg-warmdark-hover transition-colors">
+    <div class="flex justify-between pt-6 border-t border-gray-200 dark:border-warmdark-border transition-colors">
+        <div>
+            <button id="viewCommentBtn" onclick="openViewCommentModal(<?= $submission['id'] ?>)" class="px-6 py-2.5 rounded-lg text-sm font-medium shadow transition bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600 <?= $totalComments == 0 ? 'hidden' : '' ?>">
+                View Comment
+            </button>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="location.reload()" class="bg-gray-200 dark:bg-warmdark-bg text-gray-800 dark:text-gray-200 px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-300 dark:hover:bg-warmdark-border transition">
                 Back
             </button>
             <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
-                <button onclick="openCommentModal(<?= $submission['id'] ?>)" class="bg-gray-800 dark:bg-gray-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors">
+                <button onclick="openCommentModal(<?= $submission['id'] ?>)" class="bg-gray-800 dark:bg-gray-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:bg-gray-900 dark:hover:bg-gray-600 transition">
                     Add Comment
                 </button>
             <?php endif; ?>
@@ -221,10 +231,23 @@ $totalComments = $countResult['total_comments'] ?? 0;
     </div>
 </div>
 
-<div id="customToast" class="fixed bottom-5 right-5 transform translate-y-[150%] opacity-0 transition-all duration-300 bg-red-600 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-[100]">
-    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-    <span id="toastMessage" class="text-sm font-bold tracking-wide"></span>
-</div>
+<script>
+    let toastTimeout;
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('customToast');
+        document.getElementById('toastMessage').textContent = message;
+        
+        clearTimeout(toastTimeout);
+        
+        toast.classList.remove('translate-y-[150%]', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+        
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-[150%]', 'opacity-0');
+        }, 3500);
+    }
+</script>
 
 <!-- ========================================== -->
 <!-- ADD COMMENT MODAL -->

@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $personnel_name = $personnel['full_name'];
             $personnel_email = $personnel['email'];
 
-            // Fetch Student/Submission Info (Now including Phase!)
+            // Fetch Student/Submission Info (Now including student_id!)
             $stmtDetails = $conn->prepare("
                 SELECT g.round, g.phase, g.student_id, s.research_leader, s.thesis_title, u.email as student_email, s.control_number, d.name as dept_name
                 FROM librarian g 
@@ -88,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($personnel && $info) {
 
-                // FETCH MAX PHASES FOR THIS SPECIFIC DEPARTMENT
-                $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = (SELECT department_id FROM students WHERE id = ?) AND service_type = 'Librarian'");
+                // FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+                $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Librarian'");
                 $maxPhaseStmt->bind_param("i", $info['student_id']);
                 $maxPhaseStmt->execute();
                 $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();

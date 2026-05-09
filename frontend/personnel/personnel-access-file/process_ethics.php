@@ -48,7 +48,18 @@ $resultAbsolutePath = $resultFile ? $_SERVER['DOCUMENT_ROOT'] . $resultRelativeP
 $resultExists = $resultAbsolutePath && file_exists($resultAbsolutePath);
 
 $currentStatus = $submission['status'] ?? 'Pending';
-$phaseStr = isset($submission['phase']) && $submission['phase'] > 0 ? "Phase {$submission['phase']}, " : "";
+
+// FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Ethics'");
+$maxPhaseStmt->bind_param("i", $submission['student_id']);
+$maxPhaseStmt->execute();
+$maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
+$max_phases = $maxPhaseRes ? (int)$maxPhaseRes['required_phases'] : 1;
+$maxPhaseStmt->close();
+
+// FIX: Only show phase text if the system supports more than 1 phase
+$currentPhase = isset($submission['phase']) ? (int)$submission['phase'] : 1;
+$phaseStr = ($max_phases > 1) ? "Phase {$currentPhase}, " : "";
 
 // Comment Count
 $countStmt = $conn->prepare("SELECT COUNT(*) as total_comments FROM ethics_comments WHERE ethics_id = ?");
@@ -137,8 +148,8 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
     <!-- DYNAMIC ACTION PANELS -->
     <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
         <div class="p-8 bg-gray-50/50 dark:bg-warmdark-bg border-t border-gray-200 dark:border-warmdark-border" x-data="{ requireFile: true }">
-            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400 mb-2">Process Student Submission</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Review the document above and upload your result.</p>
+            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400 mb-2">Process Submission</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Review the document above and upload your evaluation result.</p>
             
             <form action="../../backend/actions/personnel_process_ethics.php" method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="window.showProcessLoader()">
                 <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
@@ -226,21 +237,3 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         </div>
     </div>
 </div>
-
-<script>
-    let toastTimeout;
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('customToast');
-        document.getElementById('toastMessage').textContent = message;
-        
-        clearTimeout(toastTimeout);
-        
-        toast.classList.remove('translate-y-[150%]', 'opacity-0');
-        toast.classList.add('translate-y-0', 'opacity-100');
-        
-        toastTimeout = setTimeout(() => {
-            toast.classList.remove('translate-y-0', 'opacity-100');
-            toast.classList.add('translate-y-[150%]', 'opacity-0');
-        }, 3500);
-    }
-</script>

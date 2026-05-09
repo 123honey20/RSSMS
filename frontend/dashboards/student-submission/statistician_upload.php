@@ -10,16 +10,16 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// Get student id and department
+// Get student id, department AND course
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id, department_id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, department_id, course_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
-$student_dept_id = $student['department_id'];
+$student_course_id = $student['course_id'];
 
-// --- GET ADMIN RULES TO KNOW MAX PHASES ---
-$reqStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = ? AND service_type = 'Statistician'");
-$reqStmt->bind_param("i", $student_dept_id);
+// --- GET ADMIN RULES TO KNOW MAX PHASES (NOW USING COURSE) ---
+$reqStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = ? AND service_type = 'Statistician'");
+$reqStmt->bind_param("i", $student_course_id);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
 $max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;

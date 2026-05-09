@@ -143,7 +143,7 @@ $deptStmt->close();
                         actionButton = `<button onclick="loadProcess(${row.id})" class="text-white bg-blue-600 dark:bg-blue-700 px-4 py-1.5 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-bold text-xs shadow-sm">Process</button>`;
                     }
 
-                    // FIX: Check max_phases from the database. Show Phase X if max_phases > 1.
+                    // Dynamic Phase Display
                     let pVal = row.phase ? parseInt(row.phase) : 1;
                     let mPhases = row.max_phases ? parseInt(row.max_phases) : 1;
                     let phaseRoundText = '';

@@ -53,8 +53,8 @@ if (ucfirst($currentStatus) === 'Rejected' || $currentStatus === '') {
     $currentStatus = 'Needs Revision';
 }
 
-// FETCH MAX PHASES FOR THIS SPECIFIC DEPARTMENT
-$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = (SELECT department_id FROM students WHERE id = ?) AND service_type = 'Human Grammarian'");
+// FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Human Grammarian'");
 $maxPhaseStmt->bind_param("i", $submission['student_id']);
 $maxPhaseStmt->execute();
 $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
@@ -163,7 +163,7 @@ $totalComments = $countResult['total_comments'] ?? 0;
         <div class="flex justify-between items-center mb-3">
             <p class="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wide">Your Uploaded Result/Feedback File</p>
             <a href="<?= htmlspecialchars($resultRelativePath) ?>" download="<?= htmlspecialchars(basename($submission['result_file_path'])) ?>" class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-sm border border-blue-100 dark:border-blue-900/50">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
                 Download Result
             </a>
         </div>
@@ -181,7 +181,6 @@ $totalComments = $countResult['total_comments'] ?? 0;
             
             <div class="flex items-center justify-between mb-4 border-b border-blue-200/50 dark:border-blue-900/30 pb-4">
                 <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400">Process Student Submission</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Review the document above and upload your result.</p>
             </div>
 
             <form action="../../backend/actions/personnel_process_human_grammarian.php" method="POST" enctype="multipart/form-data" class="space-y-4" onsubmit="window.showProcessLoader()">

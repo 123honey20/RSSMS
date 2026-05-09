@@ -21,8 +21,8 @@ function redirectWithError($message, $url, $fileToTrash = null) {
     exit();
 }
 
-// Fetch student data
-$stmt = $conn->prepare("SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, u.email, u.school_id, d.name as dept_name FROM students s JOIN users u ON s.user_id = u.id JOIN departments d ON s.department_id = d.id WHERE u.id = ?");
+// Fetch student data INCLUDING course_id
+$stmt = $conn->prepare("SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, s.course_id, u.email, u.school_id, d.name as dept_name FROM students s JOIN users u ON s.user_id = u.id JOIN departments d ON s.department_id = d.id WHERE u.id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $studentData = $stmt->get_result()->fetch_assoc();
@@ -33,12 +33,13 @@ $studentName = $studentData['research_leader'];
 $controlNo = $studentData['control_number'];
 $thesisTitle = $studentData['thesis_title'];
 $studentDeptId = $studentData['department_id'];
+$studentCourseId = $studentData['course_id']; // The new crucial variable
 $studentDeptName = $studentData['dept_name'];
 $stmt->close();
 
-// --- FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
-$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Librarian'");
-$reqStmt->bind_param("i", $studentDeptId);
+// --- FETCH ADMIN RULES USING THE COURSE ID INSTEAD OF DEPARTMENT ID ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Librarian'");
+$reqStmt->bind_param("i", $studentCourseId);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
 $max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; 
@@ -158,6 +159,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                 $personnelEmailsFound = true;
             }
         } else {
+            // NOTE: Personnel assignments are still department-based, so this intentionally uses $studentDeptId
             $stmtP = $conn->prepare("
                 SELECT u.email, p.full_name 
                 FROM personnel_departments pd

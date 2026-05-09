@@ -208,6 +208,5 @@ $deptStmt->close();
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => fetchSubmissions(1), 400);
     });
-
     document.addEventListener('DOMContentLoaded', () => fetchSubmissions(1));
 </script>

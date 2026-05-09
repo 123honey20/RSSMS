@@ -21,9 +21,9 @@ function redirectWithError($message, $url, $fileToTrash = null) {
     exit();
 }
 
-// Fetch student data including department name
+// Fetch student data including course_id
 $stmt = $conn->prepare("
-    SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, u.email, u.school_id, d.name as dept_name 
+    SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.department_id, s.course_id, u.email, u.school_id, d.name as dept_name 
     FROM students s 
     JOIN users u ON s.user_id = u.id 
     JOIN departments d ON s.department_id = d.id
@@ -38,13 +38,14 @@ $studentName = $studentData['research_leader'];
 $controlNo = $studentData['control_number'];
 $thesisTitle = $studentData['thesis_title'];
 $studentDeptId = $studentData['department_id'];
+$studentCourseId = $studentData['course_id']; // The new crucial variable
 $studentDeptName = $studentData['dept_name'];
 $school_id = $studentData['school_id'];
 $stmt->close();
 
-// --- FETCH ADMIN RULES FOR THIS DEPARTMENT & SERVICE ---
-$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Ethics'");
-$reqStmt->bind_param("i", $studentDeptId);
+// --- FETCH ADMIN RULES USING THE COURSE ID INSTEAD OF DEPARTMENT ID ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Ethics'");
+$reqStmt->bind_param("i", $studentCourseId);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
 $max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
@@ -132,14 +133,16 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $header = "<div style='background-color:#f8fafc;padding:20px;font-family:sans-serif;'><div style='max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;'>";
         $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p>This is an automated system notification from RSSMS.</p></div></div></div>";
 
+        $phaseText = $max_phases > 1 ? "Phase $phase, " : "";
+
         // 1. Student Email
         $mail->addAddress($studentEmail, $studentName);
-        $mail->Subject = "Ethics Clearance Submitted - Phase $phase, Round $round";
+        $mail->Subject = "Ethics Clearance Submitted - {$phaseText}Round $round";
         $mail->Body = $header . "
             <div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Document Submitted</h1></div>
             <div style='padding:30px;line-height:1.6;color:#334155;'>
                 <p>Hello <strong>$studentName</strong>,</p>
-                <p>Your document for <strong>Ethics Clearance (Phase $phase, Round $round)</strong> has been successfully uploaded and is now awaiting review.</p>
+                <p>Your document for <strong>Ethics Clearance ({$phaseText}Round $round)</strong> has been successfully uploaded and is now awaiting review.</p>
                 <p><strong>Control No:</strong> $controlNo</p>
             </div>" . $footer;
         $mail->send();
@@ -158,6 +161,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                 $personnelEmailsFound = true;
             }
         } else {
+            // Personnel assignments are still department-based, so this uses $studentDeptId
             $stmtP = $conn->prepare("
                 SELECT u.email, p.full_name 
                 FROM personnel_departments pd
@@ -176,7 +180,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         }
         
         if ($personnelEmailsFound) {
-            $mail->Subject = "ACTION REQUIRED: Ethics Review (Phase $phase, Round $round) - $controlNo";
+            $mail->Subject = "ACTION REQUIRED: Ethics Review ({$phaseText}Round $round) - $controlNo";
             $mail->Body = $header . "
                 <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>New Ethics Submission</h1></div>
                 <div style='padding:30px;line-height:1.6;color:#334155;'>
@@ -188,7 +192,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
                             <tr><td style='padding:8px 0; color:#64748b; width:120px;'>Student:</td><td style='font-weight:bold;'>$studentName</td></tr>
                             <tr><td style='padding:8px 0; color:#64748b;'>Control No:</td><td style='font-weight:bold;'>$controlNo</td></tr>
                             <tr><td style='padding:8px 0; color:#64748b;'>Department:</td><td>$studentDeptName</td></tr>
-                            <tr><td style='padding:8px 0; color:#64748b;'>Phase & Round:</td><td><span style='background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:bold;'>Phase $phase, Round $round</span></td></tr>
+                            <tr><td style='padding:8px 0; color:#64748b;'>Phase & Round:</td><td><span style='background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:bold;'>{$phaseText}Round $round</span></td></tr>
                             <tr><td style='padding:8px 0; color:#64748b;'>Thesis Title:</td><td style='font-style:italic;'>\"$thesisTitle\"</td></tr>
                         </table>
                     </div>
@@ -201,7 +205,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         }
     } catch (Exception $e) { error_log($e->getMessage()); }
 
-    $_SESSION['flash_success'] = "Ethics document Phase $phase, Round $round submitted successfully.";
+    $_SESSION['flash_success'] = "Ethics document {$phaseText}Round $round submitted successfully.";
     header("Location: " . $redirect_url);
     exit();
 }

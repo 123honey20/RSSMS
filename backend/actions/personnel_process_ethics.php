@@ -85,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($personnel && $info) {
                 
-                // FETCH MAX PHASES FOR THIS SPECIFIC DEPARTMENT
-                $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = (SELECT department_id FROM students WHERE id = ?) AND service_type = 'Ethics'");
+                // FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+                $maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Ethics'");
                 $maxPhaseStmt->bind_param("i", $info['student_id']);
                 $maxPhaseStmt->execute();
                 $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();

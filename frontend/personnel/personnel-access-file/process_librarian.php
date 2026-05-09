@@ -52,8 +52,8 @@ if (ucfirst($currentStatus) === 'Rejected' || $currentStatus === '') {
     $currentStatus = 'Needs Revision';
 }
 
-// FETCH MAX PHASES FOR THIS SPECIFIC DEPARTMENT
-$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM department_service_requirements WHERE department_id = (SELECT department_id FROM students WHERE id = ?) AND service_type = 'Librarian'");
+// FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Librarian'");
 $maxPhaseStmt->bind_param("i", $submission['student_id']);
 $maxPhaseStmt->execute();
 $maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
@@ -156,15 +156,15 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
     <!-- DYNAMIC ACTION PANELS -->
     <?php if (!$viewOnly && $currentStatus === 'Pending'): ?>
         <div class="p-8 bg-gray-50/50 dark:bg-warmdark-bg border-t border-gray-200 dark:border-warmdark-border" x-data="{ requireFile: true }">
-            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400">Process Student Submission</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Review the document above and upload your result.</p>
+            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400 mb-2">Process Submission</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Review the document above and upload your evaluation result.</p>
             
             <form action="../../backend/actions/personnel_process_librarian.php" method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="window.showProcessLoader()">
                 <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
                 <input type="hidden" name="action" id="hidden_action_input" value="">
                 
                 <div class="bg-white dark:bg-warmdark-panel p-5 rounded-xl border border-gray-200 dark:border-warmdark-border shadow-sm">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Attach Result File</label>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Attach Result/Feedback File (Required)</label>
                     <input type="file" id="resultFileInput" name="result_file" accept=".docx,.pdf,.txt,.csv,.xlsx,.sav,.png,.jpg" class="w-full border border-gray-300 dark:border-warmdark-border bg-gray-50 dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-100 dark:file:bg-blue-900/40 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-200 cursor-pointer">
                 </div>
 

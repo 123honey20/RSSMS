@@ -29,6 +29,7 @@ $resDepts = $deptStmt->get_result();
 while ($d = $resDepts->fetch_assoc()) {
     $assigned_depts[] = $d;
 }
+$deptStmt->close();
 ?>
 
 <div class="bg-white dark:bg-warmdark-panel p-6 rounded-xl shadow-sm min-h-[80vh] border border-transparent dark:border-warmdark-border transition-colors duration-200">

@@ -10,16 +10,17 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// 1. Get student id and department
+// 1. Get student id, department, AND course
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id, department_id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, department_id, course_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 $student_dept_id = $student['department_id'];
+$student_course_id = $student['course_id'];
 
-// --- GET ADMIN RULES FOR PHASES/ROUNDS ---
-$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Human Grammarian'");
-$reqStmt->bind_param("i", $student_dept_id);
+// --- GET ADMIN RULES FOR PHASES/ROUNDS (NOW USING COURSE) ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Human Grammarian'");
+$reqStmt->bind_param("i", $student_course_id);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
 $max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
@@ -239,7 +240,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                 </div>
@@ -392,7 +393,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="6" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="5" class="py-12 text-center text-gray-400 dark:text-gray-500">
                                     No submissions found.
                                 </td>
                             </tr>

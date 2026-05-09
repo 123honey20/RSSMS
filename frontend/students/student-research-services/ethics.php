@@ -10,16 +10,17 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// 1. Get student id and department
+// 1. Get student id, department, AND course
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id, department_id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, department_id, course_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
 $student_dept_id = $student['department_id'];
+$student_course_id = $student['course_id'];
 
-// --- GET ADMIN RULES FOR PHASES/ROUNDS ---
-$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM department_service_requirements WHERE department_id = ? AND service_type = 'Ethics'");
-$reqStmt->bind_param("i", $student_dept_id);
+// --- GET ADMIN RULES FOR PHASES/ROUNDS (NOW USING COURSE) ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Ethics'");
+$reqStmt->bind_param("i", $student_course_id);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
 $max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
@@ -177,7 +178,6 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                 </div>
 
             <?php elseif ($canUploadNewRound): ?>
-                <!-- FIX: Now exclusively handles NEW submissions -->
                 <a href="student_dashboard.php?page=student_upload_ethics"
                     class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
                     <div>
@@ -198,7 +198,6 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                 </a>
 
             <?php else: ?>
-                <!-- FIX: Automatically defaults to "Pending Review" if they just need to wait (or use the table button to update) -->
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <?php if ($max_phases > 1): ?>
@@ -242,7 +241,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                 </div>
@@ -373,7 +372,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                                         Locked
                                                     </span>
                                                 <?php elseif ($canUpdateDoc): ?>
-                                                    <!-- ACTIVE REUPLOAD BUTTON (Goes straight to upload since there's no receipt choice for Ethics) -->
+                                                    <!-- ACTIVE REUPLOAD BUTTON -->
                                                     <a href="student_dashboard.php?page=student_upload_ethics" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
