@@ -31,9 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = $checkStmt->get_result();
 
     if ($row = $res->fetch_assoc()) {
-        // Update existing record
+        // Update existing record and stamp time!
         $app_id = $row['id'];
-        $updateStmt = $conn->prepare("UPDATE service_applications SET assigned_personnel_id = ?, status = 'Approved' WHERE id = ?");
+        $updateStmt = $conn->prepare("UPDATE service_applications SET assigned_personnel_id = ?, status = 'Approved', updated_at = NOW() WHERE id = ?");
         $updateStmt->bind_param("ii", $assigned_id, $app_id);
         
         if ($updateStmt->execute()) {
@@ -44,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $updateStmt->close();
     } else {
-        // Insert new record directly into "Approved" status
-        $insertStmt = $conn->prepare("INSERT INTO service_applications (student_id, service_type, assigned_personnel_id, status) VALUES (?, ?, ?, 'Approved')");
+        // Insert new record directly into "Approved" status and stamp time!
+        $insertStmt = $conn->prepare("INSERT INTO service_applications (student_id, service_type, assigned_personnel_id, status, updated_at) VALUES (?, ?, ?, 'Approved', NOW())");
         $insertStmt->bind_param("isi", $student_id, $service_type, $assigned_id);
         
         if ($insertStmt->execute()) {

@@ -23,7 +23,7 @@ function redirectWithError(string $message, string $url) {
 
 // 1. Get student details
 $stmt = $conn->prepare("
-    SELECT s.id, s.control_number, s.research_leader, s.thesis_title, u.school_id, u.email 
+    SELECT s.id, s.control_number, s.research_leader, s.thesis_title, s.course_id, u.school_id, u.email 
     FROM students s 
     JOIN users u ON s.user_id = u.id 
     WHERE u.id = ?
@@ -37,15 +37,28 @@ $studentEmail = $studentData['email'];
 $studentName = $studentData['research_leader'];
 $controlNo = $studentData['control_number'];
 $thesisTitle = $studentData['thesis_title'];
+$studentCourseId = $studentData['course_id'];
 $stmt->close();
 
-// --- NEW: FETCH THE *CURRENT* ASSIGNED PERSONNEL FROM ADMIN'S DASHBOARD ---
-$assignStmt = $conn->prepare("SELECT assigned_personnel_id FROM service_applications WHERE student_id = ? AND service_type = 'Grammarly & AI Checking' AND status = 'Approved'");
+// --- FETCH ADMIN RULES USING THE COURSE ID ---
+$reqStmt = $conn->prepare("SELECT round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
+$reqStmt->bind_param("i", $studentCourseId);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; 
+$reqStmt->close();
+
+// --- NEW: FETCH THE *CURRENT* ASSIGNED PERSONNEL AND EXTRA ROUNDS FROM ADMIN'S DASHBOARD ---
+$assignStmt = $conn->prepare("SELECT assigned_personnel_id, extra_rounds FROM service_applications WHERE student_id = ? AND service_type = 'Grammarly & AI Checking' AND status = 'Approved'");
 $assignStmt->bind_param("i", $student_id);
 $assignStmt->execute();
 $assignRes = $assignStmt->get_result()->fetch_assoc();
 $active_personnel_id = $assignRes['assigned_personnel_id'] ?? null;
+$extra_rounds = $assignRes ? (int)$assignRes['extra_rounds'] : 0;
 $assignStmt->close();
+
+// ADD GRANTED EXTRA ROUNDS TO THE LIMIT!
+$max_rounds += $extra_rounds;
 
 $update_mode = $_POST['update_mode'] ?? 'both';
 $round = intval($_POST['round'] ?? 1);
@@ -113,6 +126,10 @@ if ($doReceipt) {
 
 // 4. Process Document
 if ($doDocument) {
+    // ENFORCE MAX ROUNDS LIMIT
+    if (!$existingDoc && $round > $max_rounds) {
+         redirectWithError("You have reached the maximum round limit ($max_rounds).", $redirect_url);
+    }
     $docFilename = "doc_{$student_id}_R{$round}_" . time() . "." . $docExt;
     $docDir = "../../../uploads/grammarly_ai/submissions/";
     if (!is_dir($docDir)) mkdir($docDir, 0755, true);

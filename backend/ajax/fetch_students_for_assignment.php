@@ -17,32 +17,30 @@ $service = $_GET['service'] ?? 'Grammarly & AI Checking';
 $dept = $_GET['dept'] ?? 'All';
 $assignment_status = $_GET['assignment_status'] ?? 'All'; 
 
-// Validate service
-if (!in_array($service, ['Grammarly & AI Checking', 'Librarian', 'Human Grammarian', 'Ethics'])) {
+// FIX: Added Statistician to the allowed array list!
+if (!in_array($service, ['Grammarly & AI Checking', 'Librarian', 'Human Grammarian', 'Ethics', 'Statistician'])) {
     $service = 'Grammarly & AI Checking';
 }
 
-// FIX: Added 'u.status = 'Approved'' to ensure unapproved students are not displayed
 $where = "WHERE u.status = 'Approved'";
 $params = [];
 $types = "";
 
-// --- Filter out students whose department does NOT require the selected service ---
+// --- Filter out students whose course does NOT require the selected service ---
 $req_column = '';
 if ($service === 'Grammarly & AI Checking') {
-    $req_column = 'd.req_grammarly_ai';
+    $req_column = 'c.req_grammarly_ai';
 } elseif ($service === 'Librarian') {
-    $req_column = 'd.req_librarian';
+    $req_column = 'c.req_librarian';
 } elseif ($service === 'Human Grammarian') {
-    $req_column = 'd.req_human_grammarian';
+    $req_column = 'c.req_human_grammarian';
 } elseif ($service === 'Ethics') {
-    $req_column = 'd.req_ethics';
+    $req_column = 'c.req_ethics';
+} elseif ($service === 'Statistician') {
+    $req_column = 'c.req_statistician';
 }
 
-// If we matched a column, ensure the department has it checked (value = 1)
-// We add a check for the column existence in case your DB doesn't have req_grammarly_ai yet.
 if (!empty($req_column)) {
-    // Only apply if the column is strictly required (fallback to safe if column missing)
     $where .= " AND ($req_column IS NULL OR $req_column = 1)";
 }
 // --------------------------------------------------------------------------------------
@@ -106,6 +104,7 @@ $sql = "
         d.name as department_name,
         c.name as course_name,
         sa.assigned_personnel_id, 
+        sa.updated_at, sa.created_at, -- FIX: Fetched the timestamps to display!
         p.full_name as assigned_personnel_name
     FROM students s
     JOIN users u ON s.user_id = u.id
@@ -118,7 +117,6 @@ $sql = "
     LIMIT ? OFFSET ?
 ";
 
-// Re-setup params for the main query
 $paramsData = $params;
 $typesData = $types;
 array_unshift($paramsData, $service);
@@ -137,6 +135,10 @@ $res = $stmt->get_result();
 
 $students = [];
 while ($row = $res->fetch_assoc()) {
+    // FIX: Safely format the date depending on whether it was an INSERT or an UPDATE
+    $date = $row['updated_at'] ?: $row['created_at'];
+    $row['formatted_assigned_date'] = $date ? date('M d, Y - h:i A', strtotime($date)) : '--';
+    
     $students[] = $row;
 }
 

@@ -13,13 +13,14 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
-// FIXED QUERY: Join service_applications to fetch the newly assigned personnel!
+// FIXED QUERY: Prioritize the historical personnel_id attached to this exact submission round!
+// It falls back to the current service_applications assignment only if the round hasn't been processed yet.
 $stmt = $conn->prepare("
     SELECT l.*, s.control_number, p.full_name AS personnel_name
     FROM librarian l
     JOIN students s ON l.student_id = s.id
     LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Librarian' AND sa.status = 'Approved'
-    LEFT JOIN personnel p ON p.id = COALESCE(sa.assigned_personnel_id, l.personnel_id)
+    LEFT JOIN personnel p ON p.id = COALESCE(l.personnel_id, sa.assigned_personnel_id)
     WHERE l.id = ? AND s.user_id = ?
 ");
 $stmt->bind_param("ii", $submissionId, $userId);

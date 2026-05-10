@@ -10,17 +10,20 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 
 require_once "../../backend/config/database.php";
 
-// Get student id
+// 1. Get student id, department, AND course
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, department_id, course_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
+$student_dept_id = $student['department_id'];
+$student_course_id = $student['course_id'];
 
 $appStmt = $conn->prepare("
     SELECT sa.*, 
            p_req.full_name as requested_name,
            p_assign.full_name as assigned_name,
-           p_assign.service_role as assigned_role
+           p_assign.service_role as assigned_role,
+           sa.extra_rounds, sa.round_request_status
     FROM service_applications sa 
     LEFT JOIN personnel p_req ON sa.requested_personnel_id = p_req.id 
     LEFT JOIN personnel p_assign ON sa.assigned_personnel_id = p_assign.id
@@ -34,6 +37,19 @@ $application = $appStmt->get_result()->fetch_assoc();
 $appStmt->close();
 
 $isAssigned = $application ? true : false;
+
+// --- GET ADMIN RULES FOR ROUNDS ---
+$reqStmt = $conn->prepare("SELECT round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
+$reqStmt->bind_param("i", $student_course_id);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7;
+$reqStmt->close();
+
+// Add granted extra rounds to the max rounds limit
+if ($application) {
+    $max_rounds += (int)$application['extra_rounds'];
+}
 
 // --- DYNAMIC REASSIGNMENT LOGIC ---
 $origPersonnelName = $application['requested_name'] ?? null;
@@ -92,7 +108,7 @@ $latestTrans = $latestTransRes->fetch_assoc();
 $transStatus = $latestTrans ? $latestTrans['status'] : null;
 
 // Fetch Requirements
-$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_grammarly_ai'");
+$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_grammarly_ai_{$student_course_id}'");
 $grammarly_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
 $grammarly_requirements = json_decode($grammarly_requirements_json, true);
 
@@ -106,11 +122,14 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
 
 $canUploadSubmission = false;
 $receiptOnlyMode = false;
+$needsRoundRequest = false;
 
 if (!$latest) {
     $canUploadSubmission = true; 
-} elseif ($currentStatus === 'Needs Revision') {
+} elseif ($currentStatus === 'Needs Revision' && $currentRound < $max_rounds) {
     $canUploadSubmission = true; 
+} elseif ($currentStatus === 'Needs Revision' && $currentRound >= $max_rounds) {
+    $needsRoundRequest = true; // Exhausted all rounds
 } elseif ($transStatus === 'Needs Revision' && $currentStatus === 'Pending') {
     $receiptOnlyMode = true; 
 }
@@ -187,6 +206,25 @@ if (!$latest) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
+                </div>
+                
+            <?php elseif ($needsRoundRequest): ?>
+                <div class="bg-red-50 dark:bg-warmdark-panel shadow-sm border border-red-200 dark:border-red-900/50 rounded-lg p-5 w-64 flex flex-col items-center justify-center text-center transition-colors">
+                    <p class="text-xs font-bold text-red-600 dark:text-red-500 uppercase tracking-wider mb-3">Max Rounds Reached</p>
+                    
+                    <?php if ($application['round_request_status'] === 'Pending'): ?>
+                        <span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[11px] px-3 py-1.5 rounded-md font-bold border border-yellow-200 dark:border-yellow-800/50 w-full">
+                            Request Pending...
+                        </span>
+                    <?php else: ?>
+                        <form action="../../backend/actions/student/request_extra_round.php" method="POST" class="w-full">
+                            <input type="hidden" name="service_type" value="Grammarly & AI Checking">
+                            <input type="hidden" name="application_id" value="<?php echo $application['id']; ?>">
+                            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition">
+                                Request Extra Round
+                            </button>
+                        </form>
+                    <?php endif; ?>
                 </div>
                 
             <?php elseif ($receiptOnlyMode): ?>

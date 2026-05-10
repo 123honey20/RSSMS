@@ -123,6 +123,13 @@ $stmt->close();
                             View Personnel
                         </a>
 
+                        <a href="admin_dashboard.php?page=round_requests" class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Round Requests
+                        </a>
+
                         <a href="admin_dashboard.php?page=personnel_requests" class="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -279,15 +286,6 @@ $stmt->close();
                         </div>
                         Manage Transactions
                     </a>
-
-                    <a href="admin_dashboard.php?page=completed_proposals" class="mt-2 flex items-center gap-3 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-green-700 dark:text-green-500 bg-green-50/50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 border border-transparent hover:border-green-200 dark:hover:border-green-500/30 transition-colors group">
-                        <div class="w-4 h-4 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 text-green-600 dark:text-green-500 group-hover:text-green-700 dark:group-hover:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                            </svg>
-                        </div>
-                        Proposal Clearances
-                    </a>
                 </div>
 
                 <div class="my-4 border-t border-gray-100 dark:border-warmdark-border"></div>
@@ -344,6 +342,9 @@ $stmt->close();
                     case 'reassign_workload':
                         include '../personnel/reassign_workload.php';
                         break;
+                    case 'round_requests':
+                        include '../admin/round_requests.php';
+                        break;
                     case 'personnel_requests':
                         include '../personnel/personnel_requests.php';
                         break;
@@ -386,25 +387,36 @@ $stmt->close();
                     case 'manage_transactions':
                         include '../transactions/manage_transactions.php';
                         break;
-                    case 'completed_proposals':
-                        include '../students/completed_proposals.php';
-                        break;
                     case 'analytics_ethics':
                         include '../analytics/ethics_analytics.php';
+                        break;
+                    case 'ethics_personnel_workload':
+                        include '../analytics/ethics_personnel_workload.php';
                         break;
                     case 'analytics_grammarly_ai':
                         include '../analytics/grammarly_ai_analytics.php';
                         break;
+                    case 'grammarly_ai_personnel_workload':
+                        include '../analytics/grammarly_ai_personnel_workload.php';
+                        break;
                     case 'analytics_human_grammarian':
                         include '../analytics/human_grammarian_analytics.php';
+                        break;
+                    case 'human_grammarian_personnel_workload':
+                        include '../analytics/human_grammarian_personnel_workload.php';
                         break;
                     case 'analytics_librarian':
                         include '../analytics/librarian_analytics.php';
                         break;
+                    case 'librarian_personnel_workload':
+                        include '../analytics/librarian_personnel_workload.php';
+                        break;
                     case 'analytics_statistician':
                         include '../analytics/statistician_analytics.php';
                         break;
-
+                    case 'statistician_personnel_workload':
+                        include '../analytics/statistician_personnel_workload.php';
+                        break;
                     case 'grammarly_ai_files':
                         $archive_title = "Grammarly & AI Checking";
                         $archive_table = "grammarly_ai";

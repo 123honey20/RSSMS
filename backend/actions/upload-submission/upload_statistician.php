@@ -45,13 +45,17 @@ $max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
 $max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; 
 $reqStmt->close();
 
-// --- NEW: FETCH THE *CURRENT* ASSIGNED PERSONNEL FROM ADMIN'S DASHBOARD ---
-$assignStmt = $conn->prepare("SELECT assigned_personnel_id FROM service_applications WHERE student_id = ? AND service_type = 'Statistician' AND status = 'Approved'");
+// --- NEW: FETCH THE *CURRENT* ASSIGNED PERSONNEL AND EXTRA ROUNDS FROM ADMIN'S DASHBOARD ---
+$assignStmt = $conn->prepare("SELECT assigned_personnel_id, extra_rounds FROM service_applications WHERE student_id = ? AND service_type = 'Statistician' AND status = 'Approved'");
 $assignStmt->bind_param("i", $student_id);
 $assignStmt->execute();
 $assignRes = $assignStmt->get_result()->fetch_assoc();
 $active_personnel_id = $assignRes['assigned_personnel_id'] ?? null;
+$extra_rounds = $assignRes ? (int)$assignRes['extra_rounds'] : 0;
 $assignStmt->close();
+
+// ADD GRANTED EXTRA ROUNDS TO THE LIMIT!
+$max_rounds += $extra_rounds;
 
 if (!isset($_FILES['submission_file']) || $_FILES['submission_file']['error'] !== UPLOAD_ERR_OK) {
     redirectWithError("Please select a valid file.", $redirect_url);

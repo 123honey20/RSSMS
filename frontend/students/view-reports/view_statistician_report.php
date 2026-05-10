@@ -13,13 +13,14 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
-// FIXED QUERY: Join service_applications to fetch the newly assigned personnel!
+// FIXED QUERY: Prioritize the historical personnel_id attached to this exact submission round!
+// It falls back to the current service_applications assignment only if the round hasn't been processed yet.
 $stmt = $conn->prepare("
     SELECT c.*, s.control_number, p.full_name AS personnel_name
     FROM statistician c
     JOIN students s ON c.student_id = s.id
     LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Statistician' AND sa.status = 'Approved'
-    LEFT JOIN personnel p ON p.id = COALESCE(sa.assigned_personnel_id, c.personnel_id)
+    LEFT JOIN personnel p ON p.id = COALESCE(c.personnel_id, sa.assigned_personnel_id)
     WHERE c.id = ? AND s.user_id = ?
 ");
 $stmt->bind_param("ii", $submissionId, $userId);
@@ -331,6 +332,7 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
 <?php endif; ?>
 
 <script>
+    // === COMMENT MODAL SCRIPTS ===
     function openCommentModalDetails(btn) {
         document.getElementById('modalCommentTitle').innerText = 'Comment #' + btn.getAttribute('data-num');
         document.getElementById('modalCommentPage').innerText = btn.getAttribute('data-page');

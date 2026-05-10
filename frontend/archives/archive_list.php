@@ -37,7 +37,8 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <input type="text" id="archiveSearch" placeholder="Search by ID Number..." class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
+        <!-- CHANGED: Search placeholder to Control Number -->
+        <input type="text" id="archiveSearch" placeholder="Search by Control Number..." class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
         <select id="syFilter" class="w-full border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium transition-colors shadow-sm">
             <option value="All">All School Years</option>
@@ -67,7 +68,8 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
         <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                 <tr>
-                    <th class="px-6 py-4 font-semibold text-center">ID Number</th>
+                    <!-- CHANGED: ID Number to Control Number -->
+                    <th class="px-6 py-4 font-semibold text-center">Control Number</th>
                     <th class="px-6 py-4 font-semibold">Thesis Title</th>
                     <th class="px-6 py-4 font-semibold text-center">Round</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
@@ -93,8 +95,9 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm text-gray-800 dark:text-gray-200">
                 <div>
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student ID Number</p>
-                    <p class="font-bold text-gray-900 dark:text-gray-100" id="m_school_id"></p>
+                    <!-- CHANGED: Student ID Number to Control Number -->
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Control Number</p>
+                    <p class="font-bold text-gray-900 dark:text-gray-100" id="m_control_number"></p>
                 </div>
                 <div>
                     <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">School Year</p>
@@ -139,6 +142,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
     </div>
 </div>
 
+<!-- ... (fileViewerModal HTML remains identical) ... -->
 <div id="fileViewerModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999] backdrop-blur-sm p-4 sm:p-8 transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all border border-transparent dark:border-warmdark-border">
         <div class="bg-gray-900 dark:bg-warmdark-bg text-white px-5 py-3 flex items-center justify-between shrink-0 shadow-md z-10 border-b border-transparent dark:border-warmdark-border">
@@ -207,7 +211,8 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
                     }
 
                     row.innerHTML = `
-                        <td class="px-6 py-4 text-center text-xs text-gray-800 dark:text-gray-200">${rec.school_id}</td>
+                        <!-- CHANGED: outputting rec.control_number instead of rec.school_id -->
+                        <td class="px-6 py-4 text-center text-xs text-gray-800 dark:text-gray-200 font-medium">${rec.control_number || 'N/A'}</td>
                         <td class="px-6 py-4 font-medium text-gray-600 dark:text-gray-300 truncate max-w-[200px]" title="${rec.thesis_title}">${rec.thesis_title}</td>
                         <td class="px-6 py-4 text-center font-semibold text-gray-800 dark:text-gray-200">R${rec.round}</td>
                         <td class="px-6 py-4 text-center">
@@ -236,6 +241,7 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
             .catch(error => console.error("Fetch Error:", error));
     }
 
+    // ... (renderPagination remains identical) ...
     function renderPagination(totalPages, currentPage) {
         const container = document.getElementById('paginationContainer');
         container.innerHTML = '';
@@ -253,7 +259,9 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
     }
 
     function openArchiveModal(data) {
-        document.getElementById('m_school_id').textContent = data.school_id || 'N/A';
+        // CHANGED: Map to control_number
+        document.getElementById('m_control_number').textContent = data.control_number || 'N/A';
+        
         document.getElementById('m_sy').textContent = data.school_year || 'N/A';
         document.getElementById('m_dept_course').textContent = (data.department_name || 'N/A') + " — " + (data.course_name || 'N/A');
         document.getElementById('m_thesis').textContent = data.thesis_title || 'N/A';
@@ -292,9 +300,9 @@ $departments = $conn->query("SELECT id, name FROM departments ORDER BY name ASC"
 
     document.addEventListener('DOMContentLoaded', () => fetchArchives(1));
 
+    // ... (openFileViewer and closeFileViewer remain identical) ...
     function openFileViewer(url, filename) {
         document.getElementById('viewer-filename').textContent = "— " + filename;
-        
         const ext = filename.split('.').pop().toLowerCase();
         const officeFormats = ['doc', 'docx', 'ppt', 'pptx', 'odt', 'rtf'];
         let finalUrl = url;

@@ -32,7 +32,8 @@ $appStmt = $conn->prepare("
     SELECT sa.*, 
            p_req.full_name as requested_name,
            p_assign.full_name as assigned_name,
-           p_assign.service_role as assigned_role
+           p_assign.service_role as assigned_role,
+           sa.extra_rounds, sa.round_request_status
     FROM service_applications sa 
     LEFT JOIN personnel p_req ON sa.requested_personnel_id = p_req.id 
     LEFT JOIN personnel p_assign ON sa.assigned_personnel_id = p_assign.id
@@ -46,7 +47,10 @@ $appStmt->close();
 
 $appStatus = $application ? $application['status'] : null;
 $isAssigned = $application ? true : false;
-
+// Add granted extra rounds to the max rounds limit
+if ($application) {
+    $max_rounds += (int)$application['extra_rounds'];
+}
 // --- DYNAMIC REASSIGNMENT LOGIC ---
 $origPersonnelName = $application['requested_name'] ?? null;
 $currentPersonnelName = $application['assigned_name'] ?? null;
@@ -85,7 +89,7 @@ $is_locked = 0;
 
 if ($appStatus === 'Approved') {
     $subs = $conn->query("SELECT *, COALESCE(is_locked, 0) as is_locked FROM librarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC, uploaded_at DESC");
-    
+
     $latestRes = $conn->query("SELECT *, COALESCE(is_locked, 0) as is_locked FROM librarian WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
     $latest = $latestRes->fetch_assoc();
     $currentRound = $latest ? (int)$latest['round'] : 0;
@@ -95,7 +99,7 @@ if ($appStatus === 'Approved') {
 }
 
 // 4. Fetch the specific requirements for Librarian
-$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_librarian'");
+$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_librarian_{$student_course_id}'");
 $librarian_requirements_json = $req_stmt->fetch_assoc()['setting_value'] ?? '[]';
 $librarian_requirements = json_decode($librarian_requirements_json, true);
 
@@ -108,6 +112,7 @@ if (!is_array($librarian_requirements)) {
 // ==========================================
 $isFullyCompleted = ($currentStatus === 'Approved' && $currentPhase >= $max_phases);
 $canUploadNewRound = false;
+$needsRoundRequest = false;
 
 if (!$latest) {
     $canUploadNewRound = true; // no submission yet
@@ -115,6 +120,8 @@ if (!$latest) {
     $canUploadNewRound = true; // can go to next round
 } elseif ($currentStatus === 'Approved' && $currentPhase < $max_phases) {
     $canUploadNewRound = true; // can go to next phase
+} elseif ($currentStatus === 'Needs Revision' && $currentRound >= $max_rounds) {
+    $needsRoundRequest = true; // Exhausted all rounds
 }
 
 // DYNAMIC RE-UPLOAD LOGIC
@@ -134,7 +141,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                 <div>
                     <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100">Waiting for Librarian Assignment</h2>
                     <p class="text-sm text-indigo-700 dark:text-indigo-300 mt-2 leading-relaxed">
-                        Your research profile is currently pending personnel assignment. The System Administrator will officially assign a dedicated Librarian to your group soon. 
+                        Your research profile is currently pending personnel assignment. The System Administrator will officially assign a dedicated Librarian to your group soon.
                         Once assigned, your upload dashboard will automatically unlock here.
                     </p>
                 </div>
@@ -143,12 +150,14 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
 
     <?php else: ?>
         <?php if (!$hasAnySubmission): ?>
-            <div x-data="{ show: true }" 
-                 x-show="show" 
-                 x-init="setTimeout(() => show = false, 5000)" 
-                 x-transition.opacity.duration.500ms 
-                 class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div x-data="{ show: true }"
+                x-show="show"
+                x-init="setTimeout(() => show = false, 5000)"
+                x-transition.opacity.duration.500ms
+                class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-900/30 flex items-center gap-3 max-w-4xl mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 <span class="text-sm text-green-800 dark:text-green-300 font-medium">A Librarian has been assigned to you! You may now submit your documents for review.</span>
             </div>
         <?php endif; ?>
@@ -167,7 +176,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
-                
+
                 <div x-show="openReqs" style="display: none;">
                     <div class="px-5 pb-5 pt-1 border-t border-blue-100 dark:border-blue-900/30 mt-1">
                         <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-2 pl-2 font-medium mt-3">
@@ -194,6 +203,26 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
+                </div>
+
+
+            <?php elseif ($needsRoundRequest): ?>
+                <div class="bg-red-50 dark:bg-warmdark-panel shadow-sm border border-red-200 dark:border-red-900/50 rounded-lg p-5 w-64 flex flex-col items-center justify-center text-center transition-colors">
+                    <p class="text-xs font-bold text-red-600 dark:text-red-500 uppercase tracking-wider mb-3">Max Rounds Reached</p>
+
+                    <?php if ($application['round_request_status'] === 'Pending'): ?>
+                        <span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[11px] px-3 py-1.5 rounded-md font-bold border border-yellow-200 dark:border-yellow-800/50 w-full">
+                            Request Pending...
+                        </span>
+                    <?php else: ?>
+                        <form action="../../backend/actions/student/request_extra_round.php" method="POST" class="w-full">
+                            <input type="hidden" name="service_type" value="Librarian">
+                            <input type="hidden" name="application_id" value="<?php echo $application['id']; ?>">
+                            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition">
+                                Request Extra Round
+                            </button>
+                        </form>
+                    <?php endif; ?>
                 </div>
 
             <?php elseif ($canUploadNewRound): ?>
@@ -270,7 +299,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
             <?php if ($application && $application['assigned_name']): ?>
                 <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-64 flex items-center justify-between transition-colors">
                     <div class="overflow-hidden pr-2 flex-1 min-w-0">
-                        
+
                         <?php if ($isReassigned): ?>
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Original Personnel</p>
                             <p class="font-medium text-gray-500 dark:text-gray-400 truncate text-xs mb-2" title="<?= htmlspecialchars($origPersonnelName) ?>">
@@ -319,7 +348,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
                                     <td class="py-3 text-xs font-semibold dark:text-gray-200">
                                         <?php if ($max_phases > 1): ?>
-                                            Phase <?php echo (int)($row['phase'] ?? 1); ?>, 
+                                            Phase <?php echo (int)($row['phase'] ?? 1); ?>,
                                         <?php endif; ?>
                                         Round <?php echo (int)$row['round']; ?>
                                     </td>
@@ -345,7 +374,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                             <?php echo ucfirst($status); ?>
                                         </span>
                                     </td>
-                                    
+
                                     <!-- TIMELINE / DATE & TIME COLUMN -->
                                     <td class="py-3 text-xs whitespace-nowrap">
                                         <div class="flex flex-col gap-1.5">
@@ -357,9 +386,9 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                                 <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
                                                 <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                                     <span class="text-gray-700 dark:text-gray-300 font-medium">
-                                                        <?php 
+                                                        <?php
                                                         $finalizedDate = $row['updated_at'] ?? null;
-                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--'; 
+                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--';
                                                         ?>
                                                     </span>
                                                 <?php else: ?>
@@ -372,7 +401,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                     <!-- REPORT ACTIONS -->
                                     <td class="py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            
+
                                             <!-- View Button -->
                                             <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                                 <a href="student_dashboard.php?page=student_view_librarian_report&id=<?php echo $row['id']; ?>"
@@ -386,7 +415,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                             <?php endif; ?>
 
                                             <!-- Re-upload / Locked Logic -->
-                                            <?php 
+                                            <?php
                                             $isRowLatest = ($row['id'] === $latest['id']);
                                             $rowLocked = (int)$row['is_locked'] === 1;
                                             ?>
@@ -396,7 +425,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                                     <!-- LOCKED STATE UI -->
                                                     <span title="Personnel is currently reviewing this file" class="flex items-center gap-1.5 bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed transition-colors shadow-sm">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                                         </svg>
                                                         Locked
                                                     </span>

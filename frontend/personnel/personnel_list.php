@@ -20,7 +20,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     <div class="flex flex-col md:flex-row gap-4 mb-4 items-center">
 
-        <input type="text" id="personnelSearch" placeholder="Search by ID Number..."
+        <input type="text" id="personnelSearch" placeholder="Search by Name or ID Number..."
             class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
         <select id="deptFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
@@ -59,12 +59,12 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300 border-collapse">
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                 <tr>
-                    <th class="px-6 py-4 font-semibold text-center">#</th>
-                    <th class="px-6 py-4 font-semibold">ID Number</th>
-                    <th class="px-6 py-4 font-semibold max-w-xs">Department</th>
-                    <th class="px-6 py-4 font-semibold text-center">Status</th>
-                    <th class="px-6 py-4 font-semibold text-center">Profile</th>
-                    <th class="px-6 py-4 font-semibold text-center">Action</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">#</th>
+                    <th class="px-6 py-4 font-semibold whitespace-nowrap">Personnel Info</th> 
+                    <th class="px-6 py-4 font-semibold whitespace-nowrap">Department</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">Status</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">Profile</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">Action</th>
                 </tr>
             </thead>
             <tbody id="personnelTableBody" class="divide-y divide-gray-100 dark:divide-warmdark-border"></tbody>
@@ -113,53 +113,51 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
-                    row.innerHTML = `
-                        <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">${counter++}.</td>
-                        <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"></td>
-                        <td class="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs" title=""></td>
-                        <td class="px-6 py-4 text-center"></td>
-                        <td class="px-6 py-4 text-center">
-                            <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs"
-                                onclick='openProfilePersonnel(${JSON.stringify(person).replace(/'/g, "&#39;")})'>
-                                View Profile
-                            </button>
-                        </td>
-                        <td class="px-6 py-4 flex justify-center gap-2">
-                            <a href="../dashboards/admin_dashboard.php?page=edit_personnel&id=${person.id}"
-                                class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs">
-                                Update
-                            </a>
-                        </td>
-                    `;
-
-                    // Inject ID Number
-                    row.children[1].textContent = person.school_id;
-                    
-                    // Inject Department Name(s) logically (REMOVED GLOBAL GRAMMARLY OVERRIDE)
                     let displayDept = person.department_name;
                     if (!displayDept || displayDept.trim() === '') {
                         displayDept = 'Unassigned';
                     }
-                    row.children[2].textContent = displayDept;
-                    row.children[2].title = displayDept; // Hover tooltip for long lists
 
-                    // Inject Status Logic
+                    let statusHtml = '';
                     if (person.status === 'Pending') {
-                        row.children[3].innerHTML = `
+                        statusHtml = `
                             <form action="../../backend/actions/approve_user.php" method="POST" class="inline">
                                 <input type="hidden" name="user_id" value="${person.id}">
-                                <button type="submit" class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 transition shadow-sm border border-blue-100 dark:border-blue-900/50">
+                                <button type="submit" class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 transition shadow-sm border border-blue-100 dark:border-blue-900/50 inline-block w-[80px]">
                                     Approve
                                 </button>
                             </form>
                         `;
                     } else {
-                        row.children[3].innerHTML = `
-                            <span class="bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100 dark:border-green-500/20">
+                        statusHtml = `
+                            <span class="bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100 dark:border-green-500/20 inline-block w-[80px] text-center">
                                 Approved
                             </span>
                         `;
                     }
+
+                    // ADDED: max-w-[200px] and truncate to name, whitespace-nowrap to buttons
+                    row.innerHTML = `
+                        <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap">${counter++}.</td>
+                        <td class="px-6 py-4 max-w-[200px]">
+                            <p class="font-bold text-gray-800 dark:text-gray-200 truncate" title="${person.full_name || 'No Name'}">${person.full_name || 'No Name'}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate" title="${person.school_id}">${person.school_id}</p>
+                        </td>
+                        <td class="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]" title="${displayDept}">${displayDept}</td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">${statusHtml}</td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs font-bold"
+                                onclick='openProfilePersonnel(${JSON.stringify(person).replace(/'/g, "&#39;")})'>
+                                View Profile
+                            </button>
+                        </td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <a href="../dashboards/admin_dashboard.php?page=edit_personnel&id=${person.id}"
+                                class="bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border hover:bg-gray-200 dark:hover:bg-warmdark-hover px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-block text-center w-[80px]">
+                                Update
+                            </a>
+                        </td>
+                    `;
 
                     tbody.appendChild(row);
                 });

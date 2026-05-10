@@ -22,16 +22,16 @@ $offset = ($page - 1) * $limit;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status = isset($_GET['status']) ? $_GET['status'] : 'All';
 $sy = isset($_GET['sy']) ? $_GET['sy'] : 'All';
-// NEW: Capture the department parameter
+// Capture the department parameter
 $dept = isset($_GET['dept']) ? $_GET['dept'] : 'All'; 
 
 $where = "WHERE u.role = 'student'";
 $params = [];
 $types = "";
 
-// Search by school_id
+// FIX: Search by control_number instead of school_id
 if (!empty($search)) {
-    $where .= " AND u.school_id LIKE ?";
+    $where .= " AND s.control_number LIKE ?";
     $params[] = "%" . $search . "%";
     $types .= "s";
 }
@@ -50,7 +50,7 @@ if ($sy !== 'All' && !empty($sy)) {
     $types .= "s";
 }
 
-// NEW: Department filter
+// Department filter
 if ($dept !== 'All' && !empty($dept)) {
     $where .= " AND s.department_id = ?";
     $params[] = $dept;
@@ -96,7 +96,7 @@ $sql = "
     LEFT JOIN departments d ON s.department_id = d.id
     LEFT JOIN courses c ON s.course_id = c.id
     $where
-    ORDER BY u.status DESC, u.created_at DESC
+    ORDER BY CASE WHEN u.status = 'Pending' THEN 1 ELSE 2 END, u.created_at DESC
     LIMIT ? OFFSET ?
 ";
 

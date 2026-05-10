@@ -32,7 +32,8 @@ $appStmt = $conn->prepare("
     SELECT sa.*, 
            p_req.full_name as requested_name,
            p_assign.full_name as assigned_name,
-           p_assign.service_role as assigned_role
+           p_assign.service_role as assigned_role,
+           sa.extra_rounds, sa.round_request_status
     FROM service_applications sa 
     LEFT JOIN personnel p_req ON sa.requested_personnel_id = p_req.id 
     LEFT JOIN personnel p_assign ON sa.assigned_personnel_id = p_assign.id
@@ -45,13 +46,18 @@ $application = $appStmt->get_result()->fetch_assoc();
 $appStmt->close();
 
 $appStatus = $application ? $application['status'] : null;
+// Add granted extra rounds to the max rounds limit
+if ($application) {
+    $max_rounds += (int)$application['extra_rounds'];
+}
 
-// --- DYNAMIC REASSIGNMENT LOGIC ---
-$origPersonnelName = $application['requested_name'] ?? null;
+// --- DYNAMIC REASSIGNMENT LOGIC (FIXED) ---
 $currentPersonnelName = $application['assigned_name'] ?? null;
+$origPersonnelName = null;
+$isReassigned = false;
 
-if ($student_id) {
-    // Check the logs to find the absolute FIRST personnel assigned if reassigned
+if ($student_id && $currentPersonnelName) {
+    // Check ONLY the logs to find if a formal reassignment occurred
     $logQuery = $conn->query("
         SELECT p1.full_name as original_name 
         FROM reassignment_logs r
@@ -61,10 +67,13 @@ if ($student_id) {
     ");
     if ($logQuery && $logQuery->num_rows > 0) {
         $logRes = $logQuery->fetch_assoc();
-        $origPersonnelName = $origPersonnelName ?: $logRes['original_name'];
+        $origPersonnelName = $logRes['original_name'];
+        // Only trigger UI if the log shows a different person than current
+        if ($origPersonnelName && $origPersonnelName !== $currentPersonnelName) {
+            $isReassigned = true;
+        }
     }
 }
-$isReassigned = ($origPersonnelName && $origPersonnelName !== $currentPersonnelName);
 
 $hasAnySubmission = false;
 if ($student_id) {
@@ -111,7 +120,7 @@ if ($appStatus === 'Approved') {
 }
 
 // 5. Fetch the specific requirements for Statistician
-$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_statistician'");
+$req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_statistician_{$student_course_id}'");
 $req_row = $req_stmt ? $req_stmt->fetch_assoc() : null;
 $statistician_requirements_json = $req_row ? $req_row['setting_value'] : '[]';
 $statistician_requirements = json_decode($statistician_requirements_json, true);
@@ -125,6 +134,7 @@ if (!is_array($statistician_requirements)) {
 // ==========================================
 $isFullyCompleted = ($currentStatus === 'Approved' && $currentPhase >= $max_phases);
 $canUploadNewRound = false;
+$needsRoundRequest = false;
 
 if (!$latest) {
     $canUploadNewRound = true; // no submission yet
@@ -132,6 +142,8 @@ if (!$latest) {
     $canUploadNewRound = true; // can go to next round
 } elseif ($currentStatus === 'Approved' && $currentPhase < $max_phases) {
     $canUploadNewRound = true; // can go to next phase
+} elseif ($currentStatus === 'Needs Revision' && $currentRound >= $max_rounds) {
+    $needsRoundRequest = true; // Exhausted all rounds
 }
 
 // DYNAMIC RE-UPLOAD LOGIC
@@ -161,7 +173,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                 <input type="hidden" name="service_type" value="Statistician">
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Select Personnel</label>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Select Personnel <span class="text-red-500">*</span></label>
                     <select name="requested_personnel_id" required class="w-full border border-gray-300 dark:border-warmdark-border bg-gray-50 dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-3 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors appearance-none cursor-pointer">
                         <option value="">-- Choose an available Statistician --</option>
                         <?php foreach ($personnelList as $p): ?>
@@ -171,9 +183,10 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Upload Contract (Optional)</label>
-                    <input type="file" name="contract_file" accept=".pdf,.jpg,.jpeg,.png" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">
-                    <p class="text-[11px] text-gray-400 mt-2 italic">Accepted formats: PDF, JPG, PNG. Max size: 5MB.</p>
+                    <!-- FIX: Updated label, added required attribute, expanded allowed formats -->
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Upload Contract <span class="text-red-500">*</span></label>
+                    <input type="file" name="contract_file" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt" class="w-full border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">
+                    <p class="text-[11px] text-gray-400 mt-2 italic">Required. Accepted formats: PDF, DOC, DOCX, TXT, JPG, PNG. Max size: 5MB.</p>
                 </div>
 
                 <div class="pt-4 border-t border-gray-100 dark:border-warmdark-border">
@@ -232,7 +245,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
-                
+
                 <div x-show="openReqs" style="display: none;">
                     <div class="px-5 pb-5 pt-1 border-t border-blue-100 dark:border-blue-900/30 mt-1">
                         <ul class="list-decimal list-inside text-sm text-blue-800 dark:text-blue-300 space-y-2 pl-2 font-medium mt-3">
@@ -260,8 +273,26 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                     </div>
                 </div>
 
+            <?php elseif ($needsRoundRequest): ?>
+                <div class="bg-red-50 dark:bg-warmdark-panel shadow-sm border border-red-200 dark:border-red-900/50 rounded-lg p-5 w-full sm:w-64 flex flex-col items-center justify-center text-center transition-colors">
+                    <p class="text-xs font-bold text-red-600 dark:text-red-500 uppercase tracking-wider mb-3">Max Rounds Reached</p>
+
+                    <?php if ($application['round_request_status'] === 'Pending'): ?>
+                        <span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[11px] px-3 py-1.5 rounded-md font-bold border border-yellow-200 dark:border-yellow-800/50 w-full">
+                            Request Pending...
+                        </span>
+                    <?php else: ?>
+                        <form action="../../backend/actions/student/request_extra_round.php" method="POST" class="w-full">
+                            <input type="hidden" name="service_type" value="Statistician">
+                            <input type="hidden" name="application_id" value="<?php echo $application['id']; ?>">
+                            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition">
+                                Request Extra Round
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+                
             <?php elseif ($canUploadNewRound): ?>
-                <!-- FIX: Exclusively handles NEW submissions -->
                 <a href="student_dashboard.php?page=student_upload_statistician"
                     class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-full sm:w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
                     <div>
@@ -282,7 +313,6 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                 </a>
 
             <?php else: ?>
-                <!-- FIX: Defaults to "Pending Review" when wait for approval (or update via table) -->
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-full sm:w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
                         <?php if ($max_phases > 1): ?>
@@ -326,17 +356,17 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- PERSONNEL CARD (UPDATED WITH REASSIGNMENT DISPLAY) -->
+            <!-- PERSONNEL CARD -->
             <?php if ($application && $application['assigned_name']): ?>
                 <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-full sm:w-64 flex items-center justify-between transition-colors">
                     <div class="overflow-hidden pr-3 flex-1 min-w-0">
-                        
+
                         <?php if ($isReassigned): ?>
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Original Personnel</p>
                             <p class="font-medium text-gray-500 dark:text-gray-400 truncate text-xs mb-2" title="<?= htmlspecialchars($origPersonnelName) ?>">
@@ -385,7 +415,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
                                     <td class="px-4 py-3 text-xs font-semibold dark:text-gray-200">
                                         <?php if ($max_phases > 1): ?>
-                                            Phase <?php echo (int)($row['phase'] ?? 1); ?>, 
+                                            Phase <?php echo (int)($row['phase'] ?? 1); ?>,
                                         <?php endif; ?>
                                         Round <?php echo (int)$row['round']; ?>
                                     </td>
@@ -407,8 +437,7 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                             <?php echo ucfirst($status); ?>
                                         </span>
                                     </td>
-                                    
-                                    <!-- TIMELINE / DATE & TIME COLUMN -->
+
                                     <td class="px-4 py-3 text-xs whitespace-nowrap">
                                         <div class="flex flex-col gap-1.5">
                                             <div>
@@ -419,9 +448,9 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                                 <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
                                                 <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                                     <span class="text-gray-700 dark:text-gray-300 font-medium">
-                                                        <?php 
+                                                        <?php
                                                         $finalizedDate = $row['updated_at'] ?? null;
-                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--'; 
+                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--';
                                                         ?>
                                                     </span>
                                                 <?php else: ?>
@@ -431,11 +460,8 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                         </div>
                                     </td>
 
-                                    <!-- REPORT ACTIONS -->
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            
-                                            <!-- View Button -->
                                             <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                                 <a href="student_dashboard.php?page=student_view_statistician_report&id=<?php echo $row['id']; ?>"
                                                     class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm font-bold inline-block">
@@ -447,23 +473,20 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                                 </span>
                                             <?php endif; ?>
 
-                                            <!-- Re-upload / Locked Logic -->
-                                            <?php 
+                                            <?php
                                             $isRowLatest = ($row['id'] === $latest['id']);
                                             $rowLocked = (int)$row['is_locked'] === 1;
                                             ?>
 
                                             <?php if ($isRowLatest && $status === 'Pending'): ?>
                                                 <?php if ($rowLocked): ?>
-                                                    <!-- LOCKED STATE UI -->
                                                     <span title="Personnel is currently reviewing this file" class="flex items-center gap-1.5 bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed transition-colors shadow-sm">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                                         </svg>
                                                         Locked
                                                     </span>
                                                 <?php elseif ($canUpdateDoc): ?>
-                                                    <!-- ACTIVE REUPLOAD BUTTON -->
                                                     <a href="student_dashboard.php?page=student_upload_statistician" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -472,7 +495,6 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
                                                     </a>
                                                 <?php endif; ?>
                                             <?php else: ?>
-                                                <!-- Old rounds or Approved rounds -->
                                                 <span class="bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-600 px-4 py-1.5 rounded-lg text-xs font-bold border border-transparent cursor-not-allowed inline-block">
                                                     Reviewed
                                                 </span>
@@ -496,7 +518,6 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
     <?php endif; ?>
 </div>
 
-<!-- FULL SCREEN LOADING OVERLAY MOVED OUTSIDE SPACE-Y-6 -->
 <div id="applicationLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -512,9 +533,9 @@ $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
     window.showApplicationLoader = function() {
         document.getElementById('applicationLoadingOverlay').classList.remove('hidden');
         document.getElementById('applicationLoadingOverlay').classList.add('flex');
-        
+
         const btn = document.getElementById('submitApplicationBtn');
-        if(btn) {
+        if (btn) {
             btn.disabled = true;
             btn.innerHTML = 'Processing...';
         }

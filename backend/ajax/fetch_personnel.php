@@ -21,10 +21,12 @@ $where = "WHERE u.role = 'personnel'";
 $params = [];
 $types = "";
 
+// FIX: Now searches both ID Number AND Full Name
 if (!empty($search)) {
-    $where .= " AND u.school_id LIKE ?";
-    $params[] = "%" . $search . "%";
-    $types .= "s";
+    $where .= " AND (u.school_id LIKE ? OR s.full_name LIKE ?)";
+    $searchWild = "%" . $search . "%";
+    array_push($params, $searchWild, $searchWild);
+    $types .= "ss";
 }
 
 // Filter using the Junction Table

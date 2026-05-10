@@ -87,7 +87,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         <th class="px-6 py-4 font-semibold">Research Leader</th>
                         <th class="px-6 py-4 font-semibold">Department / Course</th>
                         <th class="px-6 py-4 font-semibold text-center">Current Progress</th>
-                        <th class="px-6 py-4 font-semibold text-center">History</th>
+                        <th class="px-6 py-4 font-semibold text-center">Actions / History</th>
                     </tr>
                 </thead>
                 <tbody id="studentTableBody" class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
@@ -110,6 +110,39 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             </button>
         </div>
     </form>
+</div>
+
+<!-- HIDDEN FORM FOR SINGLE REVERT ACTION -->
+<form id="revertForm" action="../../backend/actions/admin_reassign_workload_action.php" method="POST" class="hidden">
+    <input type="hidden" name="service_type" id="revertServiceType">
+    <input type="hidden" name="from_personnel_id" id="revertFromPersonnel">
+    <input type="hidden" name="to_personnel_id" id="revertToPersonnel">
+    <input type="hidden" name="student_ids[]" id="revertStudentId">
+</form>
+
+<!-- REVERT CONFIRMATION MODAL -->
+<div id="revertConfirmModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[99999] backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-warmdark-panel w-[400px] max-w-[95%] rounded-2xl shadow-2xl p-6 border border-transparent dark:border-warmdark-border flex flex-col items-center text-center transform transition-all scale-95 opacity-0 duration-200" id="revertModalContentBox">
+        
+        <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4 shadow-sm border border-blue-200 dark:border-blue-800/50">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+        </div>
+        
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Confirm Revert</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6" id="revertConfirmMessage">
+            Are you sure you want to revert this student back to their original reviewer?
+        </p>
+        
+        <div class="flex gap-3 w-full">
+            <button type="button" onclick="cancelRevertAction()" class="flex-1 bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-warmdark-hover px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-gray-200 dark:border-warmdark-border">
+                Cancel
+            </button>
+            <button type="button" onclick="confirmRevertAction()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-md">
+                Yes, Revert
+            </button>
+        </div>
+
+    </div>
 </div>
 
 <!-- HISTORY MODAL -->
@@ -169,6 +202,8 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
         function resetTable() {
             tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-16 text-center text-gray-400">Please select a Department and a "Transfer From" personnel.</td></tr>`;
+            selectAllCb.disabled = true;
+            selectAllCb.checked = false;
             updateSubmitButton();
         }
 
@@ -238,17 +273,40 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     tableBody.innerHTML = '';
                     if (data.length === 0) {
                         tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-16 text-center text-gray-400">This personnel has no active students in this service.</td></tr>`;
+                        selectAllCb.disabled = true;
                     } else {
                         data.forEach(student => {
-                            // DYNAMIC BADGE COLOR
                             let badgeClass = student.current_progress === 'Completed'
                                 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50'
                                 : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800/50';
 
+                            // Render Checkbox OR Locked Icon based on 'is_completed' flag
+                            let checkboxHtml = '';
+                            if (student.is_completed) {
+                                checkboxHtml = `<div class="flex justify-center" title="Cannot reassign completed students">
+                                                    <svg class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                </div>`;
+                            } else {
+                                checkboxHtml = `<input type="checkbox" name="student_ids[]" value="${student.student_id}" class="student-cb w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer transition-all">`;
+                            }
+
+                            // Render "Revert" button if they have an original personnel DIFFERENT from the current one
+                            let revertBtnHtml = '';
+                            if (student.original_personnel_id && student.original_personnel_id != fromId && !student.is_completed) {
+                                // Escape name properly for the onclick function
+                                const safeName = student.original_personnel_name.replace(/'/g, "\\'");
+                                revertBtnHtml = `
+                                    <button type="button" onclick="revertToOriginal(${student.student_id}, ${student.original_personnel_id}, '${safeName}')" class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border border-blue-200 dark:border-blue-800/50 mt-1 w-full flex items-center justify-center gap-1" title="Revert to ${student.original_personnel_name}">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                                        Revert
+                                    </button>
+                                `;
+                            }
+
                             tableBody.innerHTML += `
-                                <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors group">
-                                    <td class="px-6 py-4 text-center">
-                                        <input type="checkbox" name="student_ids[]" value="${student.student_id}" class="student-cb w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer transition-all">
+                                <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors group ${student.is_completed ? 'bg-gray-50/30 dark:bg-warmdark-bg/30' : ''}">
+                                    <td class="px-6 py-4 text-center align-middle">
+                                        ${checkboxHtml}
                                     </td>
                                     <td class="px-6 py-4 font-bold text-gray-800 dark:text-gray-200">${student.control_number}</td>
                                     <td class="px-6 py-4 text-gray-700 dark:text-gray-300 font-medium">${student.research_leader}</td>
@@ -261,10 +319,11 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                                             ${student.current_progress}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 text-center">
-                                        <button type="button" onclick="viewHistory(${student.student_id})" class="bg-gray-100 hover:bg-gray-200 dark:bg-warmdark-bg dark:hover:bg-warmdark-border text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border border-gray-200 dark:border-warmdark-border">
+                                    <td class="px-6 py-4 text-center align-middle">
+                                        <button type="button" onclick="viewHistory(${student.student_id})" class="bg-gray-100 hover:bg-gray-200 dark:bg-warmdark-bg dark:hover:bg-warmdark-border text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border border-gray-200 dark:border-warmdark-border w-full">
                                             Log
                                         </button>
+                                        ${revertBtnHtml}
                                     </td>
                                 </tr>
                             `;
@@ -275,24 +334,26 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 });
         }
 
-        // --- NEW/UPDATED CHECKBOX LOGIC FOR SELECT ALL SYNC ---
         function attachCheckboxListeners() {
             const checkboxes = document.querySelectorAll('.student-cb');
-            selectAllCb.checked = false; // Reset main check
+            
+            // Disable selectAll if there are NO active checkboxes (i.e. all students are completed)
+            if (checkboxes.length === 0) {
+                selectAllCb.disabled = true;
+                selectAllCb.checked = false;
+            } else {
+                selectAllCb.disabled = false;
+                selectAllCb.checked = false; 
+            }
             
             checkboxes.forEach(cb => {
                 cb.addEventListener('change', () => {
-                    // Check if every single box is checked
                     const allChecked = Array.from(checkboxes).every(c => c.checked);
-                    
-                    // If all are checked, check the main box. If not, uncheck the main box.
                     selectAllCb.checked = checkboxes.length > 0 && allChecked;
-                    
                     updateSubmitButton();
                 });
             });
 
-            // If the main select all box is clicked
             selectAllCb.addEventListener('change', (e) => {
                 checkboxes.forEach(cb => cb.checked = e.target.checked);
                 updateSubmitButton();
@@ -315,12 +376,62 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             }
         }
 
-        // Listeners
         serviceSelect.addEventListener('change', fetchPersonnel);
         deptSelect.addEventListener('change', fetchPersonnel);
         fromSelect.addEventListener('change', fetchStudents);
         toSelect.addEventListener('change', updateSubmitButton);
         
+        // Single Revert Modal Logic
+        window.revertToOriginal = function(studentId, originalId, originalName) {
+            // 1. Set values in the hidden form
+            document.getElementById('revertServiceType').value = document.getElementById('reassignServiceFilter').value;
+            document.getElementById('revertFromPersonnel').value = document.getElementById('fromPersonnel').value;
+            document.getElementById('revertToPersonnel').value = originalId;
+            document.getElementById('revertStudentId').value = studentId;
+
+            // 2. Update modal message text
+            document.getElementById('revertConfirmMessage').innerHTML = `Are you sure you want to revert this student back to their original reviewer (<strong>${originalName}</strong>)?`;
+
+            // 3. Show the modal with transition
+            const modal = document.getElementById('revertConfirmModal');
+            const box = document.getElementById('revertModalContentBox');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Small timeout allows the display to render before animating opacity/scale
+            setTimeout(() => {
+                box.classList.remove('scale-95', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        window.cancelRevertAction = function() {
+            const modal = document.getElementById('revertConfirmModal');
+            const box = document.getElementById('revertModalContentBox');
+            
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+            
+            // Wait for transition to finish before hiding the container
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        window.confirmRevertAction = function() {
+            // Hide the confirmation modal
+            cancelRevertAction();
+            
+            // Show the loading overlay so the user knows it's working
+            document.getElementById('reassignLoadingOverlay').classList.remove('hidden');
+            document.getElementById('reassignLoadingOverlay').classList.add('flex');
+
+            // Submit the form
+            document.getElementById('revertForm').submit();
+        }
+
         window.viewHistory = function(studentId) {
             const service = document.getElementById('reassignServiceFilter').value;
             const container = document.getElementById('historyModalContent');
@@ -352,12 +463,20 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         html += `<div class="text-center text-sm text-gray-400 italic py-4">No reassignments recorded yet.</div>`;
                     } else {
                         data.logs.forEach((log, index) => {
+                            let isRevert = (log.to_personnel === data.original);
+                            
+                            let circleColor = isRevert ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-amber-100 text-amber-600 border-amber-200';
+                            let boxColor = isRevert ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200';
+                            let textColor = isRevert ? 'text-emerald-600' : 'text-amber-600';
+                            let label = isRevert ? 'Reverted to Original' : 'Reassigned To';
+                            let icon = isRevert ? `<svg class="w-3 h-3 inline mb-0.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>` : '';
+
                             html += `
                                 <div class="flex items-start gap-4 mb-5 relative">
                                     <div class="absolute left-4 -top-6 bottom-0 w-[2px] bg-gray-200 dark:bg-warmdark-border -z-10 h-10"></div>
-                                    <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0 mt-1 shadow-sm border border-amber-200">${index + 2}</div>
-                                    <div class="bg-amber-50/50 dark:bg-warmdark-bg p-3 rounded-lg border border-amber-200 dark:border-warmdark-border w-full shadow-sm">
-                                        <p class="text-[10px] text-amber-600 font-bold uppercase tracking-wider mb-0.5">Reassigned To</p>
+                                    <div class="w-8 h-8 rounded-full ${circleColor} flex items-center justify-center font-bold shrink-0 mt-1 shadow-sm border">${index + 2}</div>
+                                    <div class="${boxColor} dark:bg-warmdark-bg p-3 rounded-lg border dark:border-warmdark-border w-full shadow-sm">
+                                        <p class="text-[10px] ${textColor} font-bold uppercase tracking-wider mb-0.5">${label}${icon}</p>
                                         <p class="font-bold text-gray-800 dark:text-gray-200">${log.to_personnel}</p>
                                         <p class="text-xs text-gray-400 mt-1 flex justify-between">
                                             <span>Transferred from: ${log.from_personnel}</span>

@@ -55,6 +55,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     <th class="px-6 py-4 font-semibold">Student Control No.</th>
                     <th class="px-6 py-4 font-semibold">Requested Personnel</th>
                     <th class="px-6 py-4 font-semibold text-center">Contract</th>
+                    <th class="px-6 py-4 font-semibold">Timeline</th> <!-- NEW TIMELINE HEADER -->
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
@@ -160,7 +161,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                 tbody.innerHTML = '';
 
                 if (!data.requests || data.requests.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No requests found.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No requests found.</td></tr>`;
                     var pagination = document.getElementById('reqPaginationContainer');
                     if (pagination) pagination.innerHTML = '';
                     return;
@@ -176,6 +177,23 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
                     var statusClass = req.status === 'Pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : (req.status === 'Approved' ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400');
 
+                    // NEW TIMELINE HTML
+                    var timelineHtml = `
+                        <div class="flex flex-col gap-1 text-xs whitespace-nowrap">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Requested</span>
+                                <span class="text-gray-700 dark:text-gray-300 font-medium">${req.formatted_created_at}</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
+                                ${req.status === 'Pending' 
+                                    ? '<span class="text-yellow-600 dark:text-yellow-500 italic font-medium">Waiting...</span>'
+                                    : '<span class="text-gray-700 dark:text-gray-300 font-medium">' + req.formatted_updated_at + '</span>'
+                                }
+                            </div>
+                        </div>
+                    `;
+
                     // Action Button (Process vs Review)
                     var actionHtml = req.status === 'Pending' ?
                         `<button type="button" onclick="openReqModal(${req.id}, ${req.department_id || 0}, '${req.service_type}', ${req.requested_personnel_id}, '${req.contract_file_path || ''}', '${req.control_number}', '${req.status}', ${req.assigned_personnel_id || 'null'})" class="bg-blue-600 dark:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition shadow-sm">Process</button>` :
@@ -188,6 +206,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         </td>
                         <td class="px-6 py-4 text-gray-600 dark:text-gray-400">${req.requested_name}</td>
                         <td class="px-6 py-4 text-center">${contractHtml}</td>
+                        <td class="px-6 py-4">${timelineHtml}</td>
                         <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[11px] font-bold tracking-wider border border-transparent ${statusClass}">${req.status}</span></td>
                         <td class="px-6 py-4 text-center">${actionHtml}</td>
                     `;

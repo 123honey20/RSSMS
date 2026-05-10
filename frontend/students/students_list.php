@@ -35,11 +35,12 @@ for ($y = $max_year; $y >= $start_year; $y--) {
 
     <div class="flex flex-col md:flex-row gap-4 mb-4 items-center">
 
+        <!-- FIX: Updated Placeholder -->
         <input
             type="text"
             id="studentSearch"
-            placeholder="Search by ID Number..."
-            class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
+            placeholder="Search by Control Number..."
+            class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
 
         <select id="deptFilter" class="w-full md:w-1/4 border border-gray-300 dark:border-warmdark-border rounded-lg px-4 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-700 dark:text-gray-200 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors shadow-sm">
             <option value="All">All Departments</option>
@@ -76,13 +77,14 @@ for ($y = $max_year; $y >= $start_year; $y--) {
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-warmdark-border transition-colors">
         <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300 border-collapse">
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b dark:border-warmdark-border">
+                <!-- FIX: Added whitespace-nowrap and updated ID to Control Number -->
                 <tr>
-                    <th class="px-6 py-4 font-semibold text-center">#</th>
-                    <th class="px-6 py-4 font-semibold">ID Number</th>
-                    <th class="px-6 py-4 font-semibold max-w-xs">Department</th>
-                    <th class="px-6 py-4 font-semibold text-center">Status</th>
-                    <th class="px-6 py-4 font-semibold text-center">Profile</th>
-                    <th class="px-6 py-4 font-semibold text-center">Action</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">#</th>
+                    <th class="px-6 py-4 font-semibold whitespace-nowrap">Control Number</th>
+                    <th class="px-6 py-4 font-semibold whitespace-nowrap">Department</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">Status</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">Profile</th>
+                    <th class="px-6 py-4 font-semibold text-center whitespace-nowrap">Action</th>
                 </tr>
             </thead>
             <tbody id="studentTableBody" class="divide-y divide-gray-100 dark:divide-warmdark-border"></tbody>
@@ -102,7 +104,7 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         currentPage = page;
         const search = document.getElementById('studentSearch').value;
         const schoolYear = document.getElementById('syFilter').value; 
-        const dept = document.getElementById('deptFilter').value; // NEW: Get Department value
+        const dept = document.getElementById('deptFilter').value;
 
         fetch(`../../backend/ajax/fetch_students.php?p=${page}&search=${encodeURIComponent(search)}&status=${currentStatusFilter}&sy=${encodeURIComponent(schoolYear)}&dept=${encodeURIComponent(dept)}`)
             .then(response => response.json())
@@ -131,50 +133,45 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
-                    row.innerHTML = `
-                        <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">${counter++}.</td>
-                        <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"></td>
-                        <td class="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs"></td>
-                        <td class="px-6 py-4 text-center"></td>
-                        <td class="px-6 py-4 text-center">
-                            <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs"
-                                onclick='openProfileStudent(${JSON.stringify(student).replace(/'/g, "&#39;")})'>
-                                View Profile
-                            </button>
-                        </td>
-                        <td class="px-6 py-4 flex justify-center gap-2">
-                            <a href="../dashboards/admin_dashboard.php?page=edit_student&id=${student.id}"
-                                class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs">
-                                Update
-                            </a>
-                        </td>
-                    `;
-
-                    // 1. Inject ID Number
-                    row.children[1].textContent = student.school_id;
-
-                    // 2. Inject Simple Department Text
                     let deptName = student.department_name ? student.department_name : 'N/A';
-                    row.children[2].textContent = deptName;
-                    row.children[2].title = deptName; // Helps if the name is too long and gets truncated
-
-                    // 3. Inject Status Logic
+                    
+                    let statusHtml = '';
                     if (student.status === 'Pending') {
-                        row.children[3].innerHTML = `
+                        statusHtml = `
                             <form action="../../backend/actions/approve_user.php" method="POST" class="inline">
                                 <input type="hidden" name="user_id" value="${student.id}">
-                                <button type="submit" class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 transition shadow-sm border border-blue-100 dark:border-blue-900/50">
+                                <button type="submit" class="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold px-3 py-1.5 rounded-md text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 transition shadow-sm border border-blue-100 dark:border-blue-900/50 inline-block w-[80px]">
                                     Approve
                                 </button>
                             </form>
                         `;
                     } else {
-                        row.children[3].innerHTML = `
-                            <span class="bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100 dark:border-green-500/20">
+                        statusHtml = `
+                            <span class="bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-bold px-3 py-1.5 rounded-md text-xs border border-green-100 dark:border-green-500/20 inline-block w-[80px] text-center">
                                 Approved
                             </span>
                         `;
                     }
+
+                    // FIX: Replaced ID with Control Number, and formatted buttons perfectly
+                    row.innerHTML = `
+                        <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap">${counter++}.</td>
+                        <td class="px-6 py-4 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">${student.control_number || 'No Control No.'}</td>
+                        <td class="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 truncate max-w-[200px]" title="${deptName}">${deptName}</td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">${statusHtml}</td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 hover:underline text-xs font-bold"
+                                onclick='openProfileStudent(${JSON.stringify(student).replace(/'/g, "&#39;")})'>
+                                View Profile
+                            </button>
+                        </td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <a href="../dashboards/admin_dashboard.php?page=edit_student&id=${student.id}"
+                                class="bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border hover:bg-gray-200 dark:hover:bg-warmdark-hover px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-block text-center w-[80px]">
+                                Update
+                            </a>
+                        </td>
+                    `;
 
                     tbody.appendChild(row);
                 });

@@ -14,7 +14,7 @@ $stmt = $conn->prepare("
     SELECT u.school_id, u.email, 
            s.id AS student_id, s.control_number, s.thesis_title, s.research_leader,
            d.name AS department_name, c.name AS course_name,
-           d.req_grammarly_ai, d.req_ethics, d.req_human_grammarian, d.req_librarian, d.req_statistician
+           c.req_grammarly_ai, c.req_ethics, c.req_human_grammarian, c.req_librarian, c.req_statistician
     FROM users u
     LEFT JOIN students s ON u.id = s.user_id
     LEFT JOIN departments d ON s.department_id = d.id
@@ -29,31 +29,6 @@ $stmt->close();
 $student_id = $profile['student_id'] ?? 0;
 $_SESSION['control_number'] = $profile['control_number'] ?? '';
 
-// 2. Check if the student is Approved in ONLY their REQUIRED research services
-$servicesToCheck = [];
-if ($profile['req_grammarly_ai'] ?? 1) $servicesToCheck[] = 'grammarly_ai';
-if ($profile['req_ethics'] ?? 1) $servicesToCheck[] = 'ethics';
-if ($profile['req_human_grammarian'] ?? 1) $servicesToCheck[] = 'human_grammarian';
-if ($profile['req_librarian'] ?? 1) $servicesToCheck[] = 'librarian';
-if ($profile['req_statistician'] ?? 1) $servicesToCheck[] = 'statistician';
-
-$isEligibleForProposal = true;
-
-if ($student_id > 0 && !empty($servicesToCheck)) {
-    foreach ($servicesToCheck as $service) {
-        $checkStmt = $conn->prepare("SELECT id FROM $service WHERE student_id = ? AND status = 'Approved' LIMIT 1");
-        $checkStmt->bind_param("i", $student_id);
-        $checkStmt->execute();
-        if ($checkStmt->get_result()->num_rows === 0) {
-            $isEligibleForProposal = false;
-            $checkStmt->close();
-            break;
-        }
-        $checkStmt->close();
-    }
-} else {
-    $isEligibleForProposal = false;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -272,15 +247,6 @@ if ($student_id > 0 && !empty($servicesToCheck)) {
 
             <div class="p-4 border-t border-gray-100 dark:border-warmdark-border mt-auto flex flex-col gap-1 transition-colors">
 
-                <?php if ($isEligibleForProposal): ?>
-                    <a href="student_dashboard.php?page=student_proposal_certificate" class="flex items-center gap-2.5 px-3 py-2 mb-2 rounded-lg bg-gray-900 dark:bg-yellow-600 text-white font-medium hover:bg-gray-800 dark:hover:bg-yellow-500 transition-colors shadow-sm text-[13px]">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-yellow-400 dark:text-white" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        Proposal Certificate
-                    </a>
-                <?php endif; ?>
-
                 <a href="student_dashboard.php?page=student_settings" class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-warmdark-hover hover:text-gray-900 dark:hover:text-white transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -305,9 +271,6 @@ if ($student_id > 0 && !empty($servicesToCheck)) {
                 $page = $_GET['page'] ?? 'dashboard';
 
                 switch ($page) {
-                    case 'student_proposal_certificate':
-                        include '../certificate/proposal-certificate-student/student_certificate_proposal.php';
-                        break;
                     case 'students_rs_grammarly_ai':
                         include '../students/student-research-services/grammarly_ai_checking.php';
                         break;

@@ -38,11 +38,9 @@ $stmt2->close();
 // 2. Get the Application info
 $stmt = $conn->prepare("
     SELECT 
-        p_req.full_name as requested_personnel, 
         p_assign.full_name as current_personnel,
         sa.created_at as applied_date
     FROM service_applications sa
-    LEFT JOIN personnel p_req ON sa.requested_personnel_id = p_req.id
     LEFT JOIN personnel p_assign ON sa.assigned_personnel_id = p_assign.id
     WHERE sa.student_id = ? AND sa.service_type = ?
 ");
@@ -51,17 +49,14 @@ $stmt->execute();
 $appData = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// 3. SMART LOGIC: Determine the Original Personnel
+// 3. SMART LOGIC: Determine the TRUE Original Personnel
 $original_personnel = 'Unknown/Not Found';
 if ($appData) {
-    if (!empty($appData['requested_personnel'])) {
-        // If they explicitly requested someone during application
-        $original_personnel = $appData['requested_personnel'];
-    } elseif (count($logs) > 0) {
-        // If they were directly assigned, the "From" personnel of the VERY FIRST log is the original
+    if (count($logs) > 0) {
+        // Since logs are ordered ASC, the very FIRST transfer's 'from_personnel' is guaranteed to be the Original.
         $original_personnel = $logs[0]['from_personnel'];
     } elseif (!empty($appData['current_personnel'])) {
-        // If no logs and no request, the current is the original
+        // If no logs exist, it means they have never been transferred. The current IS the original.
         $original_personnel = $appData['current_personnel'];
     }
 }

@@ -17,7 +17,8 @@ if (!isset($data['active_school_year']) || empty(trim($data['active_school_year'
 
 $active_sy = trim($data['active_school_year']);
 
-$stmt = $conn->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'active_school_year'");
+// FIX: Changed from UPDATE to INSERT ON DUPLICATE KEY UPDATE so it works even if the row doesn't exist yet!
+$stmt = $conn->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('active_school_year', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
 $stmt->bind_param("s", $active_sy);
 
 if ($stmt->execute()) {

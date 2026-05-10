@@ -24,6 +24,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
             <option value="Librarian">Librarian</option>
             <option value="Human Grammarian">Human Grammarian</option>
             <option value="Ethics">Ethics</option>
+            <option value="Statistician">Statistician</option>
         </select>
 
         <input type="text" id="assignSearchInput" placeholder="Search Student Control No. or Leader..."
@@ -37,6 +38,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                     data-req-librarian="<?= isset($d['req_librarian']) ? $d['req_librarian'] : 1 ?>"
                     data-req-human-grammarian="<?= isset($d['req_human_grammarian']) ? $d['req_human_grammarian'] : 1 ?>"
                     data-req-ethics="<?= isset($d['req_ethics']) ? $d['req_ethics'] : 1 ?>"
+                    data-req-statistician="<?= isset($d['req_statistician']) ? $d['req_statistician'] : 1 ?>"
                 >
                     <?= htmlspecialchars($d['name']) ?>
                 </option>
@@ -58,6 +60,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                     <th class="px-6 py-4 font-semibold">Student Info</th>
                     <th class="px-6 py-4 font-semibold">Department</th>
                     <th class="px-6 py-4 font-semibold">Current Assignment</th>
+                    <th class="px-6 py-4 font-semibold text-center">Timeline</th>
                     <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
@@ -144,6 +147,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
         else if (service === 'Librarian') dataAttr = 'data-req-librarian';
         else if (service === 'Human Grammarian') dataAttr = 'data-req-human-grammarian';
         else if (service === 'Ethics') dataAttr = 'data-req-ethics';
+        else if (service === 'Statistician') dataAttr = 'data-req-statistician'; 
 
         var currentSelectedIsDisabled = false;
 
@@ -180,7 +184,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                 tbody.innerHTML = '';
 
                 if (!data.students || data.students.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No students found.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No students found.</td></tr>`;
                     document.getElementById('assignPaginationContainer').innerHTML = '';
                     document.getElementById('assignRecordInfo').textContent = '';
                     return;
@@ -191,21 +195,36 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                     row.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
                     var assignmentHtml = '';
+                    var timelineHtml = '';
+
                     if (student.assigned_personnel_id) {
                         assignmentHtml = `<span class="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/30 px-2.5 py-1 rounded-md text-[11px] font-bold">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                                             ${student.assigned_personnel_name}
                                           </span>`;
+                        timelineHtml = `<div class="flex flex-col gap-1 text-xs whitespace-nowrap text-center">
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Assigned On</span>
+                                            <span class="text-gray-700 dark:text-gray-300 font-medium">${student.formatted_assigned_date}</span>
+                                        </div>`;
                     } else {
                         assignmentHtml = `<span class="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-warmdark-border px-2.5 py-1 rounded-md text-[11px] font-bold">
                                             Not Assigned
                                           </span>`;
+                        timelineHtml = `<span class="text-gray-400 dark:text-gray-500 text-xs italic">--</span>`;
                     }
 
-                    var actionBtnText = student.assigned_personnel_id ? 'Change' : 'Assign';
-                    var actionBtnClass = student.assigned_personnel_id ?
-                        'bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-warmdark-border hover:bg-gray-200 dark:hover:bg-warmdark-hover shadow-sm' :
-                        'bg-blue-900 dark:bg-blue-800 text-white hover:bg-blue-800 dark:hover:bg-blue-700 shadow-sm border border-transparent';
+                    // FIX: Replaced "Change" with "Assigned ✓" and disabled the button!
+                    var actionBtnText = student.assigned_personnel_id 
+                        ? 'Assigned <svg class="w-3 h-3 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' 
+                        : 'Assign';
+                    
+                    var actionBtnClass = student.assigned_personnel_id 
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 cursor-default opacity-90' 
+                        : 'bg-blue-900 dark:bg-blue-800 text-white hover:bg-blue-800 dark:hover:bg-blue-700 shadow-sm border border-transparent cursor-pointer';
+                    
+                    var actionOnClick = student.assigned_personnel_id 
+                        ? 'disabled title="Use Batch Reassign Workload to change personnel"' 
+                        : `onclick="openAssignModal(${student.student_id}, '${student.research_leader || 'Student Group'}', '${student.control_number}', ${student.department_id}, '${service}', null)"`;
 
                     row.innerHTML = `
                         <td class="px-6 py-4">
@@ -214,11 +233,12 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                         </td>
                         <td class="px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400">${student.department_name || 'N/A'}</td>
                         <td class="px-6 py-4">${assignmentHtml}</td>
+                        <td class="px-6 py-4 text-center">${timelineHtml}</td>
                         <td class="px-6 py-4 text-center">
                             <button onclick='openProfileStudent(${JSON.stringify(student).replace(/'/g, "&#39;").replace(/"/g, "&quot;")})' class="text-blue-600 dark:text-blue-400 hover:underline text-xs transition-colors">View Profile</button>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <button onclick="openAssignModal(${student.student_id}, '${student.research_leader || 'Student Group'}', '${student.control_number}', ${student.department_id}, '${service}', ${student.assigned_personnel_id || 'null'})" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${actionBtnClass}">
+                            <button ${actionOnClick} class="px-4 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center justify-center ${actionBtnClass}">
                                 ${actionBtnText}
                             </button>
                         </td>
@@ -274,9 +294,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                     select.innerHTML = '<option value="" disabled>No personnel available for this department</option>';
                 } else {
                     data.forEach(p => {
-                        let isSelected = (p.id == currentAssignedId) ? 'selected' : '';
-                        let labelSuffix = (p.id == currentAssignedId) ? ' (Current)' : '';
-                        select.innerHTML += `<option value="${p.id}" ${isSelected}>${p.full_name}${labelSuffix}</option>`;
+                        select.innerHTML += `<option value="${p.id}">${p.full_name}</option>`;
                     });
                 }
             });

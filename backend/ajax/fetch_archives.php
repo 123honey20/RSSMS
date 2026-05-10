@@ -43,9 +43,9 @@ $where = "WHERE 1=1";
 $params = [];
 $types = "";
 
-// Search by ID Number (searches users.school_id)
+// CHANGED: Search by Control Number (searches s.control_number instead of u.school_id)
 if (!empty($search)) {
-    $where .= " AND u.school_id LIKE ?";
+    $where .= " AND s.control_number LIKE ?";
     $params[] = "%" . $search . "%";
     $types .= "s";
 }
@@ -89,11 +89,12 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// 4. Fetch the Detailed Records (CRITICAL FIX: COALESCE)
+// 4. Fetch the Detailed Records
+// CHANGED: Replaced u.school_id with s.control_number in the SELECT clause
 $sql = "
     SELECT 
         a.id, a.file_path, a.status, a.round,
-        u.school_id, 
+        s.control_number, 
         s.thesis_title, s.school_year,
         d.name AS department_name, 
         c.name AS course_name,

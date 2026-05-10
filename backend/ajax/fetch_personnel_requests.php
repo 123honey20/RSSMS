@@ -60,6 +60,10 @@ $res = $stmt->get_result();
 
 $requests = [];
 while ($row = $res->fetch_assoc()) {
+    // FIX: Format the Timeline dates
+    $row['formatted_created_at'] = !empty($row['created_at']) ? date('M d, Y - h:i A', strtotime($row['created_at'])) : 'Unknown';
+    $row['formatted_updated_at'] = !empty($row['updated_at']) ? date('M d, Y - h:i A', strtotime($row['updated_at'])) : '--';
+    
     $requests[] = $row;
 }
 

@@ -13,13 +13,14 @@ require_once "../../backend/config/database.php";
 $submissionId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $userId = $_SESSION['user'];
 
-// FIXED QUERY: Join service_applications to fetch the newly assigned personnel!
+// FIXED QUERY: Prioritize the historical personnel_id attached to this exact submission round!
+// It falls back to the current service_applications assignment only if the round hasn't been processed yet.
 $stmt = $conn->prepare("
     SELECT g.*, s.control_number, p.full_name AS personnel_name
     FROM grammarly_ai g
     JOIN students s ON g.student_id = s.id
     LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
-    LEFT JOIN personnel p ON p.id = COALESCE(sa.assigned_personnel_id, g.personnel_id)
+    LEFT JOIN personnel p ON p.id = COALESCE(g.personnel_id, sa.assigned_personnel_id)
     WHERE g.id = ? AND s.user_id = ?
 ");
 $stmt->bind_param("ii", $submissionId, $userId);
@@ -379,6 +380,7 @@ if ($submission['status'] === "Needs Revision") $statusColor = "text-red-600 dar
 </script>
 
 <style>
+    /* Custom Scrollbar specifically scoped for this page to override tailwind if necessary */
     .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
     }

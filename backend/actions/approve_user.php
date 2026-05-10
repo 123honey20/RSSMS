@@ -14,6 +14,7 @@ $stmt = $conn->prepare("UPDATE users SET status = 'Approved' WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 
-header("Location: ../../frontend/dashboards/admin_dashboard.php");
+$redirect_url = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : "../../frontend/dashboards/admin_dashboard.php";
+header("Location: " . $redirect_url);
 exit();
 ?>

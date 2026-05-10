@@ -23,7 +23,7 @@ if ($status === 'Rejected') {
     $assigned_id = NULL;
 }
 
-$stmt = $conn->prepare("UPDATE service_applications SET status = ?, assigned_personnel_id = ? WHERE id = ?");
+$stmt = $conn->prepare("UPDATE service_applications SET status = ?, assigned_personnel_id = ?, updated_at = NOW() WHERE id = ?");
 $stmt->bind_param("sii", $status, $assigned_id, $app_id);
 
 if ($stmt->execute()) {

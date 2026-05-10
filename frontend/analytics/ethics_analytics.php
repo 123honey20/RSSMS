@@ -97,14 +97,21 @@ $recent_query = $conn->query("
 ?>
 
 <div class="space-y-6 transition-colors duration-200">
-    <div class="mb-2 flex items-center justify-between">
+    <!-- NEW HEADER WITH BUTTON -->
+    <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-warmdark-border">
         <div>
             <div class="flex items-center gap-3">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Ethics Analytics</h2>
+                <h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Ethics Analytics</h2>
                 <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border border-transparent dark:border-blue-900/50 text-xs font-bold px-2.5 py-1 rounded-md">SY <?= htmlspecialchars($active_sy) ?></span>
             </div>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Comprehensive overview of submissions and feedback for the current school year.</p>
         </div>
+        
+        <a href="../dashboards/admin_dashboard.php?page=ethics_personnel_workload" 
+           class="bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            View Personnel Workload
+        </a>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
