@@ -78,7 +78,7 @@ if (!$submission) {
                     </div>
                     <div>
                         <span class="block text-blue-700 dark:text-blue-400 font-bold text-sm transition-colors">View Certificate</span>
-                        <span class="block text-gray-500 dark:text-gray-400 text-xs mt-0.5 leading-snug transition-colors">Download or print your approval certificate.</span>
+                        <span class="block text-gray-500 dark:text-gray-400 text-xs mt-0.5 leading-snug transition-colors">Download or print your approved certificate.</span>
                     </div>
                 </a>
 

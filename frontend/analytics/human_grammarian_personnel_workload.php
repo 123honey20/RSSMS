@@ -257,7 +257,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
     <!-- SECONDARY MODAL: ASSIGNED STUDENTS LIST -->
     <div x-show="studentsModalOpen" class="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 bg-slate-900/80 backdrop-blur-sm" x-cloak>
-        <div @click.away="closeStudentsModal()" class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[85vh] border border-gray-200 dark:border-warmdark-border transform transition-all">
+        <div @click.away="closeStudentsModal()" class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-2xl w-full max-w-5x2 overflow-hidden flex flex-col max-h-[85vh] border border-gray-200 dark:border-warmdark-border transform transition-all">
             
             <!-- Header -->
             <div class="px-6 py-5 border-b border-gray-200 dark:border-warmdark-border flex justify-between items-center bg-gray-50 dark:bg-warmdark-bg">

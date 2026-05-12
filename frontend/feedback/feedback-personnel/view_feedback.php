@@ -41,7 +41,6 @@ if (!$personnelResult) {
 $personnel_id = $personnelResult['id'];
 
 // 3. Fetch Overall Average per Rubric (STRICTLY FILTERED BY CURRENT JUNCTION TABLE ASSIGNMENTS)
-// REMOVED GLOBAL EXCEPTION: Now applies to ALL services
 $rubricAverages = [];
 $sqlRubrics = "
     SELECT r.id, r.name, COUNT(se.id) as total_evaluations, AVG(se.total_score) as average_total_score
