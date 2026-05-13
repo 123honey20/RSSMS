@@ -1,0 +1,5 @@
+- The student need to use the smcc email.
+
+- Student can request another round of submission when they have no rounds left.
+
+
