@@ -75,7 +75,7 @@
             <div class="relative z-10 text-center max-w-xl">
                 <img src="../images/smcc logo.png" alt="Logo" class="w-24 h-24 mx-auto mb-8 drop-shadow-2xl">
                 <h2 class="text-white text-3xl xl:text-3xl font-bold leading-tight tracking-tight mb-6">
-                    Research Support Services <br> <span class="text-blue-300 font-medium text-2xl xl:text-3xl uppercase tracking-[0.3em]">Monitoring System</span>
+                    Researchhhhhhhhh Support Services <br> <span class="text-blue-300 font-medium text-2xl xl:text-3xl uppercase tracking-[0.3em]">Monitoring System</span>
                 </h2>
                 <div class="h-1.5 w-20 bg-university-gold mx-auto rounded-full mb-8"></div>
                 <p class="text-blue-100 text-lg opacity-80 leading-relaxed font-light">
