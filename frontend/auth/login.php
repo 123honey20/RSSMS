@@ -9,7 +9,7 @@
         // Check for dark mode preference
         if (localStorage.getItem('darkMode') === 'enabled' || 
             (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
+            document.documentElementbaufaheiif.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
