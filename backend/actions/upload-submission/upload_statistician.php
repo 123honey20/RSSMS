@@ -198,3 +198,4 @@ try {
 $_SESSION['flash_success'] = "Document submitted to Statistician.";
 header("Location: " . $redirect_url);
 exit();
+?>

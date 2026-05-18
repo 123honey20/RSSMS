@@ -11,30 +11,46 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 require_once "../../backend/config/database.php";
 
 $user_id = $_SESSION['user'];
-$res = $conn->query("SELECT id FROM students WHERE user_id = $user_id");
+$res = $conn->query("SELECT id, course_id FROM students WHERE user_id = $user_id");
 $student = $res->fetch_assoc();
 $student_id = $student['id'];
+$student_course_id = $student['course_id'];
 
-// SMART ROUND & RECEIPT LOGIC
-$sub = $conn->query("SELECT round, status, is_locked FROM grammarly_ai WHERE student_id = $student_id ORDER BY round DESC LIMIT 1");
+// --- GET ADMIN RULES TO KNOW MAX PHASES (NOW USING COURSE) ---
+$reqStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
+$reqStmt->bind_param("i", $student_course_id);
+$reqStmt->execute();
+$reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
+$reqStmt->close();
+
+// SMART ROUND, PHASE & RECEIPT LOGIC
+$sub = $conn->query("SELECT phase, round, status, is_locked FROM grammarly_ai WHERE student_id = $student_id ORDER BY phase DESC, round DESC LIMIT 1");
 $existing = $sub->fetch_assoc();
 
 $receiptOnlyMode = false;
+$currentPhase = $existing ? (int)($existing['phase'] ?? 1) : 1;
+$currentRound = $existing ? (int)$existing['round'] : 0;
+$status = $existing ? $existing['status'] : null;
+$is_locked = $existing ? (int)($existing['is_locked'] ?? 0) : 0;
+
+$nextPhase = $currentPhase;
 $nextRound = 1;
-$is_locked = 0;
 
 if ($existing) {
-    $is_locked = (int)($existing['is_locked'] ?? 0);
-    $transCheck = $conn->query("SELECT status FROM grammarly_ai_transactions WHERE student_id = $student_id AND round = {$existing['round']}");
+    $transCheck = $conn->query("SELECT status FROM grammarly_ai_transactions WHERE student_id = $student_id AND phase = $currentPhase AND round = $currentRound");
     $trans = $transCheck->fetch_assoc();
 
-    if ($existing['status'] === 'Needs Revision') {
-        $nextRound = $existing['round'] + 1; 
-    } elseif ($existing['status'] === 'Pending' && $trans && $trans['status'] === 'Needs Revision') {
+    if ($status === 'Needs Revision') {
+        $nextRound = $currentRound + 1; 
+    } elseif ($status === 'Pending' && $trans && $trans['status'] === 'Needs Revision') {
         $receiptOnlyMode = true; 
-        $nextRound = $existing['round'];
+        $nextRound = $currentRound;
+    } elseif ($status === 'Approved') {
+        $nextPhase = $currentPhase + 1;
+        $nextRound = 1;
     } else {
-        $nextRound = $existing['round'];
+        $nextRound = $currentRound;
     }
 }
 
@@ -61,9 +77,21 @@ if ($urlMode === 'receipt' || $receiptOnlyMode) {
 }
 
 $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
+$displayPhase = ($status === 'Approved' && $currentPhase < $max_phases) ? $currentPhase + 1 : $currentPhase;
 ?>
 
 <div class="max-w-4xl mx-auto py-10 px-4 w-full transition-colors duration-200">
+
+    <?php if (isset($_SESSION['flash_success'])): ?>
+        <div id="toast-success" class="fixed top-6 right-6 bg-green-600 dark:bg-green-700 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0">
+            <div class="bg-green-500 dark:bg-green-600 rounded-full p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <span class="font-medium text-sm"><?php echo $_SESSION['flash_success']; ?></span>
+        </div>
+        <script>setTimeout(() => { document.getElementById('toast-success')?.classList.add('opacity-0', 'translate-x-full'); }, 3000);</script>
+        <?php unset($_SESSION['flash_success']); ?>
+    <?php endif; ?>
 
     <?php if (isset($_SESSION['flash_error'])): ?>
         <div id="toast-error" class="fixed top-6 right-6 bg-red-600 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0 font-medium text-sm">
@@ -74,24 +102,32 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
         <?php unset($_SESSION['flash_error']); ?>
     <?php endif; ?>
 
-    <!-- HEADER -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h1 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
                 <?= $submitText ?>
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Round <?php echo $nextRound; ?> • Grammarly & AI Checking</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Round <?php echo $nextRound; ?> • Submit your document and receipt for review.</p>
         </div>
-        <a href="student_dashboard.php?page=students_rs_grammarly_ai"
-            class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back
-        </a>
+        
+        <div class="flex items-center gap-3">
+            <?php if ($max_phases > 1): ?>
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
+                    <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Phase</span>
+                    <span class="bg-indigo-600 dark:bg-indigo-500 text-white text-xs font-extrabold px-2.5 py-0.5 rounded-md"><?= $displayPhase ?> of <?= $max_phases ?></span>
+                </div>
+            <?php endif; ?>
+
+            <a href="student_dashboard.php?page=students_rs_grammarly_ai"
+                class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back
+            </a>
+        </div>
     </div>
 
-    <!-- NOTIFICATION BANNER IF RECEIPT WAS REJECTED -->
     <?php if ($receiptOnlyMode && !$urlMode): ?>
         <div class="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
             <div class="flex items-start">
@@ -108,8 +144,46 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
         </div>
     <?php endif; ?>
 
-    <!-- MODERN UPLOAD FORM -->
     <div class="bg-white dark:bg-warmdark-panel rounded-3xl shadow-sm border border-gray-100 dark:border-warmdark-border p-8 transition-colors">
+        
+        <?php if ($existing): ?>
+            <div class="mb-8 p-5 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-100 dark:bg-blue-900/50 p-2.5 rounded-lg text-blue-600 dark:text-blue-400 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                            <?php if ($max_phases > 1): ?>
+                                Current Progress: Phase <?= $currentPhase ?> (Round <?php echo $currentRound; ?>)
+                            <?php else: ?>
+                                Existing Submission Found (Round <?php echo $currentRound; ?>)
+                            <?php endif; ?>
+                        </h3>
+                        <?php if ($status === 'Approved' && $currentPhase < $max_phases): ?>
+                            <p class="text-xs text-green-600 dark:text-green-400 mt-0.5 font-semibold">Ready for Phase <?= $currentPhase + 1 ?> Upload.</p>
+                        <?php else: ?>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Uploading a new file will replace your current submission.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <?php
+                    $badgeStatus = ucfirst($status);
+                    $badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-400";
+                    if ($badgeStatus === 'Pending') $badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
+                    if ($badgeStatus === 'Approved') $badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400";
+                    if ($badgeStatus === 'Needs Revision' || $badgeStatus === 'Rejected') {
+                        $badgeStatus = 'Needs Revision';
+                        $badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+                    }
+                ?>
+                <span class="px-4 py-1.5 text-xs font-bold rounded-full shadow-sm transition-colors <?php echo $badgeColor; ?>">
+                    Status: <?php echo $badgeStatus; ?>
+                </span>
+            </div>
+        <?php endif; ?>
+
         <form action="../../backend/actions/upload-submission/upload_grammarly_ai.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm(event)">
             
             <input type="hidden" name="update_mode" value="<?= htmlspecialchars($activeMode) ?>">
@@ -117,7 +191,6 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
 
             <div class="grid <?= (!$showReceipt || !$showDocument) ? 'grid-cols-1 max-w-xl mx-auto' : 'grid-cols-1 md:grid-cols-2 gap-8' ?> mb-10">
                 
-                <!-- 1. RECEIPT UPLOAD -->
                 <?php if ($showReceipt): ?>
                 <div class="flex flex-col">
                     <div class="flex items-center gap-2 mb-3">
@@ -149,7 +222,6 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
                 </div>
                 <?php endif; ?>
 
-                <!-- 2. DOCUMENT UPLOAD -->
                 <?php if ($showDocument): ?>
                 <div class="flex flex-col">
                     <div class="flex items-center gap-2 mb-3">
@@ -182,7 +254,6 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
                 <?php endif; ?>
             </div>
 
-            <!-- SUBMIT BUTTON -->
             <div class="flex justify-end pt-6 border-t border-gray-100 dark:border-warmdark-border">
                 <button type="submit" id="submitUploadBtn" class="bg-blue-600 dark:bg-blue-700 text-white px-10 py-3.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-lg transition-all flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -195,7 +266,6 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
     </div>
 </div>
 
-<!-- ORIGINAL LOADING OVERLAY -->
 <div id="uploadLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

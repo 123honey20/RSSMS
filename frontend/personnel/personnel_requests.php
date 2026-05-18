@@ -53,9 +53,9 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             <thead class="bg-gray-50 dark:bg-warmdark-bg text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-warmdark-border transition-colors">
                 <tr>
                     <th class="px-6 py-4 font-semibold">Student Control No.</th>
-                    <th class="px-6 py-4 font-semibold">Requested Personnel</th>
+                    <th class="px-6 py-4 font-semibold">Personnel (Req / Assigned)</th>
                     <th class="px-6 py-4 font-semibold text-center">Contract</th>
-                    <th class="px-6 py-4 font-semibold">Timeline</th> <!-- NEW TIMELINE HEADER -->
+                    <th class="px-6 py-4 font-semibold">Timeline</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
@@ -64,6 +64,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         </table>
 
         <div id="reqPaginationContainer" class="mt-4 flex justify-center gap-2 text-sm pb-4"></div>
+        <div id="reqRecordInfo" class="flex justify-end mt-2 text-xs text-gray-500 dark:text-gray-400 text-center pb-4 pr-6"></div>
     </div>
 </div>
 
@@ -74,17 +75,25 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
             <button onclick="closeReqModal()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
         </div>
 
-        <form action="../../backend/actions/process_application_action.php" method="POST" class="p-6" onsubmit="showProcessLoader()">
+        <form id="processRequestForm" class="p-6" onsubmit="submitProcessRequest(event)">
 
             <input type="hidden" name="application_id" id="modal_req_app_id">
             <input type="hidden" name="action" id="hidden_action_input" value="">
 
             <div class="mb-5 bg-gray-50 dark:bg-warmdark-bg p-4 rounded-xl border border-gray-200 dark:border-warmdark-border">
-                <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student Control No.</p>
-                <p class="font-bold text-gray-900 dark:text-gray-100" id="modal_req_student_control"></p>
-                <div class="mt-3">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Type</p>
-                    <span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 px-2.5 py-1 rounded-md text-xs font-bold" id="modal_req_service_type">Statistician</span>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student Control No.</p>
+                        <p class="font-bold text-gray-900 dark:text-gray-100" id="modal_req_student_control"></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Service Type</p>
+                        <span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 px-2.5 py-1 rounded-md text-xs font-bold" id="modal_req_service_type">Statistician</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-warmdark-border">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Student Originally Requested</p>
+                    <p class="font-semibold text-gray-800 dark:text-gray-200 text-sm" id="modal_req_requested_name"></p>
                 </div>
             </div>
 
@@ -126,7 +135,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
     </div>
 </div>
 
-<!-- FULL SCREEN LOADING OVERLAY -->
 <div id="processLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -137,6 +145,8 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we notify the student and personnel.</p>
     </div>
 </div>
+
+<div id="reqToastContainer" class="fixed top-6 right-6 z-[999999] flex flex-col gap-3"></div>
 
 <script>
     var reqCurrentPage = 1;
@@ -151,8 +161,7 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         var search = searchInput ? searchInput.value : '';
         var dept = deptFilter ? deptFilter.value : 'All';
 
-        // Hardcode 'Statistician' into the fetch URL instead of using a filter dropdown
-        fetch(`../../backend/ajax/fetch_personnel_requests.php?p=${page}&search=${encodeURIComponent(search)}&service=Statistician&status=${encodeURIComponent(reqStatusFilter)}&dept=${encodeURIComponent(dept)}`)
+        fetch(`../../backend/ajax/fetch_personnel_requests.php?p=${page}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(reqStatusFilter)}&dept=${encodeURIComponent(dept)}`)
             .then(res => res.json())
             .then(data => {
                 var tbody = document.getElementById('requestsTableBody');
@@ -164,6 +173,8 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No requests found.</td></tr>`;
                     var pagination = document.getElementById('reqPaginationContainer');
                     if (pagination) pagination.innerHTML = '';
+                    var recordInfo = document.getElementById('reqRecordInfo');
+                    if (recordInfo) recordInfo.textContent = '';
                     return;
                 }
 
@@ -177,7 +188,6 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
 
                     var statusClass = req.status === 'Pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : (req.status === 'Approved' ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400');
 
-                    // NEW TIMELINE HTML
                     var timelineHtml = `
                         <div class="flex flex-col gap-1 text-xs whitespace-nowrap">
                             <div>
@@ -194,17 +204,33 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                         </div>
                     `;
 
-                    // Action Button (Process vs Review)
+                    var personnelHtml = `
+                        <div class="flex flex-col gap-1 text-xs whitespace-nowrap">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Requested</span>
+                                <span class="text-gray-700 dark:text-gray-300 font-medium">${req.requested_name ? req.requested_name : '<span class="italic text-gray-400">None</span>'}</span>
+                            </div>
+                            ${req.status === 'Approved' ? `
+                            <div class="mt-0.5">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400 block">Assigned</span>
+                                <span class="text-blue-700 dark:text-blue-400 font-bold">${req.assigned_name ? req.assigned_name : '<span class="italic text-gray-400">Pending</span>'}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    var safeReqName = req.requested_name ? req.requested_name.replace(/'/g, "\\'") : '';
+
                     var actionHtml = req.status === 'Pending' ?
-                        `<button type="button" onclick="openReqModal(${req.id}, ${req.department_id || 0}, '${req.service_type}', ${req.requested_personnel_id}, '${req.contract_file_path || ''}', '${req.control_number}', '${req.status}', ${req.assigned_personnel_id || 'null'})" class="bg-blue-600 dark:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition shadow-sm">Process</button>` :
-                        `<button type="button" onclick="openReqModal(${req.id}, ${req.department_id || 0}, '${req.service_type}', ${req.requested_personnel_id}, '${req.contract_file_path || ''}', '${req.control_number}', '${req.status}', ${req.assigned_personnel_id || 'null'})" class="bg-gray-500 dark:bg-gray-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-gray-600 dark:hover:bg-gray-500 transition shadow-sm">Review</button>`;
+                        `<button type="button" onclick="openReqModal(${req.id}, ${req.department_id || 0}, '${req.service_type}', ${req.requested_personnel_id || 'null'}, '${req.contract_file_path || ''}', '${req.control_number}', '${req.status}', ${req.assigned_personnel_id || 'null'}, '${safeReqName}')" class="bg-blue-600 dark:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition shadow-sm">Process</button>` :
+                        `<button type="button" onclick="openReqModal(${req.id}, ${req.department_id || 0}, '${req.service_type}', ${req.requested_personnel_id || 'null'}, '${req.contract_file_path || ''}', '${req.control_number}', '${req.status}', ${req.assigned_personnel_id || 'null'}, '${safeReqName}')" class="bg-gray-500 dark:bg-gray-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-gray-600 dark:hover:bg-gray-500 transition shadow-sm">Review</button>`;
 
                     row.innerHTML = `
                         <td class="px-6 py-4">
                             <p class="font-bold text-gray-800 dark:text-gray-200">${req.control_number}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">${req.department_name || 'Global'}</p>
                         </td>
-                        <td class="px-6 py-4 text-gray-600 dark:text-gray-400">${req.requested_name}</td>
+                        <td class="px-6 py-4">${personnelHtml}</td>
                         <td class="px-6 py-4 text-center">${contractHtml}</td>
                         <td class="px-6 py-4">${timelineHtml}</td>
                         <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[11px] font-bold tracking-wider border border-transparent ${statusClass}">${req.status}</span></td>
@@ -212,9 +238,38 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
                     `;
                     tbody.appendChild(row);
                 });
+
+                renderReqPagination(data.totalPages, data.currentPage);
+                
+                const totalRows = data.totalRows || 0;
+                const startRecord = totalRows > 0 ? ((reqCurrentPage - 1) * 10 + 1) : 0;
+                const endRecord = Math.min(reqCurrentPage * 10, totalRows);
+                const infoDiv = document.getElementById('reqRecordInfo');
+                if (infoDiv) {
+                    infoDiv.textContent = totalRows > 0 ? `Showing ${startRecord} - ${endRecord} of ${totalRows} Requests` : '';
+                }
+
             })
             .catch(err => console.error("Error fetching requests:", err));
     };
+
+    function renderReqPagination(totalPages, currentPage) {
+        const container = document.getElementById('reqPaginationContainer');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        if (currentPage > 1) {
+            container.innerHTML += `<button onclick="loadAdminRequests(${currentPage - 1})" class="px-3 py-1 border border-gray-200 dark:border-warmdark-border rounded-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-warmdark-hover transition shadow-sm">Prev</button>`;
+        }
+        for (let i = 1; i <= totalPages; i++) {
+            container.innerHTML += `<button onclick="loadAdminRequests(${i})" class="px-3 py-1 text-xs font-bold border border-gray-200 dark:border-warmdark-border rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 dark:bg-blue-800 text-white border-blue-900 dark:border-blue-800' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-warmdark-hover'}">${i}</button>`;
+        }
+        if (currentPage < totalPages) {
+            container.innerHTML += `<button onclick="loadAdminRequests(${currentPage + 1})" class="px-3 py-1 border border-gray-200 dark:border-warmdark-border text-gray-600 dark:text-gray-300 text-xs font-bold rounded-md hover:bg-gray-50 dark:hover:bg-warmdark-hover transition shadow-sm">Next</button>`;
+        }
+    }
 
     window.setReqStatusFilter = function(status) {
         reqStatusFilter = status;
@@ -234,9 +289,11 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         }
     };
 
-    window.openReqModal = function(appId, deptId, serviceType, reqPersonnelId, contractPath, controlNo, status, assignedPersonnelId) {
+    window.openReqModal = function(appId, deptId, serviceType, reqPersonnelId, contractPath, controlNo, status, assignedPersonnelId, requestedName) {
         document.getElementById('modal_req_app_id').value = appId;
         document.getElementById('modal_req_student_control').textContent = controlNo;
+        
+        document.getElementById('modal_req_requested_name').textContent = requestedName || 'None';
 
         var contractLink = document.getElementById('modal_req_contract_link');
         var noContract = document.getElementById('modal_req_no_contract');
@@ -307,8 +364,37 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         document.getElementById('processRequestModal').classList.remove('flex');
     };
 
-    // --- NEW: Loading Overlay Script ---
-    window.showProcessLoader = function() {
+    // --- ADDED: Local Toast Function ---
+    window.showLocalToast = function(message, type = "success") {
+        const container = document.getElementById("reqToastContainer");
+        const toast = document.createElement("div");
+
+        const baseClasses = "flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-sm font-bold tracking-wide transform transition-all duration-300 translate-x-full opacity-0";
+        const typeClasses = type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white";
+
+        toast.className = `${baseClasses} ${typeClasses}`;
+        toast.innerHTML = `
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${ type === "success"
+                    ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>`
+                    : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>` }
+            </svg>
+            <span>${message}</span>
+        `;
+        
+        container.appendChild(toast);
+
+        setTimeout(() => toast.classList.remove("translate-x-full", "opacity-0"), 50);
+        setTimeout(() => {
+            toast.classList.add("translate-x-full", "opacity-0");
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
+
+    // --- ADDED: AJAX Submit Function to Prevent Reload ---
+    window.submitProcessRequest = function(e) {
+        e.preventDefault();
+        
         // Hide modal
         document.getElementById('processRequestModal').classList.add('hidden');
         
@@ -316,10 +402,35 @@ $dept_query = $conn->query("SELECT id, name FROM departments ORDER BY name ASC")
         document.getElementById('processLoadingOverlay').classList.remove('hidden');
         document.getElementById('processLoadingOverlay').classList.add('flex');
         
-        // Disable buttons so admin doesn't double click
-        const btns = document.querySelectorAll('#modal_action_buttons button');
-        btns.forEach(btn => btn.disabled = true);
-    }
+        var formData = new FormData(e.target);
+
+        fetch('../../backend/actions/process_application_action.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Hide Loader
+            document.getElementById('processLoadingOverlay').classList.add('hidden');
+            document.getElementById('processLoadingOverlay').classList.remove('flex');
+            
+            // Show the Toast!
+            showLocalToast(data.message, data.success ? 'success' : 'error');
+            
+            // Refresh table dynamically if successful
+            if(data.success) {
+                if (typeof window.loadAdminRequests === 'function') {
+                    window.loadAdminRequests(reqCurrentPage);
+                }
+            }
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            document.getElementById('processLoadingOverlay').classList.add('hidden');
+            document.getElementById('processLoadingOverlay').classList.remove('flex');
+            showLocalToast("An error occurred during processing.", "error");
+        });
+    };
 
     setTimeout(() => {
         var deptEl = document.getElementById('reqDeptFilter');

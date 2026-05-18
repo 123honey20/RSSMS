@@ -78,6 +78,7 @@ $deptStmt->close();
                     <th class="px-6 py-4 font-semibold text-center">Student Profile</th>
                     <th class="px-6 py-4 font-semibold text-center">Status</th>
                     <th class="px-6 py-4 font-semibold text-center">Phase & Round</th>
+                    <th class="px-6 py-4 font-semibold">Date & Time</th>
                     <th class="px-6 py-4 font-semibold text-center">Action</th>
                 </tr>
             </thead>
@@ -109,7 +110,7 @@ $deptStmt->close();
                 if (data.submissions.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
@@ -127,20 +128,21 @@ $deptStmt->close();
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
-                    let statusBadge = '';
-                    if (row.status === 'Approved') {
-                        statusBadge = `<span class="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/20 border border-green-100 dark:border-green-500/30 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Approved</span>`;
-                    } else if (row.status === 'Needs Revision') {
-                        statusBadge = `<span class="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Needs Revision</span>`;
-                    } else {
-                        statusBadge = `<span class="text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-100 dark:border-yellow-900/50 font-bold px-3 py-1.5 rounded-md text-xs transition-colors">Pending</span>`;
-                    }
+                    // ==========================================
+                    // IMPROVED BADGE STYLING (Fixed width, Pill Shape)
+                    // ==========================================
+                    let badgeColor = "text-gray-500 dark:text-gray-400"; 
+                    if (row.status === 'Approved') badgeColor = "text-green-600 dark:text-green-400";
+                    if (row.status === 'Needs Revision') badgeColor = "text-red-600 dark:text-red-400";
+                    if (row.status === 'Pending') badgeColor = "text-yellow-600 dark:text-yellow-400";
+
+                    let statusBadge = `<span class="inline-flex items-center justify-center w-[80px] px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider ${badgeColor}">${row.status}</span>`;
 
                     let actionButton = '';
                     if (row.status === 'Approved' || row.status === 'Needs Revision') {
-                        actionButton = `<button onclick="viewSubmissionWithComments(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-bold text-xs shadow-sm">Review Submission</button>`;
+                        actionButton = `<button onclick="viewSubmissionWithComments(${row.id})" class="text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-warmdark-bg border border-gray-200 dark:border-warmdark-border px-4 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-warmdark-hover transition font-medium text-xs shadow-sm">Review Submission</button>`;
                     } else {
-                        actionButton = `<button onclick="loadProcess(${row.id})" class="text-white bg-blue-600 dark:bg-blue-700 px-4 py-1.5 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-bold text-xs shadow-sm">Process</button>`;
+                        actionButton = `<button onclick="loadProcess(${row.id})" class="text-white bg-blue-600 dark:bg-blue-700 px-4 py-1.5 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium text-xs shadow-sm">Process</button>`;
                     }
 
                     // Dynamic Phase Display
@@ -150,24 +152,40 @@ $deptStmt->close();
                     
                     if (mPhases > 1) {
                         phaseRoundText = `<div class="flex flex-col items-center">
-                                            <span class="font-bold text-gray-800 dark:text-gray-200">Phase ${pVal}</span>
+                                            <span class="font-medium text-gray-800 dark:text-gray-200">Phase ${pVal}</span>
                                             <span class="text-xs text-gray-500 dark:text-gray-400">Round ${row.round}</span>
                                           </div>`;
                     } else {
-                        phaseRoundText = `<span class="font-medium text-gray-600 dark:text-gray-300">Round ${row.round}</span>`;
+                        phaseRoundText = `<span class="font-medium text-xs text-gray-600 dark:text-gray-300">Round ${row.round}</span>`;
                     }
+
+                    // DATE AND TIME DISPLAY
+                    let timeDisplay = `
+                        <div class="flex flex-col gap-1.5 whitespace-nowrap">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Received</span>
+                                <span class="text-gray-700 dark:text-gray-300 font-medium text-xs">${row.formatted_uploaded_at}</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
+                                ${(row.status === 'Approved' || row.status === 'Needs Revision') ? 
+                                    `<span class="text-gray-700 dark:text-gray-300 font-medium text-xs">${row.formatted_updated_at}</span>` : 
+                                    `<span class="text-yellow-600 dark:text-yellow-500 italic font-medium text-xs">Waiting...</span>`}
+                            </div>
+                        </div>`;
 
                     tr.innerHTML = `
                         <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">${counter++}.</td>
                         <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">${row.control_number}</td>
                         <td class="px-6 py-4 text-center">
-                            <button class="text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-lg hover:underline text-xs"
+                            <button class="text-blue-700 dark:text-blue-400 px-3 py-1.5 hover:underline text-xs"
                                 onclick='openProfileStudent(${JSON.stringify(row).replace(/'/g, "&#39;")})'>
                                 View Profile
                             </button>
                         </td>
                         <td class="px-6 py-4 text-center">${statusBadge}</td>
                         <td class="px-6 py-4 text-center">${phaseRoundText}</td>
+                        <td class="px-6 py-4">${timeDisplay}</td>
                         <td class="px-6 py-4 flex justify-center gap-2">
                             ${actionButton}
                         </td>
@@ -208,5 +226,6 @@ $deptStmt->close();
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => fetchSubmissions(1), 400);
     });
+
     document.addEventListener('DOMContentLoaded', () => fetchSubmissions(1));
 </script>

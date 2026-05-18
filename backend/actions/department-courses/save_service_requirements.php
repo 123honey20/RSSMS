@@ -16,13 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $required_phases = intval($_POST['required_phases']);
     $round_limit = intval($_POST['round_limit_per_phase']);
 
-    // Extra Security: Prevent Grammarly & AI from being processed
-    if ($service_type === 'Grammarly & AI Checking') {
-        $_SESSION['flash_error'] = "Grammarly & AI Checking does not support phase configurations.";
-        header("Location: ../../../frontend/dashboards/admin_dashboard.php?page=service_requirements");
-        exit();
-    }
-
     // Basic Validation
     if (empty($course_ids) || !is_array($course_ids) || empty($service_type) || $required_phases < 1 || $round_limit < 1) {
         $_SESSION['flash_error'] = "Please select at least one course and fill in all fields correctly.";
@@ -59,3 +52,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: ../../../frontend/dashboards/admin_dashboard.php?page=service_requirements");
     exit();
 }
+?>

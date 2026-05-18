@@ -208,3 +208,4 @@ try {
 $_SESSION['flash_success'] = "Document submitted successfully.";
 header("Location: " . $redirect_url);
 exit();
+?>

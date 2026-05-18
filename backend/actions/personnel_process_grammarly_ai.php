@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $transStatus = ($action === 'Approve Receipt') ? 'Approved' : 'Needs Revision';
         
-        $infoStmt = $conn->prepare("SELECT student_id, round FROM grammarly_ai WHERE id = ?");
+        // Include phase in info lookup
+        $infoStmt = $conn->prepare("SELECT student_id, phase, round FROM grammarly_ai WHERE id = ?");
         $infoStmt->bind_param("i", $submission_id);
         $infoStmt->execute();
         $subInfo = $infoStmt->get_result()->fetch_assoc();
@@ -29,11 +30,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($subInfo) {
             $student_id = $subInfo['student_id'];
+            $phase = $subInfo['phase'];
             $round = $subInfo['round'];
             
-            // Update Transaction Table
-            $transStmt = $conn->prepare("UPDATE grammarly_ai_transactions SET status = ? WHERE student_id = ? AND round = ?");
-            $transStmt->bind_param("sii", $transStatus, $student_id, $round);
+            // Update Transaction Table (Requires Phase + Round matching)
+            $transStmt = $conn->prepare("UPDATE grammarly_ai_transactions SET status = ? WHERE student_id = ? AND phase = ? AND round = ?");
+            $transStmt->bind_param("siii", $transStatus, $student_id, $phase, $round);
             $success = $transStmt->execute();
             $transStmt->close();
             
@@ -64,12 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p>Automated Grammarly & AI Checking Log.</p></div></div></div>";
 
                         $mail->addAddress($info['student_email'], $info['research_leader']);
-                        $mail->Subject = "Receipt $transStatus - Round $round";
+                        $mail->Subject = "Receipt $transStatus - Phase $phase Round $round";
                         
                         if ($transStatus === 'Approved') {
-                            $mail->Body = $header . "<div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Receipt Approved</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>{$info['research_leader']}</strong>,</p><p>Your payment receipt for Round $round has been verified and <strong style='color:$themeColor;'>Approved</strong>. Our personnel will now proceed to review your research document.</p></div>" . $footer;
+                            $mail->Body = $header . "<div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Receipt Approved</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>{$info['research_leader']}</strong>,</p><p>Your payment receipt for Phase $phase, Round $round has been verified and <strong style='color:$themeColor;'>Approved</strong>. Our personnel will now proceed to review your research document.</p></div>" . $footer;
                         } else {
-                            $mail->Body = $header . "<div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Receipt Rejected</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>{$info['research_leader']}</strong>,</p><p>Your payment receipt for Round $round was <strong style='color:$themeColor;'>Rejected (Needs Revision)</strong>. Please log into your dashboard and re-upload a clear, valid receipt so we can review your document.</p></div>" . $footer;
+                            $mail->Body = $header . "<div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Receipt Rejected</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>{$info['research_leader']}</strong>,</p><p>Your payment receipt for Phase $phase, Round $round was <strong style='color:$themeColor;'>Rejected (Needs Revision)</strong>. Please log into your dashboard and re-upload a clear, valid receipt so we can review your document.</p></div>" . $footer;
                         }
                         $mail->send();
                     } catch (Exception $e) {}
@@ -138,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_success'] = "Document $status successfully!";
 
             $stmtDetails = $conn->prepare("
-                SELECT g.round, s.research_leader, s.thesis_title, u.email as student_email, s.control_number
+                SELECT g.phase, g.round, s.research_leader, s.thesis_title, u.email as student_email, s.control_number
                 FROM grammarly_ai g JOIN students s ON g.student_id = s.id JOIN users u ON s.user_id = u.id WHERE g.id = ?
             ");
             $stmtDetails->bind_param("i", $submission_id);
@@ -162,15 +164,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $header = "<div style='background-color:#f8fafc;padding:20px;font-family:sans-serif;'><div style='max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;'>";
                     $footer = "<div style='background:#f1f5f9;padding:20px;text-align:center;font-size:12px;color:#64748b;'><p>Automated Grammarly & AI Checking Log.</p></div></div></div>";
 
+                    $phaseText = (isset($info['phase']) && $info['phase'] > 0) ? "Phase {$info['phase']}, " : "";
+
                     $mail->addAddress($info['student_email'], $info['research_leader']);
                     $mail->Subject = "Document Review Result: $status";
-                    $mail->Body = $header . "<div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Document $status</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>{$info['research_leader']}</strong>,</p><p>Your research document for Round {$info['round']} has been <strong style='color:$themeColor;'>$status</strong>. You can now download the result from your dashboard.</p></div>" . $footer;
+                    $mail->Body = $header . "<div style='background:$themeColor;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Document $status</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>{$info['research_leader']}</strong>,</p><p>Your research document for {$phaseText}Round {$info['round']} has been <strong style='color:$themeColor;'>$status</strong>. You can now download the result from your dashboard.</p></div>" . $footer;
                     $mail->send();
 
                     $mail->clearAddresses();
                     $mail->addAddress($personnel_email, $personnel_name);
                     $mail->Subject = "Action Logged: Document Review Complete - $status";
-                    $mail->Body = $header . "<div style='background:#334155;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Action Confirmed</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$personnel_name</strong>,</p><p>You have successfully processed the research document for {$info['research_leader']} (Round {$info['round']}) as <strong style='color:$themeColor;'>$status</strong>.</p></div>" . $footer;
+                    $mail->Body = $header . "<div style='background:#334155;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:22px;'>Action Confirmed</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$personnel_name</strong>,</p><p>You have successfully processed the research document for {$info['research_leader']} ({$phaseText}Round {$info['round']}) as <strong style='color:$themeColor;'>$status</strong>.</p></div>" . $footer;
                     $mail->send();
                 } catch (Exception $e) {}
             }

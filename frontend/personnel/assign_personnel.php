@@ -86,7 +86,7 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
             <button onclick="closeAssignModal()" class="text-white hover:text-gray-200 text-xl font-bold leading-none">✕</button>
         </div>
 
-        <form action="../../backend/actions/admin_direct_assign_action.php" method="POST" class="p-6" onsubmit="showAssignmentLoader()">
+        <form id="assignPersonnelForm" class="p-6" onsubmit="submitDirectAssign(event)">
             <input type="hidden" name="student_id" id="modal_assign_student_id">
             <input type="hidden" name="service_type" id="modal_assign_service_type">
 
@@ -132,6 +132,8 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sending email notifications to student and personnel.</p>
     </div>
 </div>
+
+<div id="assignToastContainer" class="fixed top-6 right-6 z-[999999] flex flex-col gap-3"></div>
 
 <script>
     var assignCurrentPage = 1;
@@ -213,7 +215,6 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
                         timelineHtml = `<span class="text-gray-400 dark:text-gray-500 text-xs italic">--</span>`;
                     }
 
-                    // FIX: Replaced "Change" with "Assigned ✓" and disabled the button!
                     var actionBtnText = student.assigned_personnel_id 
                         ? 'Assigned <svg class="w-3 h-3 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' 
                         : 'Assign';
@@ -308,19 +309,71 @@ $dept_query = $conn->query("SELECT * FROM departments ORDER BY name ASC");
         document.getElementById('directAssignModal').classList.remove('flex');
     };
 
-    // --- NEW: Loading Overlay Script ---
-    window.showAssignmentLoader = function() {
-        // Hide the standard modal to show just the loader clearly
-        document.getElementById('directAssignModal').classList.add('hidden');
+    // --- ADDED: Local Toast Function ---
+    window.showLocalToast = function(message, type = "success") {
+        const container = document.getElementById("assignToastContainer");
+        const toast = document.createElement("div");
+
+        const baseClasses = "flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-sm font-bold tracking-wide transform transition-all duration-300 translate-x-full opacity-0";
+        const typeClasses = type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white";
+
+        toast.className = `${baseClasses} ${typeClasses}`;
+        toast.innerHTML = `
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${ type === "success"
+                    ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>`
+                    : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>` }
+            </svg>
+            <span>${message}</span>
+        `;
         
-        // Show the loading overlay
+        container.appendChild(toast);
+
+        setTimeout(() => toast.classList.remove("translate-x-full", "opacity-0"), 50);
+        setTimeout(() => {
+            toast.classList.add("translate-x-full", "opacity-0");
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
+
+    // --- ADDED: AJAX Submit Function to Prevent Reload ---
+    window.submitDirectAssign = function(e) {
+        e.preventDefault();
+        
+        // Show loader overlay
+        document.getElementById('directAssignModal').classList.add('hidden');
         document.getElementById('assignmentLoadingOverlay').classList.remove('hidden');
         document.getElementById('assignmentLoadingOverlay').classList.add('flex');
         
-        // Prevent double clicks
-        const btn = document.getElementById('confirmAssignBtn');
-        btn.disabled = true;
-    }
+        var formData = new FormData(e.target);
+
+        fetch('../../backend/actions/admin_direct_assign_action.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Hide Loader
+            document.getElementById('assignmentLoadingOverlay').classList.add('hidden');
+            document.getElementById('assignmentLoadingOverlay').classList.remove('flex');
+            
+            // Show the Toast!
+            showLocalToast(data.message, data.success ? 'success' : 'error');
+            
+            // Refresh table dynamically if successful
+            if(data.success) {
+                if (typeof window.loadStudentsForAssignment === 'function') {
+                    window.loadStudentsForAssignment(assignCurrentPage);
+                }
+            }
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            document.getElementById('assignmentLoadingOverlay').classList.add('hidden');
+            document.getElementById('assignmentLoadingOverlay').classList.remove('flex');
+            showLocalToast("An error occurred during assignment.", "error");
+        });
+    };
 
     // Event Listeners
     setTimeout(() => {

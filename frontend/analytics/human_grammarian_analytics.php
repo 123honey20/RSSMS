@@ -23,24 +23,26 @@ if ($doc_query) {
     }
 }
 
-// 2. Fetch Document Rounds Data (Up to 7 Rounds)
-$rounds_data = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0];
-$round_query = $conn->query("
-    SELECT h.round, COUNT(*) as count 
+// 2. Fetch Document Phase & Rounds Data (DYNAMIC: Checks actual database combinations)
+$pr_labels = [];
+$pr_counts = [];
+$pr_query = $conn->query("
+    SELECT COALESCE(h.phase, 1) as phase, h.round, COUNT(*) as count 
     FROM human_grammarian h 
     JOIN students s ON h.student_id = s.id 
     WHERE s.school_year = '$safe_sy' 
-    GROUP BY h.round
+    GROUP BY phase, h.round
+    ORDER BY phase ASC, h.round ASC
 ");
-if ($round_query) {
-    while ($row = $round_query->fetch_assoc()) {
-        $r = (int)$row['round'];
-        if ($r >= 7) {
-            $rounds_data[7] += (int)$row['count'];
-        } elseif ($r >= 1) {
-            $rounds_data[$r] = (int)$row['count'];
-        }
+if ($pr_query && $pr_query->num_rows > 0) {
+    while ($row = $pr_query->fetch_assoc()) {
+        $pr_labels[] = "Phase " . $row['phase'] . " R" . $row['round'];
+        $pr_counts[] = (int)$row['count'];
     }
+} else {
+    // Fallback if no submissions exist yet
+    $pr_labels = ['Phase 1 R1'];
+    $pr_counts = [0];
 }
 
 // 3. Fetch Feedback Totals 
@@ -60,11 +62,9 @@ if ($fb_stats_query) {
     $total_comments = (int)$fb_stats['total_comments'];
 }
 
-// 3b. Fetch Feedback Ratings Distribution 
-$fb_ratings = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
-$fb_sum = 0;
-$actual_ratings_counted = 0;
-
+// 3b. Fetch Feedback Ratings Distribution (DYNAMIC based on rubric levels)
+$fb_labels = [];
+$fb_counts = [];
 $fb_query = $conn->query("
     SELECT rating, COUNT(*) as count 
     FROM (
@@ -76,22 +76,22 @@ $fb_query = $conn->query("
         GROUP BY ev.id
     ) as subquery
     GROUP BY rating
+    ORDER BY rating DESC
 ");
-if ($fb_query) {
+if ($fb_query && $fb_query->num_rows > 0) {
     while ($row = $fb_query->fetch_assoc()) {
-        $rtg = (int)$row['rating'];
-        if (isset($fb_ratings[$rtg])) {
-            $fb_ratings[$rtg] = (int)$row['count'];
-            $fb_sum += $rtg * (int)$row['count'];
-            $actual_ratings_counted += (int)$row['count'];
-        }
+        $fb_labels[] = 'Score ' . (int)$row['rating'];
+        $fb_counts[] = (int)$row['count'];
     }
+} else {
+    // Fallback if no feedback exists yet
+    $fb_labels = ['Score 4', 'Score 3', 'Score 2', 'Score 1'];
+    $fb_counts = [0, 0, 0, 0];
 }
-$avg_rating = $actual_ratings_counted > 0 ? number_format($fb_sum / $actual_ratings_counted, 1) : "0.0";
 
 // 4. Fetch Recent Submissions
 $recent_query = $conn->query("
-    SELECT s.control_number, s.thesis_title, h.status, h.round, h.uploaded_at
+    SELECT s.control_number, s.thesis_title, h.status, h.round, COALESCE(h.phase, 1) as phase, h.uploaded_at
     FROM human_grammarian h 
     JOIN students s ON h.student_id = s.id 
     WHERE s.school_year = '$safe_sy'
@@ -101,7 +101,6 @@ $recent_query = $conn->query("
 
 <div class="space-y-6 transition-colors duration-200">
     
-    <!-- HEADER SECTION -->
     <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-5 border-b border-gray-200 dark:border-warmdark-border">
         <div>
             <div class="flex items-center gap-3 mb-1">
@@ -168,6 +167,7 @@ $recent_query = $conn->query("
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8-1.125 0-2.197-.183-3.21-.516L3 21l1.516-5.79C3.183 14.197 3 13.125 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
             </div>
         </div>
+
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -180,7 +180,7 @@ $recent_query = $conn->query("
 
         <div class="bg-white dark:bg-warmdark-panel p-6 rounded-xl shadow-sm border border-gray-100 dark:border-warmdark-border flex flex-col lg:col-span-2 transition-colors">
             <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Feedback Distribution</h3>
-            <p class="text-[11px] text-gray-400 dark:text-gray-500 leading-snug mb-4 mt-1">Shows how many students gave an overall average rating of 1 to 5 stars for this service.</p>
+            <p class="text-[11px] text-gray-400 dark:text-gray-500 leading-snug mb-4 mt-1">Shows the average score calculated from the evaluation rubric criteria given by students.</p>
             <div class="relative w-full flex-1 min-h-[180px]">
                 <canvas id="hgFeedbackChart"></canvas>
             </div>
@@ -188,7 +188,7 @@ $recent_query = $conn->query("
     </div>
 
     <div class="bg-white dark:bg-warmdark-panel p-6 rounded-xl shadow-sm border border-gray-100 dark:border-warmdark-border transition-colors">
-        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-6">Submissions Per Round (Limit: 7)</h3>
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-6">Submissions Per Phase & Round</h3>
         <div class="relative w-full h-[280px]">
             <canvas id="hgRoundBuildingChart"></canvas>
         </div>
@@ -204,7 +204,7 @@ $recent_query = $conn->query("
                     <tr>
                         <th class="px-6 py-3 font-semibold">Control No.</th>
                         <th class="px-6 py-3 font-semibold">Thesis Title</th>
-                        <th class="px-6 py-3 font-semibold text-center">Round</th>
+                        <th class="px-6 py-3 font-semibold text-center">Phase & Round</th>
                         <th class="px-6 py-3 font-semibold text-center">Date Uploaded</th>
                         <th class="px-6 py-3 font-semibold text-center">Status</th>
                     </tr>
@@ -215,7 +215,12 @@ $recent_query = $conn->query("
                             <tr class="hover:bg-gray-50 dark:hover:bg-warmdark-hover transition-colors">
                                 <td class="px-6 py-3 font-bold text-gray-800 dark:text-gray-200"><?= htmlspecialchars($row['control_number']) ?></td>
                                 <td class="px-6 py-3 truncate max-w-xs" title="<?= htmlspecialchars($row['thesis_title']) ?>"><?= htmlspecialchars($row['thesis_title']) ?></td>
-                                <td class="px-6 py-3 text-center font-medium text-gray-600 dark:text-gray-300">R<?= $row['round'] ?></td>
+                                <td class="px-6 py-3 text-center font-medium text-gray-600 dark:text-gray-300">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs">Phase <?= $row['phase'] ?></span>
+                                        <span class="text-[10px] text-gray-400">Round <?= $row['round'] ?></span>
+                                    </div>
+                                </td>
                                 <td class="px-6 py-3 text-center text-xs text-gray-500 dark:text-gray-400"><?= date('M d, Y', strtotime($row['uploaded_at'])) ?></td>
                                 <td class="px-6 py-3 text-center">
                                     <?php
@@ -279,10 +284,10 @@ $recent_query = $conn->query("
         new Chart(document.getElementById('hgFeedbackChart').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star'],
+                labels: <?= json_encode($fb_labels) ?>,
                 datasets: [{
-                    label: 'Ratings',
-                    data: [<?= $fb_ratings[5] ?>, <?= $fb_ratings[4] ?>, <?= $fb_ratings[3] ?>, <?= $fb_ratings[2] ?>, <?= $fb_ratings[1] ?>],
+                    label: 'Total Students',
+                    data: <?= json_encode($fb_counts) ?>,
                     backgroundColor: '#facc15',
                     borderRadius: 4,
                     barThickness: 20
@@ -324,10 +329,10 @@ $recent_query = $conn->query("
         new Chart(document.getElementById('hgRoundBuildingChart').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: ['Round 1', 'Round 2', 'Round 3', 'Round 4', 'Round 5', 'Round 6', 'Round 7'],
+                labels: <?= json_encode($pr_labels) ?>,
                 datasets: [{
                     label: 'Submissions',
-                    data: [<?= $rounds_data[1] ?>, <?= $rounds_data[2] ?>, <?= $rounds_data[3] ?>, <?= $rounds_data[4] ?>, <?= $rounds_data[5] ?>, <?= $rounds_data[6] ?>, <?= $rounds_data[7] ?>],
+                    data: <?= json_encode($pr_counts) ?>,
                     backgroundColor: '#1e3a8a',
                     borderRadius: {
                         topLeft: 8,
@@ -357,7 +362,8 @@ $recent_query = $conn->query("
                             display: false
                         },
                         ticks: {
-                            color: textColor
+                            color: textColor,
+                            font: { size: 11 }
                         }
                     }
                 },

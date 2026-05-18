@@ -38,11 +38,12 @@ $appStmt->close();
 
 $isAssigned = $application ? true : false;
 
-// --- GET ADMIN RULES FOR ROUNDS ---
-$reqStmt = $conn->prepare("SELECT round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
+// --- GET ADMIN RULES FOR ROUNDS & PHASES ---
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
 $reqStmt->bind_param("i", $student_course_id);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1;
 $max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7;
 $reqStmt->close();
 
@@ -79,33 +80,38 @@ if ($student_id) {
     }
 }
 
+// FIX: Added phase DESC to order
 $subs = $conn->query("
     SELECT *, COALESCE(is_locked, 0) as is_locked FROM grammarly_ai 
     WHERE student_id = $student_id 
-    ORDER BY round DESC, uploaded_at DESC
+    ORDER BY phase DESC, round DESC, uploaded_at DESC
 ");
 
-// Fetch Latest Document Status
+// FIX: Fetch Latest Document Status ordered by phase first!
 $latestRes = $conn->query("
     SELECT *, COALESCE(is_locked, 0) as is_locked FROM grammarly_ai 
     WHERE student_id = $student_id 
-    ORDER BY round DESC 
+    ORDER BY phase DESC, round DESC 
     LIMIT 1
 ");
 $latest = $latestRes->fetch_assoc();
+$currentPhase = $latest ? (int)($latest['phase'] ?? 1) : 1;
 $currentRound = $latest ? (int)$latest['round'] : 0;
 $currentStatus = $latest ? $latest['status'] : null;
 $is_locked = $latest ? (int)$latest['is_locked'] : 0;
 
-// Fetch Latest Transaction (Receipt) Status
-$latestTransRes = $conn->query("
-    SELECT status FROM grammarly_ai_transactions 
-    WHERE student_id = $student_id 
-    ORDER BY round DESC 
-    LIMIT 1
-");
-$latestTrans = $latestTransRes->fetch_assoc();
-$transStatus = $latestTrans ? $latestTrans['status'] : null;
+// FIX: Fetch Latest Transaction (Receipt) Status for the CURRENT Phase & Round specifically
+$transStatus = null;
+if ($latest) {
+    $latestTransRes = $conn->query("
+        SELECT status FROM grammarly_ai_transactions 
+        WHERE student_id = $student_id AND phase = $currentPhase AND round = $currentRound
+        ORDER BY id DESC LIMIT 1
+    ");
+    if ($latestTransRes && $latestTransRes->num_rows > 0) {
+        $transStatus = $latestTransRes->fetch_assoc()['status'];
+    }
+}
 
 // Fetch Requirements
 $req_stmt = $conn->query("SELECT setting_value FROM system_settings WHERE setting_key = 'req_desc_grammarly_ai_{$student_course_id}'");
@@ -117,22 +123,59 @@ if (!is_array($grammarly_requirements)) {
 }
 
 // --- DYNAMIC RE-UPLOAD LOGIC (Smart Control) ---
-$canUpdateReceipt = ($latestTrans && $transStatus !== 'Approved');
+$canUpdateReceipt = ($latestTransRes && $transStatus !== 'Approved');
 $canUpdateDoc = ($latest && $currentStatus === 'Pending' && $is_locked === 0);
 
 $canUploadSubmission = false;
 $receiptOnlyMode = false;
 $needsRoundRequest = false;
+$isFullyCompleted = ($currentStatus === 'Approved' && $currentPhase >= $max_phases);
+
+$nextPhase = $currentPhase;
+$nextRound = 1;
 
 if (!$latest) {
     $canUploadSubmission = true; 
 } elseif ($currentStatus === 'Needs Revision' && $currentRound < $max_rounds) {
     $canUploadSubmission = true; 
+    $nextRound = $currentRound + 1;
 } elseif ($currentStatus === 'Needs Revision' && $currentRound >= $max_rounds) {
     $needsRoundRequest = true; // Exhausted all rounds
+    $nextRound = $currentRound;
+} elseif ($currentStatus === 'Approved' && $currentPhase < $max_phases) {
+    $canUploadSubmission = true; // New Phase!
+    $nextPhase = $currentPhase + 1;
+    $nextRound = 1;
 } elseif ($transStatus === 'Needs Revision' && $currentStatus === 'Pending') {
     $receiptOnlyMode = true; 
+    $nextRound = $currentRound;
+} else {
+    $nextRound = $currentRound; // Default back to current round state
 }
+
+// HANDLE MANUAL RE-UPLOAD MODES FROM MODAL
+$urlMode = $_GET['mode'] ?? '';
+$showReceipt = true;
+$showDocument = true;
+
+// Security check: Block manually forced document upload if locked!
+if ($urlMode === 'document' && $is_locked === 1) {
+    $_SESSION['flash_error'] = "The personnel is currently reviewing your document. You cannot re-upload it.";
+    echo "<script>window.location.href='student_dashboard.php?page=students_rs_grammarly_ai';</script>";
+    exit();
+}
+
+if ($urlMode === 'receipt' || $receiptOnlyMode) {
+    $showDocument = false;
+    $submitText = 'Re-upload Receipt';
+} elseif ($urlMode === 'document') {
+    $showReceipt = false;
+    $submitText = 'Re-upload Document';
+} else {
+    $submitText = 'Submit Both Files';
+}
+
+$activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
 ?>
 
 <div class="space-y-6 transition-colors duration-200">
@@ -195,8 +238,8 @@ if (!$latest) {
 
         <div class="flex flex-wrap gap-6">
 
-            <?php if ($currentStatus === 'Approved'): ?>
-                <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-90 transition-colors">
+            <?php if ($isFullyCompleted): ?>
+                <div class="bg-gray-50 dark:bg-warmdark-panel border border-green-200 dark:border-green-900/50 rounded-lg p-5 w-64 flex items-center justify-between opacity-90 transition-colors">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
                         <p class="font-semibold text-green-700 dark:text-green-500">Fully Completed</p>
@@ -245,8 +288,14 @@ if (!$latest) {
                 <a href="student_dashboard.php?page=student_upload_grammarly_ai&mode=both"
                     class="bg-white dark:bg-warmdark-panel shadow dark:shadow-md rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md dark:hover:shadow-lg transition group border border-transparent dark:border-warmdark-border">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Submit Files</p>
+                        <?php if ($max_phases > 1): ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Phase <?= $currentStatus === 'Approved' ? $currentPhase + 1 : $currentPhase ?></p>
+                        <?php else: ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Upload</p>
+                        <?php endif; ?>
+                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            Submit Files
+                        </p>
                     </div>
                     <div class="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 p-2 rounded-xl group-hover:scale-105 transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,8 +307,12 @@ if (!$latest) {
             <?php elseif ($currentStatus === 'Pending'): ?>
                 <div class="bg-gray-50 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-75 transition-colors">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Upload</p>
-                        <p class="font-semibold text-gray-600 dark:text-gray-300">Pending Submission</p>
+                        <?php if ($max_phases > 1): ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Phase <?= $currentPhase ?></p>
+                        <?php else: ?>
+                            <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Upload</p>
+                        <?php endif; ?>
+                        <p class="font-semibold text-gray-600 dark:text-gray-300">Pending Review</p>
                     </div>
                     <div class="text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-xl transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -270,12 +323,12 @@ if (!$latest) {
 
             <?php endif; ?>
 
-            <?php if ($currentStatus === 'Approved'): ?>
+            <?php if ($isFullyCompleted): ?>
                 <a href="student_dashboard.php?page=student_grammarly_ai_approved_result&id=<?php echo $latest['id']; ?>"
                     class="bg-white dark:bg-warmdark-panel shadow-sm border border-green-200 dark:border-green-900/50 border-l-4 border-l-green-500 dark:border-l-green-500 rounded-lg p-5 w-64 flex items-center justify-between hover:shadow-md transition group cursor-pointer">
                     <div>
-                        <p class="text-xs text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-0.5">Available</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">View Approved Result</p>
+                        <p class="text-xs text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-0.5">Final Result</p>
+                        <p class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">View Approved File</p>
                     </div>
                     <div class="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 p-2 rounded-full group-hover:bg-green-100 dark:group-hover:bg-green-500/20 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -287,17 +340,20 @@ if (!$latest) {
                 <div class="bg-gray-100 dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border rounded-lg p-5 w-64 flex items-center justify-between opacity-70 transition-colors">
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">Locked</p>
-                        <p class="font-semibold text-gray-500 dark:text-gray-400">Result Not Available</p>
+                        <?php if ($max_phases > 1 && $currentPhase > 1): ?>
+                            <p class="font-semibold text-gray-500 dark:text-gray-400 text-[13px]">Must complete Phase <?php echo $max_phases; ?></p>
+                        <?php else: ?>
+                            <p class="font-semibold text-gray-500 dark:text-gray-400">Result Not Available</p>
+                        <?php endif; ?>
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- PERSONNEL CARD (UPDATED WITH REASSIGNMENT DISPLAY) -->
             <?php if ($application && $application['assigned_name']): ?>
                 <div class="bg-white dark:bg-warmdark-panel shadow-sm border border-indigo-200 dark:border-indigo-900/50 border-l-4 border-l-indigo-500 dark:border-l-indigo-500 rounded-lg p-5 w-64 flex items-center justify-between transition-colors">
                     <div class="overflow-hidden pr-2 flex-1 min-w-0">
@@ -326,9 +382,10 @@ if (!$latest) {
                     </div>
                 </div>
             <?php endif; ?>
+
         </div>
 
-        <div class="bg-white dark:bg-warmdark-panel rounded-lg shadow border border-transparent dark:border-warmdark-border p-6 transition-colors">
+        <div class="bg-white dark:bg-warmdark-panel rounded-lg shadow border border-transparent dark:border-warmdark-border p-6 transition-colors mt-6">
             <h2 class="text-md font-semibold text-gray-800 dark:text-gray-100 mb-4">
                 History of All File Submit in Grammarly & AI Checking
             </h2>
@@ -341,20 +398,29 @@ if (!$latest) {
                             <th class="py-2">File</th>
                             <th class="py-2">Status</th>
                             <th class="py-2">Date & Time</th>
-                            <th class="py-2 text-center">Report</th> 
+                            <th class="py-2 text-center">Report</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-warmdark-border transition-colors">
-                        <?php if ($subs->num_rows > 0): ?>
+                        <?php if ($subs && $subs->num_rows > 0): ?>
                             <?php while ($row = $subs->fetch_assoc()): ?>
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors">
-                                    <td class="py-3 text-xs font-semibold dark:text-gray-200">Round <?php echo (int)$row['round']; ?></td>
+                                    <td class="py-3 text-xs font-semibold dark:text-gray-200">
+                                        <?php if ($max_phases > 1): ?>
+                                            Phase <?php echo (int)($row['phase'] ?? 1); ?>,
+                                        <?php endif; ?>
+                                        Round <?php echo (int)$row['round']; ?>
+                                    </td>
+
                                     <td class="py-3 max-w-xs">
-                                        <?php $fullName = basename($row['file_path']); ?>
+                                        <?php
+                                        $fullName = basename($row['file_path']);
+                                        ?>
                                         <span class="block truncate text-gray-700 dark:text-gray-300" title="<?php echo htmlspecialchars($fullName); ?>">
                                             <?php echo htmlspecialchars($fullName); ?>
                                         </span>
                                     </td>
+
                                     <td class="py-3">
                                         <?php
                                         $status = $row['status'];
@@ -367,8 +433,7 @@ if (!$latest) {
                                             <?php echo ucfirst($status); ?>
                                         </span>
                                     </td>
-                                    
-                                    <!-- TIMELINE / DATE & TIME COLUMN -->
+
                                     <td class="py-3 text-xs whitespace-nowrap">
                                         <div class="flex flex-col gap-1.5">
                                             <div>
@@ -379,9 +444,9 @@ if (!$latest) {
                                                 <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">Finalized</span>
                                                 <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                                     <span class="text-gray-700 dark:text-gray-300 font-medium">
-                                                        <?php 
+                                                        <?php
                                                         $finalizedDate = $row['updated_at'] ?? null;
-                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--'; 
+                                                        echo $finalizedDate ? date('M d, Y \a\t h:i A', strtotime($finalizedDate)) : '--';
                                                         ?>
                                                     </span>
                                                 <?php else: ?>
@@ -391,11 +456,9 @@ if (!$latest) {
                                         </div>
                                     </td>
 
-                                    <!-- REPORT ACTIONS -->
                                     <td class="py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            
-                                            <!-- View Button -->
+
                                             <?php if ($status === 'Approved' || $status === 'Needs Revision'): ?>
                                                 <a href="student_dashboard.php?page=student_view_grammarly_ai_report&id=<?php echo $row['id']; ?>"
                                                     class="bg-blue-600 dark:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm font-bold inline-block">
@@ -407,24 +470,21 @@ if (!$latest) {
                                                 </span>
                                             <?php endif; ?>
 
-                                            <!-- Re-upload / Locked Logic -->
-                                            <?php 
+                                            <?php
                                             $isRowLatest = ($row['id'] === $latest['id']);
                                             $rowLocked = (int)$row['is_locked'] === 1;
                                             ?>
-                                            
+
                                             <?php if ($isRowLatest && $status === 'Pending'): ?>
                                                 <?php if ($rowLocked): ?>
-                                                    <!-- LOCKED STATE UI -->
                                                     <span title="Personnel is currently reviewing this file" class="flex items-center gap-1.5 bg-gray-100 dark:bg-warmdark-bg text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-warmdark-border px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed transition-colors shadow-sm">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                                         </svg>
                                                         Locked
                                                     </span>
                                                 <?php elseif ($canUpdateDoc || $canUpdateReceipt): ?>
-                                                    <!-- ACTIVE REUPLOAD BUTTON -->
-                                                    <button onclick="openReuploadChoiceModal()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                                                    <button onclick="openReuploadChoiceModal()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                         </svg>
@@ -432,7 +492,6 @@ if (!$latest) {
                                                     </button>
                                                 <?php endif; ?>
                                             <?php else: ?>
-                                                <!-- Old rounds or Approved rounds -->
                                                 <span class="bg-gray-50 dark:bg-warmdark-bg text-gray-400 dark:text-gray-600 px-4 py-1.5 rounded-lg text-xs font-bold border border-transparent cursor-not-allowed inline-block">
                                                     Reviewed
                                                 </span>
@@ -440,6 +499,7 @@ if (!$latest) {
 
                                         </div>
                                     </td>
+
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>

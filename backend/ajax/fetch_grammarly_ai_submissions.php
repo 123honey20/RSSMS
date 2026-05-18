@@ -23,7 +23,7 @@ $dept = isset($_GET['dept']) ? $_GET['dept'] : 'All';
 $status = isset($_GET['status']) ? $_GET['status'] : 'All';
 $sy = isset($_GET['sy']) ? $_GET['sy'] : 'All'; 
 
-// NEW: Enforce security lock - only show students assigned to this specific personnel
+// Enforce security lock - only show students assigned to this specific personnel
 $where = "WHERE p.user_id = ?";
 $params = [$user_id];
 $types = "i";
@@ -49,7 +49,7 @@ if ($sy !== 'All' && !empty($sy)) {
     $types .= "s";
 }
 
-// NEW: Join service_applications and personnel tables to verify assignment
+// Join service_applications and personnel tables to verify assignment
 $countSql = "
     SELECT COUNT(*) as total 
     FROM grammarly_ai g 
@@ -64,9 +64,10 @@ $countStmt->execute();
 $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 
-// NEW: Join service_applications and personnel tables to verify assignment for the main query
+// Update Main Query to fetch `phase` and `max_phases` correctly
 $sql = "
-    SELECT g.id, g.status, g.round, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name
+    SELECT g.id, g.status, g.round, g.phase, g.uploaded_at, g.updated_at, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name,
+           COALESCE(csr.required_phases, 1) AS max_phases
     FROM grammarly_ai g
     JOIN students s ON g.student_id = s.id
     JOIN users u ON s.user_id = u.id
@@ -74,6 +75,7 @@ $sql = "
     LEFT JOIN courses c ON s.course_id = c.id
     JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
     JOIN personnel p ON sa.assigned_personnel_id = p.id
+    LEFT JOIN course_service_requirements csr ON s.course_id = csr.course_id AND csr.service_type = 'Grammarly & AI Checking'
     $where
     ORDER BY CASE WHEN g.status = 'Pending' THEN 1 ELSE 2 END, g.id DESC
     LIMIT ? OFFSET ?
@@ -88,6 +90,10 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $data = [];
-while ($row = $result->fetch_assoc()) { $data[] = $row; }
+while ($row = $result->fetch_assoc()) { 
+    $row['formatted_uploaded_at'] = $row['uploaded_at'] ? date('M d, Y \a\t h:i A', strtotime($row['uploaded_at'])) : '--';
+    $row['formatted_updated_at'] = $row['updated_at'] ? date('M d, Y \a\t h:i A', strtotime($row['updated_at'])) : '--';
+    $data[] = $row; 
+}
 echo json_encode(["submissions" => $data, "totalPages" => $totalPages, "currentPage" => $page, "totalRows" => $totalRows]);
 ?>

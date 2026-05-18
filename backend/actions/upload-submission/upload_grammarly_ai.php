@@ -13,7 +13,6 @@ use PHPMailer\PHPMailer\Exception;
 
 $user_id = $_SESSION['user'];
 $redirect_url = "../../../frontend/dashboards/student_dashboard.php?page=student_upload_grammarly_ai";
-$success_url = "../../../frontend/dashboards/student_dashboard.php?page=students_rs_grammarly_ai";
 
 function redirectWithError(string $message, string $url) {
     $_SESSION['flash_error'] = $message;
@@ -41,10 +40,11 @@ $studentCourseId = $studentData['course_id'];
 $stmt->close();
 
 // --- FETCH ADMIN RULES USING THE COURSE ID ---
-$reqStmt = $conn->prepare("SELECT round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
+$reqStmt = $conn->prepare("SELECT required_phases, round_limit_per_phase FROM course_service_requirements WHERE course_id = ? AND service_type = 'Grammarly & AI Checking'");
 $reqStmt->bind_param("i", $studentCourseId);
 $reqStmt->execute();
 $reqRes = $reqStmt->get_result()->fetch_assoc();
+$max_phases = $reqRes ? (int)$reqRes['required_phases'] : 1; 
 $max_rounds = $reqRes ? (int)$reqRes['round_limit_per_phase'] : 7; 
 $reqStmt->close();
 
@@ -61,7 +61,35 @@ $assignStmt->close();
 $max_rounds += $extra_rounds;
 
 $update_mode = $_POST['update_mode'] ?? 'both';
-$round = intval($_POST['round'] ?? 1);
+
+// Fetch the latest document from DB to determine exactly what round/phase we are on
+$checkSub = $conn->prepare("SELECT id, phase, round, file_path, status, is_locked FROM grammarly_ai WHERE student_id = ? ORDER BY phase DESC, round DESC LIMIT 1");
+$checkSub->bind_param("i", $student_id);
+$checkSub->execute();
+$existingDoc = $checkSub->get_result()->fetch_assoc();
+$checkSub->close();
+
+$phase = 1;
+$round = 1;
+
+if ($existingDoc) {
+    $phase = (int)($existingDoc['phase'] ?? 1);
+    $round = (int)$existingDoc['round'];
+
+    if ($existingDoc['status'] === 'Needs Revision') {
+        if ($round >= $max_rounds) {
+             redirectWithError("You have reached the maximum round limit ($max_rounds).", $redirect_url);
+        }
+        $round++;
+    } elseif ($existingDoc['status'] === 'Approved') {
+        if ($phase >= $max_phases) {
+            redirectWithError("You have already completed all required phases.", $redirect_url);
+        }
+        $phase++;
+        $round = 1;
+    }
+    // If 'Pending', phase and round remain exactly the same (we are just re-uploading)
+}
 
 $doReceipt = in_array($update_mode, ['both', 'receipt']);
 $doDocument = in_array($update_mode, ['both', 'document']);
@@ -90,21 +118,14 @@ if ($doDocument) {
     }
 }
 
-// Fetch check document locks
-$checkSub = $conn->prepare("SELECT id, file_path, is_locked FROM grammarly_ai WHERE student_id = ? AND round = ? LIMIT 1");
-$checkSub->bind_param("ii", $student_id, $round);
-$checkSub->execute();
-$existingDoc = $checkSub->get_result()->fetch_assoc();
-$checkSub->close();
-
 // ENFORCE SECURITY LOCK!
-if ($doDocument && $existingDoc && (int)$existingDoc['is_locked'] === 1) {
+if ($doDocument && $existingDoc && (int)$existingDoc['is_locked'] === 1 && $existingDoc['status'] === 'Pending') {
     redirectWithError("Your document is currently being reviewed by the personnel and cannot be changed.", $redirect_url);
 }
 
 // 3. Process Receipt
 if ($doReceipt) {
-    $receiptFilename = "receipt_{$student_id}_R{$round}_" . time() . "." . $receiptExt;
+    $receiptFilename = "receipt_{$student_id}_P{$phase}_R{$round}_" . time() . "." . $receiptExt;
     $receiptDir = "../../../uploads/grammarly_ai/receipts/";
     if (!is_dir($receiptDir)) mkdir($receiptDir, 0755, true);
     
@@ -112,13 +133,14 @@ if ($doReceipt) {
         redirectWithError("Failed to upload receipt.", $redirect_url);
     }
 
-    $tCheck = $conn->query("SELECT id FROM grammarly_ai_transactions WHERE student_id = $student_id AND round = $round");
+    // Include `phase` in the check and query
+    $tCheck = $conn->query("SELECT id FROM grammarly_ai_transactions WHERE student_id = $student_id AND phase = $phase AND round = $round");
     if ($tCheck->num_rows > 0) {
-        $transStmt = $conn->prepare("UPDATE grammarly_ai_transactions SET receipt_path = ?, status = 'Receipt Uploaded' WHERE student_id = ? AND round = ?");
-        $transStmt->bind_param("sii", $receiptFilename, $student_id, $round);
+        $transStmt = $conn->prepare("UPDATE grammarly_ai_transactions SET receipt_path = ?, status = 'Receipt Uploaded' WHERE student_id = ? AND phase = ? AND round = ?");
+        $transStmt->bind_param("siii", $receiptFilename, $student_id, $phase, $round);
     } else {
-        $transStmt = $conn->prepare("INSERT INTO grammarly_ai_transactions (student_id, round, receipt_path, status) VALUES (?, ?, ?, 'Receipt Uploaded')");
-        $transStmt->bind_param("iis", $student_id, $round, $receiptFilename);
+        $transStmt = $conn->prepare("INSERT INTO grammarly_ai_transactions (student_id, phase, round, receipt_path, status) VALUES (?, ?, ?, ?, 'Receipt Uploaded')");
+        $transStmt->bind_param("iiis", $student_id, $phase, $round, $receiptFilename);
     }
     $transStmt->execute();
     $transStmt->close();
@@ -126,11 +148,7 @@ if ($doReceipt) {
 
 // 4. Process Document
 if ($doDocument) {
-    // ENFORCE MAX ROUNDS LIMIT
-    if (!$existingDoc && $round > $max_rounds) {
-         redirectWithError("You have reached the maximum round limit ($max_rounds).", $redirect_url);
-    }
-    $docFilename = "doc_{$student_id}_R{$round}_" . time() . "." . $docExt;
+    $docFilename = "doc_{$student_id}_P{$phase}_R{$round}_" . time() . "." . $docExt;
     $docDir = "../../../uploads/grammarly_ai/submissions/";
     if (!is_dir($docDir)) mkdir($docDir, 0755, true);
     
@@ -138,16 +156,17 @@ if ($doDocument) {
         redirectWithError("Failed to upload document.", $redirect_url);
     }
 
-    if ($existingDoc) {
+    if ($existingDoc && $existingDoc['status'] === 'Pending') {
+        // We are just overwriting a pending submission
         $oldPath = $docDir . $existingDoc['file_path'];
-        if (file_exists($oldPath)) unlink($oldPath); 
+        if (file_exists($oldPath) && is_file($oldPath)) unlink($oldPath); 
 
-        // Update document AND reset the lock (is_locked = 0) and use active personnel
         $subStmt = $conn->prepare("UPDATE grammarly_ai SET file_path = ?, status = 'Pending', personnel_id = ?, is_locked = 0, uploaded_at = NOW() WHERE id = ?");
         $subStmt->bind_param("sii", $docFilename, $active_personnel_id, $existingDoc['id']);
     } else {
-        $subStmt = $conn->prepare("INSERT INTO grammarly_ai (student_id, school_id, file_path, status, round, personnel_id, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, 0)");
-        $subStmt->bind_param("issii", $student_id, $school_id, $docFilename, $round, $active_personnel_id);
+        // We are inserting a new round or phase
+        $subStmt = $conn->prepare("INSERT INTO grammarly_ai (student_id, school_id, file_path, status, phase, round, personnel_id, is_locked) VALUES (?, ?, ?, 'Pending', ?, ?, ?, 0)");
+        $subStmt->bind_param("issiii", $student_id, $school_id, $docFilename, $phase, $round, $active_personnel_id);
     }
     $subStmt->execute();
     $subStmt->close();
@@ -183,10 +202,12 @@ try {
         $titleText = "Document Updated";
     }
 
+    $phaseText = $max_phases > 1 ? "Phase $phase, " : "";
+
     // Email to Student
     $mail->addAddress($studentEmail, $studentName);
-    $mail->Subject = "Submission Received - Round $round";
-    $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>$titleText</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your $uploadTypeText been successfully uploaded for Round $round.</p></div>" . $footer;
+    $mail->Subject = "Submission Received - {$phaseText}Round $round";
+    $mail->Body = $header . "<div style='background:#059669;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>$titleText</h1></div><div style='padding:30px;line-height:1.6;color:#334155;'><p>Hello <strong>$studentName</strong>,</p><p>Your $uploadTypeText been successfully uploaded for {$phaseText}Round $round.</p></div>" . $footer;
     $mail->send();
 
     // Email to Personnel
@@ -204,14 +225,14 @@ try {
     }
     
     if ($resP->num_rows > 0) {
-        $mail->Subject = "ACTION REQUIRED: Submission Update Round $round - $controlNo";
+        $mail->Subject = "ACTION REQUIRED: Submission Update {$phaseText}Round $round - $controlNo";
         $mail->Body = $header . "
             <div style='background:#2563eb;padding:30px;text-align:center;'><h1 style='color:#fff;margin:0;font-size:24px;'>Submission Updated</h1></div>
             <div style='padding:30px;line-height:1.6;color:#334155;'>
                 <p>A student has updated their files for review.</p>
                 <div style='background:#eff6ff; border-left:4px solid #2563eb; padding:15px; margin:20px 0;'>
                     <p style='margin:0;'><strong>Student:</strong> $studentName</p>
-                    <p style='margin:0;'><strong>Round:</strong> $round</p>
+                    <p style='margin:0;'><strong>Round:</strong> {$phaseText}Round $round</p>
                     <p style='margin:0;'><strong>Update Type:</strong> $titleText</p>
                 </div>
                 <p>Please log in to the dashboard to process this submission.</p>
@@ -221,5 +242,8 @@ try {
 } catch (Exception $e) { }
 
 $_SESSION['flash_success'] = "Files successfully uploaded!";
-header("Location: " . $success_url);
+
+// FIX: REDIRECT TO THE UPLOAD PAGE SO TOAST WORKS
+header("Location: " . $redirect_url);
 exit();
+?>

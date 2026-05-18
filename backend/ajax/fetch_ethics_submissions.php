@@ -101,9 +101,9 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 $countStmt->close();
 
-// Update Main Query - FIX: Check course_service_requirements
+// Update Main Query - FIX: Check course_service_requirements AND Add date tracking
 $sql = "
-    SELECT e.id, e.status, e.round, e.phase, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name,
+    SELECT e.id, e.status, e.round, e.phase, e.uploaded_at, e.updated_at, s.control_number, s.research_leader, s.thesis_title, u.email, d.name AS department_name, c.name AS course_name,
            COALESCE(csr.required_phases, 1) AS max_phases
     FROM ethics e
     JOIN students s ON e.student_id = s.id
@@ -124,7 +124,12 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $data = [];
-while ($row = $result->fetch_assoc()) { $data[] = $row; }
+while ($row = $result->fetch_assoc()) { 
+    // Format the dates directly in PHP so the JS can just inject them easily
+    $row['formatted_uploaded_at'] = $row['uploaded_at'] ? date('M d, Y \a\t h:i A', strtotime($row['uploaded_at'])) : '--';
+    $row['formatted_updated_at'] = $row['updated_at'] ? date('M d, Y \a\t h:i A', strtotime($row['updated_at'])) : '--';
+    $data[] = $row; 
+}
 $stmt->close();
 
 echo json_encode(["submissions" => $data, "totalPages" => $totalPages, "currentPage" => $page, "totalRows" => $totalRows]);

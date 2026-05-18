@@ -20,13 +20,13 @@ if (!$viewOnly) {
 
 // Fetch BOTH Document and Receipt info in one query!
 $stmt = $conn->prepare("
-    SELECT g.id, g.file_path, g.status, g.round, g.student_id, g.is_locked,
+    SELECT g.id, g.file_path, g.status, g.round, g.phase, g.student_id, g.is_locked,
            s.control_number, g.result_file_path, 
            p.full_name as assigned_personnel,
            t.receipt_path, t.status as transaction_status
     FROM grammarly_ai g
     JOIN students s ON g.student_id = s.id
-    LEFT JOIN grammarly_ai_transactions t ON g.student_id = t.student_id AND g.round = t.round
+    LEFT JOIN grammarly_ai_transactions t ON g.student_id = t.student_id AND g.phase = t.phase AND g.round = t.round
     LEFT JOIN service_applications sa ON sa.student_id = s.id AND sa.service_type = 'Grammarly & AI Checking' AND sa.status = 'Approved'
     LEFT JOIN personnel p ON sa.assigned_personnel_id = p.id
     WHERE g.id = ?
@@ -62,6 +62,17 @@ $transactionStatus = $submission['transaction_status'] ?? 'Pending';
 // Smart Tab Logic (Open Receipt tab first if it needs review)
 $defaultTab = ($transactionStatus !== 'Approved') ? 'receipt' : 'document';
 
+// FETCH MAX PHASES FOR THIS SPECIFIC COURSE
+$maxPhaseStmt = $conn->prepare("SELECT required_phases FROM course_service_requirements WHERE course_id = (SELECT course_id FROM students WHERE id = ?) AND service_type = 'Grammarly & AI Checking'");
+$maxPhaseStmt->bind_param("i", $submission['student_id']);
+$maxPhaseStmt->execute();
+$maxPhaseRes = $maxPhaseStmt->get_result()->fetch_assoc();
+$max_phases = $maxPhaseRes ? (int)$maxPhaseRes['required_phases'] : 1;
+$maxPhaseStmt->close();
+
+$currentPhase = isset($submission['phase']) ? (int)$submission['phase'] : 1;
+$phaseStr = ($max_phases > 1) ? "Phase {$currentPhase}, " : "";
+
 // Comment Count
 $countStmt = $conn->prepare("SELECT COUNT(*) as total_comments FROM grammarly_ai_comments WHERE grammarly_ai_id = ?");
 $countStmt->bind_param("i", $submissionId);
@@ -71,14 +82,13 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
 
 <div class="max-w-6xl mx-auto bg-white dark:bg-warmdark-panel rounded-2xl shadow-lg border border-transparent dark:border-warmdark-border transition-colors duration-200" x-data="{ tab: '<?= $defaultTab ?>' }">
     
-    <!-- HEADER -->
     <div class="p-8 border-b border-gray-200 dark:border-warmdark-border flex flex-wrap justify-between items-center gap-4 transition-colors">
         <div>
             <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Submission Review</h2>
             <div class="mt-2 flex items-center gap-4 text-sm">
                 <span class="text-gray-500 dark:text-gray-400">Control No: <strong class="text-gray-800 dark:text-gray-200"><?= htmlspecialchars($submission['control_number']) ?></strong></span>
                 <span class="text-gray-300 dark:text-gray-600">|</span>
-                <span class="text-gray-500 dark:text-gray-400">Round: <strong class="text-gray-800 dark:text-gray-200"><?= $submission['round'] ?></strong></span>
+                <span class="text-gray-500 dark:text-gray-400"><?= $phaseStr ?>Round: <strong class="text-gray-800 dark:text-gray-200"><?= $submission['round'] ?></strong></span>
             </div>
         </div>
 
@@ -97,7 +107,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         </div>
     </div>
 
-    <!-- TABS NAVIGATION -->
     <div class="px-8 pt-4 border-b border-gray-200 dark:border-warmdark-border flex gap-6 overflow-x-auto custom-scrollbar">
         <button @click="tab = 'document'" :class="tab === 'document' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 font-bold' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'" class="pb-3 border-b-2 text-sm transition-colors whitespace-nowrap flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -115,7 +124,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         <?php endif; ?>
     </div>
 
-    <!-- TAB 1: DOCUMENT -->
     <div x-show="tab === 'document'" class="p-8" x-cloak>
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Submitted Document</h3>
@@ -141,7 +149,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         <?php endif; ?>
     </div>
 
-    <!-- TAB 2: RECEIPT -->
     <div x-show="tab === 'receipt'" class="p-8" x-cloak>
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Payment Receipt</h3>
@@ -160,7 +167,7 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         <?php elseif ($transactionStatus === 'Needs Revision'): ?>
             <div class="mb-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 p-3.5 rounded-xl flex items-center gap-3 text-red-700 dark:text-red-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                <span class="text-sm font-medium">This payment receipt was <strong>Rejected (Needs Revision)</strong>. Waiting for the student to re-upload.</span>
+                <span class="text-sm font-medium">This payment receipt was <strong>(Needs Revision)</strong>. Waiting for the student to re-upload.</span>
             </div>
         <?php endif; ?>
 
@@ -182,7 +189,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         <?php endif; ?>
     </div>
 
-    <!-- TAB 3: RESULT (If exists) -->
     <?php if ($resultExists): ?>
     <div x-show="tab === 'result'" class="p-8" x-cloak>
         <div class="flex justify-between items-center mb-4">
@@ -197,10 +203,8 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
     </div>
     <?php endif; ?>
 
-    <!-- DYNAMIC ACTION PANELS -->
     <?php if (!$viewOnly): ?>
         
-        <!-- STEP 1: RECEIPT VERIFICATION -->
         <?php if (in_array($transactionStatus, ['Receipt Uploaded', 'Pending'])): ?>
             <div class="p-8 bg-gray-50/50 dark:bg-warmdark-bg border-t border-gray-200 dark:border-warmdark-border">
                 <h3 class="text-lg font-bold text-amber-700 dark:text-amber-500 mb-2">Step 1: Payment Receipt Verification</h3>
@@ -219,14 +223,12 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
                 </form>
             </div>
 
-        <!-- WAITING FOR STUDENT (Receipt Rejected) -->
         <?php elseif ($transactionStatus === 'Needs Revision'): ?>
             <div class="p-8 bg-red-50/50 dark:bg-red-900/10 border-t border-red-200 dark:border-red-900/30">
                 <h3 class="text-lg font-bold text-red-700 dark:text-red-400 mb-2">Step 1: Waiting for Student</h3>
                 <p class="text-sm text-red-600 dark:text-red-300 font-medium">You rejected the payment receipt. Please wait for the student to upload a new one before proceeding.</p>
             </div>
 
-        <!-- STEP 2: DOCUMENT VERIFICATION -->
         <?php elseif ($transactionStatus === 'Approved' && $currentStatus === 'Pending'): ?>
             <div class="p-8 bg-gray-50/50 dark:bg-warmdark-bg border-t border-gray-200 dark:border-warmdark-border" x-data="{ requireFile: true }">
                 <h3 class="text-lg font-bold text-blue-900 dark:text-blue-400 mb-2">Step 2: Process Submission</h3>
@@ -247,7 +249,7 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
                         </button>
                         
                         <button type="submit" @click="if(!document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result file.', 'error'); } else { document.getElementById('hidden_action_input').value = 'Needs Revision'; }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-3 rounded-xl text-sm font-bold transition-colors flex-1 sm:flex-none">
-                            Reject / Needs Revision
+                            Needs Revision
                         </button>
                     </div>
                 </form>
@@ -256,7 +258,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
 
     <?php endif; ?>
 
-    <!-- FOOTER CONTROLS -->
     <div class="p-6 border-t border-gray-200 dark:border-warmdark-border flex justify-between items-center bg-white dark:bg-warmdark-panel rounded-b-2xl">
         <button id="viewCommentBtn" onclick="openViewCommentModal(<?= $submission['id'] ?>)" class="px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 <?= $totalComments == 0 ? 'hidden' : '' ?>">
             View Comments
@@ -280,7 +281,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
     <span id="toastMessage" class="text-sm font-bold tracking-wide"></span>
 </div>
 
-<!-- ORIGINAL ADD COMMENT MODAL -->
 <div id="commentModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel w-[500px] max-w-[95%] rounded-xl shadow-xl p-6 space-y-4 border border-transparent dark:border-warmdark-border transition-colors">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Add Comment</h3>
@@ -288,7 +288,7 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
         <div id="commentCounter" class="text-sm text-gray-500 dark:text-gray-400">Comment No. <span><?= $totalComments + 1 ?></span></div>
         <div>
             <label class="text-sm text-gray-600 dark:text-gray-400">Comment</label>
-            <textarea id="commentText" class="w-full mt-1 border border-gray-300 dark:border-warmdark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-50 transition-colors" rows="4"></textarea>
+            <textarea id="commentText" class="w-full mt-1 border border-gray-300 dark:border-warmdark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors" rows="4"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-warmdark-border mt-2 transition-colors">
             <button onclick="closeCommentModal()" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:underline transition-colors">Cancel</button>
@@ -297,7 +297,6 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
     </div>
 </div>
 
-<!-- ORIGINAL VIEW COMMENTS MODAL -->
 <div id="viewCommentModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel w-[600px] max-w-[95%] rounded-xl shadow-xl p-6 space-y-4 border border-transparent dark:border-warmdark-border transition-colors">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Submitted Comments</h3>

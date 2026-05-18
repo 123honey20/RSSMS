@@ -2,13 +2,17 @@
 session_start();
 require_once "../config/database.php";
 
-// NEW: Require PHPMailer
+// Require PHPMailer
 require '../../vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+// ADDED: Tell the browser to expect a JSON response
+header('Content-Type: application/json');
+
 if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
-    die("Unauthorized access.");
+    echo json_encode(["success" => false, "message" => "Unauthorized access."]);
+    exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -17,12 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $assigned_id = intval($_POST['assigned_personnel_id']);
 
     if (!$student_id || !$service_type || !$assigned_id) {
-        $_SESSION['flash_error'] = "Missing assignment details.";
-        header("Location: ../../frontend/dashboards/admin_dashboard.php?page=assign_personnel");
+        echo json_encode(["success" => false, "message" => "Missing assignment details."]);
         exit();
     }
 
     $is_success = false;
+    $msg = "";
 
     // Check if an application already exists for this student and service
     $checkStmt = $conn->prepare("SELECT id FROM service_applications WHERE student_id = ? AND service_type = ?");
@@ -38,9 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($updateStmt->execute()) {
             $is_success = true;
-            $_SESSION['flash_success'] = "$service_type Personnel successfully re-assigned!";
+            $msg = "$service_type Personnel successfully re-assigned!";
         } else {
-            $_SESSION['flash_error'] = "Failed to update assignment.";
+            echo json_encode(["success" => false, "message" => "Failed to update assignment."]);
+            exit();
         }
         $updateStmt->close();
     } else {
@@ -50,9 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($insertStmt->execute()) {
             $is_success = true;
-            $_SESSION['flash_success'] = "$service_type Personnel officially assigned!";
+            $msg = "$service_type Personnel officially assigned!";
         } else {
-            $_SESSION['flash_error'] = "Failed to assign personnel.";
+            echo json_encode(["success" => false, "message" => "Failed to assign personnel."]);
+            exit();
         }
         $insertStmt->close();
     }
@@ -60,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $checkStmt->close();
 
     // ============================================
-    // NEW: SEND EMAIL NOTIFICATIONS IF SUCCESSFUL
+    // SEND EMAIL NOTIFICATIONS IF SUCCESSFUL
     // ============================================
     if ($is_success) {
         // Fetch detailed info required for the emails
@@ -132,13 +138,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->send();
 
             } catch (Exception $e) {
-                // If email fails, log error but don't stop the success message for DB
                 error_log("PHPMailer Error during personnel assignment: " . $e->getMessage());
             }
         }
     }
     
-    header("Location: ../../frontend/dashboards/admin_dashboard.php?page=assign_personnel");
+    // Echo the JSON Success Response!
+    echo json_encode(["success" => true, "message" => $msg]);
     exit();
 }
 ?>

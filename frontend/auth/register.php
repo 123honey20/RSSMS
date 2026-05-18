@@ -231,12 +231,23 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                 </div>
 
                 <div class="mt-10">
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20">
+                    <button type="submit" id="submitRegisterBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20">
                         Create Account
                     </button>
                 </div>
 
             </form>
+        </div>
+    </div>
+
+    <div id="registrationLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
+            <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Creating Account...</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we process your registration.</p>
         </div>
     </div>
 
@@ -268,6 +279,16 @@ $active_sy = $sy_query->fetch_assoc()['setting_value'] ?? '2025-2026';
                         e.preventDefault();
                         this.errorMsg = "Passwords do not match. Please try again.";
                         return;
+                    }
+                    
+                    // Show Loading Overlay
+                    document.getElementById('registrationLoadingOverlay').classList.remove('hidden');
+                    document.getElementById('registrationLoadingOverlay').classList.add('flex');
+                    
+                    // Update Button Text
+                    const btn = document.getElementById('submitRegisterBtn');
+                    if (btn) {
+                        btn.innerHTML = 'Processing...';
                     }
                 },
 

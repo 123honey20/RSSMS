@@ -123,26 +123,25 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50/50 dark:hover:bg-warmdark-hover transition-colors";
 
-                    // DYNAMIC BADGE LOGIC FOR DARK MODE
-                    let badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-700 dark:text-gray-300 border border-transparent dark:border-warmdark-border"; 
-                    if (row.status === 'Receipt Uploaded') badgeColor = "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-transparent dark:border-yellow-900/50";
-                    if (row.status === 'Approved') badgeColor = "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-transparent dark:border-green-500/30";
-                    if (row.status === 'Needs Revision') badgeColor = "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-transparent dark:border-red-900/50";
+                    let badgeColor = "bg-gray-100 dark:bg-warmdark-bg text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-warmdark-border"; 
+                    if (row.status === 'Receipt Uploaded') badgeColor = "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30";
+                    if (row.status === 'Approved') badgeColor = "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900/30";
+                    if (row.status === 'Needs Revision') badgeColor = "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30";
 
-                    let statusBadge = `<span class="px-3 py-1 rounded-md text-[10px] font-bold uppercase ${badgeColor}">${row.status}</span>`;
+                    let statusBadge = `<span class="inline-flex items-center justify-center w-[120px] px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${badgeColor}">${row.status}</span>`;
 
                     // LOGIC FOR ASSIGNED PERSONNEL
                     let personnelDisplay = row.personnel_name 
                         ? `<div class="font-semibold text-gray-800 dark:text-gray-200">${row.personnel_name}</div>
                            <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grammarly & AI</div>` 
-                        : `<span class="text-xs text-amber-600 dark:text-amber-500 font-semibold italic bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded border border-amber-200 dark:border-amber-900/30">Pending Assignment</span>`;
+                        : `<span class="text-[11px] text-amber-600 dark:text-amber-500 font-semibold italic bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/30">Pending Assignment</span>`;
 
                     let viewButton = '';
                     if (row.status === 'No Receipt' || !row.receipt_path) {
                         viewButton = `<span class="text-gray-400 dark:text-gray-500 text-[11px] font-medium italic">Not Submitted</span>`;
                     } else {
                         viewButton = `<button onclick="openFileViewer('../../uploads/grammarly_ai/receipts/${row.receipt_path}', '${row.receipt_path}')" 
-                                class="text-blue-700 dark:text-blue-400 hover:underline text-xs inline-flex items-center gap-1">
+                                class="text-blue-700 dark:text-blue-400 hover:underline text-xs font-bold inline-flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                 View Receipt
                             </button>`;
@@ -158,8 +157,8 @@ for ($y = $max_year; $y >= $start_year; $y--) {
                             ${viewButton}
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <button class="text-blue-700 dark:text-blue-400 hover:underline text-xs" 
-                                onclick='openProfileStudent(${JSON.stringify(row).replace(/'/g, "&#39;")})'>
+                            <button class="text-blue-700 dark:text-blue-400 hover:underline text-xs font-bold" 
+                                onclick='openProfileStudent(${JSON.stringify(row).replace(/'/g, "&#39;").replace(/"/g, "&quot;")})'>
                                 Details
                             </button>
                         </td>
@@ -182,13 +181,13 @@ for ($y = $max_year; $y >= $start_year; $y--) {
         if (totalPages <= 1) return;
 
         if (currentPage > 1) {
-            container.innerHTML += `<button onclick="fetchTransactions(${currentPage - 1})" class="px-3 py-1 border border-gray-200 dark:border-warmdark-border rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-warmdark-hover transition shadow-sm">Prev</button>`;
+            container.innerHTML += `<button onclick="fetchTransactions(${currentPage - 1})" class="px-3 py-1 border border-gray-200 dark:border-warmdark-border rounded-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-warmdark-hover transition shadow-sm">Prev</button>`;
         }
         for (let i = 1; i <= totalPages; i++) {
-            container.innerHTML += `<button onclick="fetchTransactions(${i})" class="px-3 py-1 text-xs border border-gray-200 dark:border-warmdark-border rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 dark:bg-blue-800 text-white border-blue-900 dark:border-blue-800' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-warmdark-hover'}">${i}</button>`;
+            container.innerHTML += `<button onclick="fetchTransactions(${i})" class="px-3 py-1 text-xs font-bold border border-gray-200 dark:border-warmdark-border rounded-md shadow-sm transition ${i === currentPage ? 'bg-blue-900 dark:bg-blue-800 text-white border-blue-900 dark:border-blue-800' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-warmdark-hover'}">${i}</button>`;
         }
         if (currentPage < totalPages) {
-            container.innerHTML += `<button onclick="fetchTransactions(${currentPage + 1})" class="px-3 py-1 border border-gray-200 dark:border-warmdark-border text-gray-600 dark:text-gray-300 text-xs rounded-md hover:bg-gray-50 dark:hover:bg-warmdark-hover transition shadow-sm">Next</button>`;
+            container.innerHTML += `<button onclick="fetchTransactions(${currentPage + 1})" class="px-3 py-1 border border-gray-200 dark:border-warmdark-border text-gray-600 dark:text-gray-300 text-xs font-bold rounded-md hover:bg-gray-50 dark:hover:bg-warmdark-hover transition shadow-sm">Next</button>`;
         }
     }
 

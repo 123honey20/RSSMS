@@ -166,7 +166,7 @@ $totalComments = $countStmt->get_result()->fetch_assoc()['total_comments'] ?? 0;
                     </button>
                     
                     <button type="submit" @click="if(!document.getElementById('resultFileInput').value) { $event.preventDefault(); showToast('Please attach a result file.', 'error'); } else { document.getElementById('hidden_action_input').value = 'Needs Revision'; }" class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 px-8 py-3 rounded-xl text-sm font-bold transition-colors flex-1 sm:flex-none">
-                        Reject / Needs Revision
+                        Needs Revision
                     </button>
                 </div>
             </form>

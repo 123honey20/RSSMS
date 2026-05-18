@@ -33,7 +33,7 @@ $rulesQuery = $conn->query("
     ORDER BY d.name ASC, c.name ASC, r.service_type ASC
 ");
 $rules = [];
-if ($rulesQuery) { // <-- FIX: Added parentheses here
+if ($rulesQuery) { 
     while ($row = $rulesQuery->fetch_assoc()) {
         $rules[] = $row;
     }
@@ -42,7 +42,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
 
 <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 w-full transition-colors duration-200">
 
-    <!-- Toast Notifications -->
     <?php if (isset($_SESSION['flash_success'])): ?>
         <div id="toast-success" class="fixed top-6 right-6 bg-emerald-600 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 transform translate-x-0 font-medium">
             <div class="bg-white/20 rounded-full p-1">
@@ -65,7 +64,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
         <?php unset($_SESSION['flash_error']); ?>
     <?php endif; ?>
 
-    <!-- Page Header -->
     <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <div class="flex items-center gap-3 mb-1">
@@ -83,7 +81,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- FORM SECTION -->
         <div class="lg:col-span-4">
             <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden transition-colors">
                 <div class="px-6 py-5 border-b border-gray-100 dark:border-warmdark-border bg-gray-50/50 dark:bg-warmdark-bg/50">
@@ -97,7 +94,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
                     <form action="../../backend/actions/department-courses/save_service_requirements.php" method="POST" onsubmit="return validateForm()">
                         
                         <div class="space-y-5">
-                            <!-- Department Selection -->
                             <div>
                                 <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Target Department</label>
                                 <div class="relative">
@@ -113,7 +109,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
                                 </div>
                             </div>
 
-                            <!-- DYNAMIC COURSE CHECKLIST -->
                             <div id="courseSelectionContainer" class="hidden bg-gray-50/50 dark:bg-warmdark-bg/50 border border-gray-200 dark:border-warmdark-border rounded-xl p-4 transition-all">
                                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-200 dark:border-warmdark-border">
                                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Select Courses</label>
@@ -123,17 +118,16 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
                                     </div>
                                 </div>
                                 <div id="coursesList" class="max-h-40 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                                    <!-- Checkboxes rendered here via JS -->
-                                </div>
+                                    </div>
                                 <p id="courseError" class="hidden text-red-500 text-xs font-semibold mt-2">Please select at least one course.</p>
                             </div>
 
-                            <!-- Service Type -->
                             <div>
                                 <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Service Type</label>
                                 <div class="relative">
                                     <select name="service_type" required class="block w-full border border-gray-300 dark:border-warmdark-border rounded-xl px-4 py-3 text-sm bg-gray-50 focus:bg-white dark:bg-warmdark-bg text-gray-900 dark:text-gray-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all appearance-none shadow-sm cursor-pointer font-medium">
                                         <option value="" disabled selected>-- Select Service --</option>
+                                        <option value="Grammarly & AI Checking">Grammarly & AI Checking</option>
                                         <option value="Human Grammarian">Human Grammarian</option>
                                         <option value="Ethics">Ethics</option>
                                         <option value="Statistician">Statistician</option>
@@ -145,7 +139,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
                                 </div>
                             </div>
 
-                            <!-- Phases and Rounds -->
                             <div class="grid grid-cols-2 gap-5 pt-2">
                                 <div>
                                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2" title="How many times must they be approved?">Total Phases</label>
@@ -169,7 +162,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
             </div>
         </div>
 
-        <!-- TABLE SECTION -->
         <div class="lg:col-span-8">
             <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-gray-200 dark:border-warmdark-border overflow-hidden transition-colors flex flex-col h-full">
                 <div class="px-6 py-5 border-b border-gray-100 dark:border-warmdark-border flex items-center justify-between bg-gray-50/50 dark:bg-warmdark-bg/50">
@@ -241,7 +233,6 @@ if ($rulesQuery) { // <-- FIX: Added parentheses here
     </div>
 </div>
 
-<!-- LOCAL LOADING OVERLAY -->
 <div id="configLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-3xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-blue-600 dark:text-blue-400 mb-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

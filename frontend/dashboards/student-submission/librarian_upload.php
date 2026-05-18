@@ -41,6 +41,7 @@ if ($status === 'Pending' && $is_locked === 1) {
 
 $isReupload = ($existing && $status === 'Pending');
 $submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
+$nextPhaseToDisplay = ($status === 'Approved' && $currentPhase < $max_phases) ? $currentPhase + 1 : $currentPhase;
 ?>
 
 <div class="max-w-4xl mx-auto py-8 px-4 w-full transition-colors duration-200">
@@ -76,19 +77,25 @@ $submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
             <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
                 <?= $submitText ?>
             </h1>
-            <?php if ($max_phases > 1): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document for Phase <?= $existing && $existing['status'] === 'Approved' ? $currentPhase + 1 : $currentPhase ?>.</p>
-            <?php else: ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document to review by the Librarian Personnel.</p>
-            <?php endif; ?>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your document to review by the Librarian Personnel.</p>
         </div>
-        <a href="student_dashboard.php?page=students_rs_librarian" 
-           class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Dashboard
-        </a>
+        
+        <div class="flex items-center gap-3">
+            <?php if ($max_phases > 1): ?>
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
+                    <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Phase</span>
+                    <span class="bg-indigo-600 dark:bg-indigo-500 text-white text-xs font-extrabold px-2.5 py-0.5 rounded-md"><?= $nextPhaseToDisplay ?> of <?= $max_phases ?></span>
+                </div>
+            <?php endif; ?>
+
+            <a href="student_dashboard.php?page=students_rs_librarian" 
+               class="bg-white dark:bg-warmdark-panel border border-gray-200 dark:border-warmdark-border text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-warmdark-hover transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
     </div>
 
     <div class="bg-white dark:bg-warmdark-panel rounded-2xl shadow-sm border border-transparent dark:border-warmdark-border p-8 transition-colors">
@@ -104,12 +111,12 @@ $submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
                     <div>
                         <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
                             <?php if ($max_phases > 1): ?>
-                                Current Progress: Phase <?= $currentPhase ?> (Round <?php echo $existing['round']; ?>)
+                                Current Progress: Phase <?= $currentPhase ?> of <?= $max_phases ?> (Round <?php echo $existing['round']; ?>)
                             <?php else: ?>
                                 Existing Submission Found (Round <?php echo $existing['round']; ?>)
                             <?php endif; ?>
                         </h3>
-                        <?php if ($existing['status'] === 'Approved'): ?>
+                        <?php if ($existing['status'] === 'Approved' && $currentPhase < $max_phases): ?>
                             <p class="text-xs text-green-600 dark:text-green-400 mt-0.5 font-semibold">Ready for Phase <?= $currentPhase + 1 ?> Upload.</p>
                         <?php else: ?>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Uploading a new file will replace your current submission.</p>
@@ -174,15 +181,14 @@ $submitText = $isReupload ? 'Re-upload Document' : 'Submit Document';
     </div>
 </div>
 
-<!-- FULL SCREEN LOADING OVERLAY -->
 <div id="uploadLoadingOverlay" class="fixed inset-0 z-[99999] bg-black/60 hidden items-center justify-center backdrop-blur-sm transition-opacity">
     <div class="bg-white dark:bg-warmdark-panel p-8 rounded-2xl flex flex-col items-center shadow-2xl border border-transparent dark:border-warmdark-border transform scale-100 animate-pulse">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600 dark:text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Uploading Document...</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we process and notify the personnel.</p>
+        <h3 id="loadingTitle" class="text-lg font-bold text-gray-800 dark:text-gray-100">Uploading Document...</h3>
+        <p id="loadingDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please wait while we process and notify the personnel.</p>
     </div>
 </div>
 
