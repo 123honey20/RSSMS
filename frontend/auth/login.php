@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <title>RSSMS - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script> <script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script> 
+    <script>
         // Check for dark mode preference
         if (localStorage.getItem('darkMode') === 'enabled' || 
             (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -26,6 +27,15 @@
                         university: {
                             gold: '#D4AF37',
                             blue: '#1E3A8A'
+                        }
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: 0, transform: 'translateY(20px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' },
                         }
                     }
                 }
@@ -55,6 +65,47 @@
             -webkit-text-fill-color: white !important; /* white text */
             caret-color: white;
         }
+
+        /* FLOATING BOXES ANIMATION */
+        .box-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1; /* Behind text, above background */
+        }
+        .box-area li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px;
+            height: 25px;
+            background: rgba(255, 255, 255, 0.08); /* Semi-transparent white */
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: float 20s linear infinite;
+            bottom: -150px;
+            border-radius: 8px; /* Slightly rounded edges for cubes */
+        }
+        .box-area li:nth-child(1) { left: 86%; width: 80px; height: 80px; animation-delay: 0s; }
+        .box-area li:nth-child(2) { left: 12%; width: 30px; height: 30px; animation-delay: 1.5s; animation-duration: 10s; }
+        .box-area li:nth-child(3) { left: 70%; width: 100px; height: 100px; animation-delay: 5.5s; }
+        .box-area li:nth-child(4) { left: 42%; width: 150px; height: 150px; animation-delay: 0s; animation-duration: 15s; }
+        .box-area li:nth-child(5) { left: 65%; width: 40px; height: 40px; animation-delay: 0s; }
+        .box-area li:nth-child(6) { left: 15%; width: 110px; height: 110px; animation-delay: 3.5s; }
+        .box-area li:nth-child(7) { left: 35%; width: 60px; height: 60px; animation-delay: 7s; }
+        .box-area li:nth-child(8) { left: 55%; width: 25px; height: 25px; animation-delay: 15s; animation-duration: 40s; }
+        .box-area li:nth-child(9) { left: 25%; width: 90px; height: 90px; animation-delay: 2s; animation-duration: 12s; }
+        .box-area li:nth-child(10) { left: 85%; width: 50px; height: 50px; animation-delay: 11s; }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-1000px) rotate(720deg); opacity: 0; }
+        }
     </style>
 </head>
 
@@ -72,10 +123,14 @@
             <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
             <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
             
-            <div class="relative z-10 text-center max-w-xl">
+            <ul class="box-area pointer-events-none">
+                <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+            </ul>
+            
+            <div class="relative z-10 text-center max-w-xl animate-fade-in-up">
                 <img src="../images/smcc logo.png" alt="Logo" class="w-24 h-24 mx-auto mb-8 drop-shadow-2xl">
                 <h2 class="text-white text-3xl xl:text-3xl font-bold leading-tight tracking-tight mb-6">
-                    Researchhhhhhhhh Support Services <br> <span class="text-blue-300 font-medium text-2xl xl:text-3xl uppercase tracking-[0.3em]">Monitoring System</span>
+                    Research Support Services <br> <span class="text-blue-300 font-medium text-2xl xl:text-3xl uppercase tracking-[0.3em]">Monitoring System</span>
                 </h2>
                 <div class="h-1.5 w-20 bg-university-gold mx-auto rounded-full mb-8"></div>
                 <p class="text-blue-100 text-lg opacity-80 leading-relaxed font-light">
@@ -85,7 +140,7 @@
         </div>
 
         <div class="w-full lg:w-2/5 flex items-center justify-center p-6 sm:p-12 md:p-20">
-            <div class="w-full max-w-md">
+            <div class="w-full max-w-md animate-fade-in-up">
                 
                 <div class="flex lg:hidden items-center gap-4 mb-10">
                     <img src="../images/smcc logo.png" alt="Logo" class="w-12 h-12">
