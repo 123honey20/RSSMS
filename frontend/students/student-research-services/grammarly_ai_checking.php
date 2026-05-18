@@ -100,8 +100,10 @@ $currentRound = $latest ? (int)$latest['round'] : 0;
 $currentStatus = $latest ? $latest['status'] : null;
 $is_locked = $latest ? (int)$latest['is_locked'] : 0;
 
-// FIX: Fetch Latest Transaction (Receipt) Status for the CURRENT Phase & Round specifically
+// Fetch Latest Transaction (Receipt) Status for the CURRENT Phase & Round specifically
 $transStatus = null;
+$latestTransRes = null; // <-- Declared outside the IF block to prevent undefined variable warning
+
 if ($latest) {
     $latestTransRes = $conn->query("
         SELECT status FROM grammarly_ai_transactions 
@@ -348,7 +350,7 @@ $activeMode = $urlMode ?: ($receiptOnlyMode ? 'receipt' : 'both');
                     </div>
                     <div class="text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-warmdark-bg p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                 </div>
