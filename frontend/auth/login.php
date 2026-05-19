@@ -134,7 +134,7 @@
                 </h2>
                 <div class="h-1.5 w-20 bg-university-gold mx-auto rounded-full mb-8"></div>
                 <p class="text-blue-100 text-lg opacity-80 leading-relaxed font-light">
-                    The centralized monitoring system for academic research excellence and support services at Saint Michael College of Caraga.
+                    The  monitoring system for academic research excellence and support services at Saint Michael College of Caraga.
                 </p>
             </div>
         </div>
